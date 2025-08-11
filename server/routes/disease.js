@@ -3,7 +3,9 @@ const express = require('express');
 const User = require('../models/User');
 const router = express.Router();
 const mongoose = require('mongoose');
-// DiseaseAlert model (inline for now)
+const fetch = require('node-fetch');
+
+const API_URL = "https://generativelanguage.googleapis.com/v1beta2/models/gemini-2.0-pro:generateContent?key=AIzaSyAqWH8BEYRNGeO9HNWYaOrVll_c4kaXPHk"; 
 const DiseaseAlertSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   disease: String,
@@ -25,16 +27,16 @@ router.post('/report', async (req, res) => {
     return res.status(400).json({ message: 'Disease and location required' });
   }
   try {
-    
+
     const usersNearby = await User.find({
       location: {
         $near: {
           $geometry: location,
-          $maxDistance: 10000 
+          $maxDistance: 10000
         }
       }
     });
-    
+
     // Create in-app notifications for each user
     let alerts = [];
     for (const user of usersNearby) {
@@ -76,5 +78,21 @@ router.patch('/alerts/read', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+
+router.post('/proxy', async (req, res) => {
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req.body),
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch from API" });
+  }
+});
+
 
 module.exports = router;

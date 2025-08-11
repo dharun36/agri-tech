@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import useDiseaseAlerts from './useDiseaseAlerts'
+import WeatherAnalysis from './WeatherAnalysis'
 import { Link, useNavigate } from 'react-router-dom'
 import { FaCloudSun, FaSeedling, FaPlus, FaTrash } from "react-icons/fa"
 
@@ -12,9 +13,10 @@ function Home() {
       const user = JSON.parse(userStr);
       userId = user.id || user._id;
     }
-  } catch {}
+  } catch { }
+
   useDiseaseAlerts(userId);
-  // Weather state
+
   const [weather, setWeather] = useState(null)
   const [hourly, setHourly] = useState([])
   const [daily, setDaily] = useState([])
@@ -55,7 +57,7 @@ function Home() {
     fetchCrops();
   }, [navigate]);
 
-  // Add crop to backend
+
   const handleAddCrop = async () => {
     if (!newCrop.trim()) return;
     setCropError("");
@@ -130,6 +132,7 @@ function Home() {
               desc: getWeatherDesc(current.values.weatherCode),
               icon: getWeatherIcon(current.values.weatherCode),
               time: current.time,
+              humidity: current.values.humidity || null,
             })
             setHourly(data.timelines.hourly.slice(0, 6))
             setDaily(data.timelines.daily.slice(0, 7))
@@ -295,7 +298,13 @@ function Home() {
                 </div>
               </div>
             )}
+
+
           </div>
+
+
+
+
 
           {/* Crop Management */}
           <div className={`${card} w-full`}>
@@ -324,17 +333,19 @@ function Home() {
                 <FaPlus /> Add
               </button>
 
-              {/* Get Crop Recommendtion */}
+
               <button>
-              <Link
-  to="/crop-recommendation"
-  className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 text-white px-4 py-2 rounded-lg shadow transition font-semibold flex items-center gap-2 w-full sm:w-auto justify-center"
->
-  <FaSeedling />
-  Get Recommendation
-</Link>
+                <Link
+                  to="/crop-recommendation"
+                  className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 text-white px-4 py-2 rounded-lg shadow transition font-semibold flex items-center gap-2 w-full sm:w-auto justify-center"
+                >
+                  <FaSeedling />
+                  Get Recommendation
+                </Link>
               </button>
             </div>
+
+
             <ul className="space-y-2">
               {crops.map((crop, idx) => (
                 <li key={idx} className="flex items-center justify-between bg-gradient-to-r from-green-50 to-green-100 px-4 py-2 rounded-lg shadow">
@@ -353,7 +364,31 @@ function Home() {
                 </li>
               ))}
             </ul>
+
+            {/* Display Crop Error */}
+            {cropError && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <span className="text-sm text-red-600">{cropError}</span>
+              </div>
+            )}
+
+            {/* Show loading state for crop operations */}
+            {cropLoading && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <span className="text-sm text-blue-600">Processing crop operation...</span>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Weather Analysis Component */}
+        <div className="mt-8">
+          <WeatherAnalysis
+            weather={weather}
+            daily={daily}
+            formatDay={formatDay}
+            getWeatherDesc={getWeatherDesc}
+          />
         </div>
 
         {/* Quick Links Section */}
@@ -398,9 +433,74 @@ function Home() {
             </div>
           </Link>
         </div>
+
+        {/* Smart Irrigation Insights */}
+        <div className="mt-8">
+          <div className="rounded-2xl shadow-lg bg-gradient-to-br from-blue-50 to-white border border-blue-100 p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <i className="fas fa-tint text-blue-600"></i>
+              Smart Irrigation Insights
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-white rounded-lg shadow-sm">
+                <h4 className="font-semibold text-gray-700 mb-2">Soil Types</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Clay:</span>
+                    <span className="text-blue-600">High retention</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Sandy:</span>
+                    <span className="text-yellow-600">Low retention</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Loamy:</span>
+                    <span className="text-green-600">Optimal</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-white rounded-lg shadow-sm">
+                <h4 className="font-semibold text-gray-700 mb-2">Crop Water Needs</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Tomatoes:</span>
+                    <span className="text-red-600">25mm/day</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Lettuce:</span>
+                    <span className="text-green-600">15mm/day</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Corn:</span>
+                    <span className="text-yellow-600">30mm/day</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-white rounded-lg shadow-sm">
+                <h4 className="font-semibold text-gray-700 mb-2">Alerts</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="text-orange-600">
+                    <i className="fas fa-exclamation-triangle mr-2"></i>
+                    Optimal timing: 6-8 AM
+                  </div>
+                  <div className="text-blue-600">
+                    <i className="fas fa-cloud-rain mr-2"></i>
+                    Check rain forecast
+                  </div>
+                  <div className="text-green-600">
+                    <i className="fas fa-leaf mr-2"></i>
+                    Monitor soil moisture
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   )
 }
 
-export default Home
+export default Home;

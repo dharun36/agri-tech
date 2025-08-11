@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 
 const GOV_API_KEY = "579b464db66ec23bdd0000013f7611f40d8544e97c38a95e33add5b7";
-const GOV_API_URL = "https://api.data.gov.in/resource/35985678-0d79-46b4-9ed6-6f13308a1d24";
+const GOV_API_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070";
 
-const DATA_ID = "35985678-0d79-46b4-9ed6-6f13308a1d24";
+const DATA_ID = "9ef84268-d588-465a-a308-a864a43d0070";
 
 const cropImages = {
   Rice: "https://storage.googleapis.com/a1aa/image/dfacf51c-4439-49db-e185-fc674bf808d5.jpg",
@@ -29,30 +29,29 @@ const MarketPrices = () => {
         if (!res.ok) throw new Error('Failed to fetch crops');
         const crops = await res.json();
         // 2. For each crop, fetch today's price from the API
-        const today = new Date().toISOString().slice(0, 10).split('-').reverse().join('-'); // dd-mm-yyyy
         const pricePromises = crops.map(async (crop) => {
-          const params = new URLSearchParams({
-            "api-key": GOV_API_KEY,
-            format: "json",
-            limit: "1",
-            "filters[commodity]": crop.name,
-            "filters[arrival_date]": today,
-          });
+          // Replace with the district you want, or remove the filter for all locations
+          const district = "Erode"; // You can also make this dynamic
+
+          const apiUrl = `https://api.data.gov.in/resource/${DATA_ID}?api-key=${GOV_API_KEY}&format=json&filters[commodity]=${encodeURIComponent(crop.name)}&filters[district]=${encodeURIComponent(district)}&limit=1`;
+
           try {
-            const apiRes = await fetch(`https://api.data.gov.in/resource/${DATA_ID}?api-key=${GOV_API_KEY}&format=json&limit=10`);
-            console.log(`${GOV_API_URL}?${params.toString()}`);
+            const apiRes = await fetch(apiUrl);
             const apiData = await apiRes.json();
             let price = "N/A";
-            console.log(apiData.records);
+
             if (apiData.records && apiData.records.length > 0) {
-              price = `₹${parseInt(apiData.records[0].Modal_Price)/100} per kg`;
+              const rec = apiData.records[0];
+              price = `₹${parseInt(rec.modal_price, 10) / 100} per kg`;
             }
+
             return {
               name: crop.name,
               price,
               img: cropImages[crop.name] || cropImages.Vegetables,
               alt: crop.name
             };
+
           } catch {
             return {
               name: crop.name,

@@ -1,8 +1,10 @@
 import React, { useRef, useState } from 'react'
 import { toast } from 'react-toastify';
+import dotenv from 'dotenv';
 
 const GEMINI_API_KEY = "AIzaSyAqWH8BEYRNGeO9HNWYaOrVll_c4kaXPHk";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY;
+const DISEASE_API_URL = "http://127.0.0.1:8000";
 
 function DetectDisease() {
   const [image, setImage] = useState("https://storage.googleapis.com/a1aa/image/84ab60a5-9190-488e-7e07-7a0015dffdc7.jpg")
@@ -33,8 +35,32 @@ function DetectDisease() {
         setImage(ev.target.result)
         setLoading(true);
         setError("");
-        // Use file name as context for now
-        const prompt = `Given the following plant disease image context, return ONLY a JSON object with these fields: "disease", "description", and "advice". No extra text, just valid JSON. Example:\n{\n  "disease": "Leaf Spot",\n  "description": "Leaf spot is characterized by small, circular, tan or brown spots on the leaves.",\n  "advice": "Ensure adequate spacing between plants to improve air circulation. Avoid overhead watering to minimize leaf wetness duration."\n}\nImage context: ${file.name}`;
+
+        //get prediction from the disease API
+          const formData = new FormData();
+          formData.append("file", file);
+
+          try {
+            const res = await fetch("http://127.0.0.1:8000/predict", {
+              method: "POST",
+              body: formData, // Use FormData for file uploads
+            });
+
+            if (!res.ok) {
+              const errorData = await res.json();
+              setError(errorData.detail || "Unknown error");
+              return;
+            }
+
+            const data = await res.json();
+            setAnalysis(data);
+            console.log(data);
+          } catch (err) {
+            setError("Failed to communicate with disease API");
+          }
+        
+
+        const prompt = `Given the following plant disease image context, return ONLY a JSON object with these fields: "disease", "description", "treatment", and "advice". No extra text, just valid JSON. Example:\n{\n  "disease": "Leaf Spot",\n  "description": "Leaf spot is characterized by small, circular, tan or brown spots on the leaves.",\n  "advice": "Ensure adequate spacing between plants to improve air circulation. Avoid overhead watering to minimize leaf wetness duration."\n}\nImage context: ${file.name}`;
         try {
           const res = await fetch(GEMINI_API_URL, {
             method: "POST",
@@ -44,15 +70,17 @@ function DetectDisease() {
             })
           });
           const data = await res.json();
+          console.log(data);
           const geminiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
           let result = null;
           try {
             result = JSON.parse(geminiText);
+            
           } catch {
             // fallback: try to extract JSON from the response
             const match = geminiText.match(/\{[\s\S]*\}/);
             if (match) {
-              try { result = JSON.parse(match[0]); } catch {}
+              try { result = JSON.parse(match[0]); } catch { }
             }
           }
           if (result && result.disease && result.description && result.advice) {
@@ -162,20 +190,28 @@ function DetectDisease() {
 
       {/* AI Analysis Section */}
       <section className="bg-white rounded-lg p-6 border border-gray-100 shadow-sm space-y-4">
-        <div className="text-black text-sm font-normal">AI Analysis Results</div>
+        <div className="text-black text-sm font-normal"><strong>AI Analysis Results</strong></div>
         <div className="w-full h-full p-3 py-5 resize-none bg-gray-100 text-xs rounded p-1">
-        <strong>Disease Detected :</strong>
-            {loading ? "Analyzing..." :
-              analysis
-                ? ` ${analysis.detected}\nDescription: ${analysis.description}\n`
-                : ""}
-        <br />
-        <strong>Treatment :</strong>
-        {loading ? "Analyzing..." :
-              analysis
-                ? ` ${analysis.treatment}`
-                : ""}
-          
+          <strong>Disease Detected :</strong>
+          {loading ? "Analyzing..." :
+            analysis
+              ? ` ${analysis.detected}`
+              : ""}
+          <br />
+          <br />
+          <strong>Description :</strong>{loading ? "Analyzing..." :
+            analysis
+              ? ` ${analysis.description}\n`
+              : ""}
+          <br />
+          <br/>
+
+          <strong>Treatment :</strong>
+          {loading ? "Analyzing..." :
+            analysis
+              ? ` ${analysis.treatment}`
+              : ""}
+
         </div>
         <div className="bg-gray-200 rounded-md p-3 text-xs text-black text-left">
           <strong>Advice</strong>
