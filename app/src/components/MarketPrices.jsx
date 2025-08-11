@@ -6,7 +6,7 @@ const GOV_API_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a8
 const DATA_ID = "9ef84268-d588-465a-a308-a864a43d0070";
 
 const cropImages = {
-  Rice: "https://storage.googleapis.com/a1aa/image/dfacf51c-4439-49db-e185-fc674bf808d5.jpg",
+  Paddy: "https://storage.googleapis.com/a1aa/image/dfacf51c-4439-49db-e185-fc674bf808d5.jpg",
   Wheat: "https://storage.googleapis.com/a1aa/image/3bd0901a-748b-4579-3362-3bcbabcaa020.jpg",
   Corn: "https://storage.googleapis.com/a1aa/image/36192153-5529-4c03-1c06-c82ed080ecd2.jpg",
   Vegetables: "https://storage.googleapis.com/a1aa/image/66694345-5244-4928-8654-e7bf1554898a.jpg",
