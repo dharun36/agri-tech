@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaSeedling, FaUserPlus } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next'
 
 const Signup = () => {
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', latitude: '', longitude: '' });
@@ -12,8 +13,8 @@ const Signup = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  
-  
+
+
   const handleGetLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -38,7 +39,7 @@ const Signup = () => {
     setLoading(true);
     setError('');
     try {
-      
+
       const payload = { ...form };
       if (form.latitude && form.longitude) {
         payload.location = {
@@ -65,6 +66,8 @@ const Signup = () => {
     }
   };
 
+  const { t } = useTranslation()
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-white">
       <form
@@ -76,12 +79,12 @@ const Signup = () => {
             <FaSeedling />
           </div>
           <h2 className="text-2xl font-bold text-green-700 mb-1 flex items-center gap-2">
-            <FaUserPlus /> Sign Up
+            <FaUserPlus /> {t('sign_up')}
           </h2>
-          <p className="text-gray-500 text-sm">Grow your agri journey with us!</p>
+          <p className="text-gray-500 text-sm">{t('signup_welcome')}</p>
         </div>
         <div className="mb-4">
-          <label className="block text-gray-700 mb-1">Name</label>
+          <label className="block text-gray-700 mb-1">{t('name')}</label>
           <input
             type="text"
             name="name"
@@ -93,7 +96,7 @@ const Signup = () => {
           />
         </div>
         <div className="mb-4">
-          <label className="block text-gray-700 mb-1">Email</label>
+          <label className="block text-gray-700 mb-1">{t('email')}</label>
           <input
             type="email"
             name="email"
@@ -105,7 +108,7 @@ const Signup = () => {
           />
         </div>
         <div className="mb-4">
-          <label className="block text-gray-700 mb-1">Phone Number</label>
+          <label className="block text-gray-700 mb-1">{t('phone_number')}</label>
           <input
             type="tel"
             name="phone"
@@ -118,7 +121,7 @@ const Signup = () => {
         </div>
         <div className="mb-4 flex gap-2 items-end">
           <div className="flex-1">
-            <label className="block text-gray-700 mb-1">Farm Latitude</label>
+            <label className="block text-gray-700 mb-1">{t('farm_latitude')}</label>
             <input
               type="number"
               name="latitude"
@@ -130,7 +133,7 @@ const Signup = () => {
             />
           </div>
           <div className="flex-1">
-            <label className="block text-gray-700 mb-1">Farm Longitude</label>
+            <label className="block text-gray-700 mb-1">{t('farm_longitude')}</label>
             <input
               type="number"
               name="longitude"
@@ -146,11 +149,11 @@ const Signup = () => {
             onClick={handleGetLocation}
             className="bg-blue-500 text-white px-3 py-2 rounded-lg font-semibold shadow hover:bg-blue-600 transition"
           >
-            Use My Location
+            {t('use_my_location')}
           </button>
         </div>
         <div className="mb-6">
-          <label className="block text-gray-700 mb-1">Password</label>
+          <label className="block text-gray-700 mb-1">{t('password')}</label>
           <input
             type="password"
             name="password"
@@ -168,11 +171,11 @@ const Signup = () => {
           disabled={loading}
           className="w-full bg-gradient-to-r from-green-400 to-green-600 text-white py-2 rounded-lg font-semibold shadow hover:from-green-500 hover:to-green-700 transition flex items-center justify-center gap-2"
         >
-          {loading ? 'Signing up...' : <><FaUserPlus /> Sign Up</>}
+          {loading ? t('signing_up') : <><FaUserPlus /> {t('sign_up')}</>}
         </button>
         <div className="text-center mt-4 text-gray-600 text-sm">
           Already have an account?{' '}
-          <Link to="/login" className="text-green-600 font-semibold hover:underline">Login</Link>
+          <Link to="/login" className="text-green-600 font-semibold hover:underline">{t('login_title')}</Link>
         </div>
       </form>
     </div>

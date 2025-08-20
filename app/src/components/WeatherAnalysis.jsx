@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next'
 
 const GEMINI_API_KEY = "AIzaSyAqWH8BEYRNGeO9HNWYaOrVll_c4kaXPHk";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY;
@@ -9,13 +10,18 @@ const WeatherAnalysis = ({ weather, daily, formatDay, getWeatherDesc }) => {
   const [analysisError, setAnalysisError] = useState(null);
 
   // Weather Analysis Function
+  const { t } = useTranslation()
+
   const analyzeWeather = async () => {
     if (!weather) return;
 
     setAnalysisLoading(true);
     setAnalysisError(null);
 
-    const prompt = `You are a great and knowledgeable farming assistant. 
+    // Ask AI to respond using the user's current language
+    const langCode = (localStorage.getItem('i18nextLng') || 'en');
+    const userLang = langCode === 'ta' ? 'Tamil' : langCode === 'en' ? 'English' : langCode;
+    const prompt = `Respond in ${userLang}. You are a great and knowledgeable farming assistant. 
     Given the following weather data. Return ONLY a JSON object with these fields: "advice",
     "irrigation_tips". Keep each field to maximum 2 sentences.
 
@@ -114,24 +120,24 @@ const WeatherAnalysis = ({ weather, daily, formatDay, getWeatherDesc }) => {
           disabled={analysisLoading}
           className={`${buttonStyle} w-full justify-center ${analysisLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-          {analysisLoading ? 'Analyzing...' : 'Get Weather Analysis'}
+          {analysisLoading ? t('analyzing') : t('get_weather_analysis')}
         </button>
       </div>
 
       {/* Weather Analysis Results */}
       {weatherAnalysis && (
         <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="font-semibold text-blue-800 mb-2">Weather Analysis</h3>
+          <h3 className="font-semibold text-blue-800 mb-2">{t('weather_analysis')}</h3>
           <div className="space-y-3 text-sm">
             {weatherAnalysis.advice && (
               <div>
-                <span className="font-medium text-gray-700">Current Conditions:</span>
+                <span className="font-medium text-gray-700">{t('current_conditions')}:</span>
                 {renderField(weatherAnalysis.advice)}
               </div>
             )}
             {weatherAnalysis.irrigation_tips && (
               <div>
-                <span className="font-medium text-blue-700">Watering Advice:</span>
+                <span className="font-medium text-blue-700">{t('watering_advice')}:</span>
                 {renderField(weatherAnalysis.irrigation_tips)}
               </div>
             )}

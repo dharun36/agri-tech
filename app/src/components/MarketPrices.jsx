@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from 'react-i18next'
 
 const GOV_API_KEY = "579b464db66ec23bdd0000013f7611f40d8544e97c38a95e33add5b7";
 const GOV_API_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070";
@@ -6,11 +7,12 @@ const GOV_API_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a8
 const DATA_ID = "9ef84268-d588-465a-a308-a864a43d0070";
 
 const cropImages = {
-  Paddy: "https://storage.googleapis.com/a1aa/image/dfacf51c-4439-49db-e185-fc674bf808d5.jpg",
+  Rice: "https://storage.googleapis.com/a1aa/image/dfacf51c-4439-49db-e185-fc674bf808d5.jpg",
   Wheat: "https://storage.googleapis.com/a1aa/image/3bd0901a-748b-4579-3362-3bcbabcaa020.jpg",
-  Corn: "https://storage.googleapis.com/a1aa/image/36192153-5529-4c03-1c06-c82ed080ecd2.jpg",
+  Maize: "https://storage.googleapis.com/a1aa/image/36192153-5529-4c03-1c06-c82ed080ecd2.jpg",
   Vegetables: "https://storage.googleapis.com/a1aa/image/66694345-5244-4928-8654-e7bf1554898a.jpg",
   Fruits: "https://storage.googleapis.com/a1aa/image/5beca4ed-ce87-41c0-226d-f8badcf32503.jpg",
+  Pulses: "https://storage.googleapis.com/a1aa/image/2f0b3c4d-6a5e-4b8c-1f7d-9f0c8e2a3b6b.jpg"
 };
 
 const MarketPrices = () => {
@@ -33,8 +35,9 @@ const MarketPrices = () => {
           // Replace with the district you want, or remove the filter for all locations
           const district = "Erode"; // You can also make this dynamic
 
-          const apiUrl = `https://api.data.gov.in/resource/${DATA_ID}?api-key=${GOV_API_KEY}&format=json&filters[commodity]=${encodeURIComponent(crop.name)}&filters[district]=${encodeURIComponent(district)}&limit=1`;
-
+          // const apiUrl = `https://api.data.gov.in/resource/${DATA_ID}?api-key=${GOV_API_KEY}&format=json&filters[commodity]=${encodeURIComponent(crop.name)}&filters[district]=${encodeURIComponent(district)}&limit=1`;
+          const apiUrl = `https://api.data.gov.in/resource/${DATA_ID}?api-key=${GOV_API_KEY}&format=json&filters[commodity]=${encodeURIComponent(crop.name)}&limit=1`;
+          console.log(apiUrl);
           try {
             const apiRes = await fetch(apiUrl);
             const apiData = await apiRes.json();
@@ -42,6 +45,7 @@ const MarketPrices = () => {
 
             if (apiData.records && apiData.records.length > 0) {
               const rec = apiData.records[0];
+              console.log(rec);
               price = `₹${parseInt(rec.modal_price, 10) / 100} per kg`;
             }
 
@@ -72,6 +76,8 @@ const MarketPrices = () => {
     fetchCropsAndPrices();
   }, []);
 
+  const { t } = useTranslation()
+
   return (
     <div className="bg-white text-black font-sans">
       {/* Main */}
@@ -81,7 +87,7 @@ const MarketPrices = () => {
           <div className="flex-1 md:max-w-xs mb-6 md:mb-0">
             <input
               type="text"
-              placeholder="Search for crops or market locations"
+              placeholder={t('search_placeholder')}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
               disabled
             />
@@ -128,9 +134,9 @@ const MarketPrices = () => {
           {/* Product Grid */}
           <section className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-6 mt-6 md:mt-0">
             {loading ? (
-              <div className="text-gray-500 col-span-2">Loading crop prices...</div>
+              <div className="text-gray-500 col-span-2">{t('loading_crop_prices')}</div>
             ) : products.length === 0 ? (
-              <div className="text-gray-500 col-span-2">No crop prices found.</div>
+              <div className="text-gray-500 col-span-2">{t('no_crop_prices_found')}</div>
             ) : (
               products.map((item) => (
                 <div key={item.name}>

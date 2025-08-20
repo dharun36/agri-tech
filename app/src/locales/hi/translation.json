@@ -1,0 +1,12 @@
+{
+  "weather": "मौसम",
+  "local_forecast": "आपका स्थानीय पूर्वानुमान",
+  "my_crops": "मेरी फसलें",
+  "manage_fields": "अपने खेत प्रबंधित करें",
+  "add": "जोड़ें",
+  "get_recommendation": "सिफारिश प्राप्त करें",
+  "get_weather_analysis": "मौसम विश्लेषण प्राप्त करें",
+  "current_conditions": "वर्तमान परिस्थितियां",
+  "watering_advice": "सिंचाई सलाह",
+  "smart_irrigation": "स्मार्ट सिंचाई जानकारी"
+}

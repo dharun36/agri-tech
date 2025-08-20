@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next'
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -16,6 +17,7 @@ const cropImages = {
 };
 
 function Croprecommation() {
+  const { t } = useTranslation()
   const [form, setForm] = useState({
     soil: "Loamy",
     season: "summer",
@@ -24,6 +26,7 @@ function Croprecommation() {
     previousCrop: "",
     location: ""
   });
+  const [language, setLanguage] = useState("English");
   const [loading, setLoading] = useState(false);
   const [recommendedCrops, setRecommendedCrops] = useState([]);
   const [error, setError] = useState("");
@@ -42,8 +45,11 @@ function Croprecommation() {
     setError("");
     setRecommendedCrops([]);
     try {
-      const prompt = `Given the following farm conditions, recommend the best four crops to grow. 
-Return ONLY a JSON array of objects, each with "crop" and "reason" fields. 
+      // Ensure Gemini replies in the user's selected language
+      const langCode = (localStorage.getItem('i18nextLng') || 'en');
+      const userLang = langCode === 'ta' ? 'Tamil' : langCode === 'en' ? 'English' : langCode;
+      const prompt = `Respond in ${userLang}. Given the following farm conditions, recommend the best four crops to grow. 
+Return ONLY a JSON array of objects, each with "crop" and "reason" fields in ${language}. 
 No extra text, just valid JSON. Example:
 [
   {"crop": "Wheat", "reason": "Wheat is suitable for loamy soil and moderate water."},
@@ -73,7 +79,7 @@ Location: ${form.location}`;
         // fallback: try to extract JSON from the response
         const match = geminiText.match(/\[.*\]/s);
         if (match) {
-          try { crops = JSON.parse(match[0]); } catch {}
+          try { crops = JSON.parse(match[0]); } catch { }
         }
       }
       setRecommendedCrops(crops);
@@ -122,11 +128,11 @@ Location: ${form.location}`;
         className="bg-gray-100 rounded-lg p-6 w-full max-w-md"
       >
         <h2 id="input-data-title" className="font-bold mb-4 text-sm">
-          Input Your Data
+          {t('input_your_data')}
         </h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="soil" className="block text-xs mb-1">Soil Type</label>
+            <label htmlFor="soil" className="block text-xs mb-1">{t('soil_type')}</label>
             <select
               id="soil"
               name="soil"
@@ -141,7 +147,7 @@ Location: ${form.location}`;
           </div>
 
           <fieldset className="mb-4">
-            <legend className="text-xs mb-1 font-normal">Season</legend>
+            <legend className="text-xs mb-1 font-normal">{t('season')}</legend>
             <div className="flex items-center space-x-4 text-xs">
               <label className="flex items-center space-x-1">
                 <input
@@ -151,7 +157,7 @@ Location: ${form.location}`;
                   checked={form.season === "summer"}
                   onChange={handleChange}
                 />
-                <span>Summer</span>
+                <span>{t('summer')}</span>
               </label>
               <label className="flex items-center space-x-1">
                 <input
@@ -161,13 +167,13 @@ Location: ${form.location}`;
                   checked={form.season === "winter"}
                   onChange={handleChange}
                 />
-                <span>Winter</span>
+                <span>{t('winter')}</span>
               </label>
             </div>
           </fieldset>
 
           <fieldset className="mb-4">
-            <legend className="text-xs mb-1 font-normal">Water Availability</legend>
+            <legend className="text-xs mb-1 font-normal">{t('water_availability')}</legend>
             <label className="flex items-center space-x-1 text-xs">
               <input
                 type="checkbox"
@@ -175,12 +181,12 @@ Location: ${form.location}`;
                 checked={form.water}
                 onChange={handleChange}
               />
-              <span>High</span>
+              <span>{t('high')}</span>
             </label>
           </fieldset>
 
           <div className="mb-4">
-            <label htmlFor="landSize" className="block text-xs mb-1">Land Size (acres or hectares)</label>
+            <label htmlFor="landSize" className="block text-xs mb-1">{t('land_size')}</label>
             <input
               type="number"
               id="landSize"
@@ -194,7 +200,7 @@ Location: ${form.location}`;
           </div>
 
           <div className="mb-4">
-            <label htmlFor="previousCrop" className="block text-xs mb-1">Previous Crop</label>
+            <label htmlFor="previousCrop" className="block text-xs mb-1">{t('previous_crop')}</label>
             <input
               type="text"
               id="previousCrop"
@@ -207,7 +213,7 @@ Location: ${form.location}`;
           </div>
 
           <div className="mb-6">
-            <label htmlFor="location" className="block text-xs mb-1">Location</label>
+            <label htmlFor="location" className="block text-xs mb-1">{t('location_label')}</label>
             <input
               type="text"
               id="location"
@@ -220,7 +226,7 @@ Location: ${form.location}`;
           </div>
 
           <button type="submit" className="bg-black text-white text-xs w-full py-2 rounded-md font-semibold" disabled={loading}>
-            {loading ? "Getting Recommendation..." : "Submit"}
+            {loading ? t('getting_recommendation') : t('submit')}
           </button>
           {error && <div className="text-red-500 text-xs mt-2">{error}</div>}
         </form>
@@ -228,10 +234,10 @@ Location: ${form.location}`;
 
       {/* Suggested Crops */}
       <section className="flex-1">
-        <h2 className="font-bold mb-4 text-sm">Suggested Crops</h2>
+        <h2 className="font-bold mb-4 text-sm">{t('suggested_crops')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {recommendedCrops.length === 0 && !loading ? (
-            <p className="text-xs text-gray-500">Fill the form and submit to get a crop recommendation from Gemini AI.</p>
+            <p className="text-xs text-gray-500">{t('fill_form_prompt')}</p>
           ) : (
             recommendedCrops.map((crop, idx) => (
               <article key={crop.crop + idx} className="bg-gray-100 rounded-lg p-4 flex items-center space-x-4 max-w-md">
@@ -243,7 +249,7 @@ Location: ${form.location}`;
                     onClick={() => handleAddCrop(crop.crop)}
                     className="bg-black text-white px-3 py-1 rounded text-xs font-semibold mt-2"
                   >
-                    Add to My Crops
+                    {t('add_to_my_crops')}
                   </button>
                 </div>
               </article>

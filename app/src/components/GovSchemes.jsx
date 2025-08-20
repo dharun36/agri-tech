@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from 'react-i18next'
 import { FaSeedling, FaShieldAlt, FaWarehouse } from "react-icons/fa";
 
 const schemes = [
@@ -28,7 +29,8 @@ const schemes = [
 const categories = ["All", "Farming", "Insurance", "Infrastructure"];
 
 export default function GovSchemes() {
-  const [activeFilter, setActiveFilter] = useState("All");
+  const { t } = useTranslation()
+  const [activeFilter, setActiveFilter] = useState(t('all') || "All");
 
   const filteredSchemes =
     activeFilter === "All"
@@ -37,7 +39,7 @@ export default function GovSchemes() {
 
   return (
     <div className="bg-white min-h-screen px-6 py-8 font-sans text-gray-800">
-      <h1 className="text-xl font-bold mb-4">Government Schemes</h1>
+      <h1 className="text-xl font-bold mb-4">{t('government_schemes')}</h1>
 
       {/* Filter Tabs */}
       <div className="flex space-x-2 mb-6 text-sm">
@@ -45,13 +47,12 @@ export default function GovSchemes() {
           <button
             key={cat}
             onClick={() => setActiveFilter(cat)}
-            className={`px-4 py-1 rounded-full border ${
-              activeFilter === cat
+            className={`px-4 py-1 rounded-full border ${activeFilter === cat
                 ? "bg-blue-600 text-white"
                 : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
-            }`}
+              }`}
           >
-            {cat}
+            {t(cat.toLowerCase()) || cat}
           </button>
         ))}
       </div>
@@ -59,7 +60,7 @@ export default function GovSchemes() {
       {/* Search */}
       <input
         type="text"
-        placeholder="Search schemes..."
+        placeholder={t('search_placeholder')}
         className="w-full max-w-md mb-6 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
       />
 
@@ -76,7 +77,7 @@ export default function GovSchemes() {
             </div>
             <p className="text-sm mt-2">{scheme.description}</p>
             <button className="mt-4 text-sm font-semibold bg-black text-white px-3 py-1 rounded hover:bg-gray-800 w-fit">
-              Apply Now
+              {t('apply_now')}
             </button>
           </div>
         ))}

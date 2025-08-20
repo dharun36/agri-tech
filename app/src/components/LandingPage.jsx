@@ -6,8 +6,11 @@ import {
   FaUserCircle,
   FaClipboardList,
 } from "react-icons/fa";
+import { useTranslation } from 'react-i18next'
 
 const LandingPage = () => {
+  const { t } = useTranslation()
+
   return (
     <div className="flex h-screen font-sans text-gray-800">
       {/* Sidebar */}
@@ -24,11 +27,11 @@ const LandingPage = () => {
         <div className="flex justify-between items-center mb-6">
           <input
             type="text"
-            placeholder="Search crops, prices, and schemes"
+            placeholder={t('search_placeholder')}
             className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none"
           />
           <div className="flex items-center space-x-2">
-            <span className="text-sm">Welcome,</span>
+            <span className="text-sm">{t('welcome')},</span>
             <FaUserCircle className="text-2xl text-gray-600" />
           </div>
         </div>
@@ -39,9 +42,9 @@ const LandingPage = () => {
           <div className="md:col-span-2 space-y-4">
             <div className="bg-white p-4 rounded-lg shadow-sm">
               <div className="flex justify-between mb-2">
-                <h3 className="text-sm font-semibold">My Crops</h3>
+                <h3 className="text-sm font-semibold">{t('my_crops')}</h3>
                 <button className="text-xs px-2 py-1 bg-lime-100 text-lime-700 rounded">
-                  + New query
+                  {t('new_query')}
                 </button>
               </div>
               <div className="text-sm space-y-2">
@@ -59,8 +62,8 @@ const LandingPage = () => {
                 </div>
               </div>
               <div className="mt-4 flex justify-between">
-                <button className="bg-gray-100 px-3 py-1 text-xs rounded">View all queries</button>
-                <button className="bg-black text-white px-3 py-1 text-xs rounded">Upgrade Plan</button>
+                <button className="bg-gray-100 px-3 py-1 text-xs rounded">{t('view_all_queries')}</button>
+                <button className="bg-black text-white px-3 py-1 text-xs rounded">{t('upgrade_plan')}</button>
               </div>
             </div>
 

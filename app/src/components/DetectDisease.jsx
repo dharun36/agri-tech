@@ -1,12 +1,13 @@
-import React, { useRef, useState } from 'react'
+import React, { use, useRef, useState } from 'react'
 import { toast } from 'react-toastify';
 import dotenv from 'dotenv';
-
+import { useTranslation } from 'react-i18next'
 const GEMINI_API_KEY = "AIzaSyAqWH8BEYRNGeO9HNWYaOrVll_c4kaXPHk";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY;
 const DISEASE_API_URL = "http://127.0.0.1:8000";
 
 function DetectDisease() {
+  const { t } = useTranslation();
   const [image, setImage] = useState("https://storage.googleapis.com/a1aa/image/84ab60a5-9190-488e-7e07-7a0015dffdc7.jpg")
   const [analysis, setAnalysis] = useState({
     detected: "Leaf Spot",
@@ -37,30 +38,37 @@ function DetectDisease() {
         setError("");
 
         //get prediction from the disease API
-          const formData = new FormData();
-          formData.append("file", file);
+        const formData = new FormData();
+        formData.append("file", file);
 
-          try {
-            const res = await fetch("http://127.0.0.1:8000/predict", {
-              method: "POST",
-              body: formData, // Use FormData for file uploads
-            });
+        try {
+          const res = await fetch("http://127.0.0.1:8000/predict", {
+            method: "POST",
+            body: formData, // Use FormData for file uploads
+          });
 
-            if (!res.ok) {
-              const errorData = await res.json();
-              setError(errorData.detail || "Unknown error");
-              return;
-            }
-
-            const data = await res.json();
-            setAnalysis(data);
-            console.log(data);
-          } catch (err) {
-            setError("Failed to communicate with disease API");
+          if (!res.ok) {
+            const errorData = await res.json();
+            setError(errorData.detail || "Unknown error");
+            return;
           }
-        
 
-        const prompt = `Given the following plant disease image context, return ONLY a JSON object with these fields: "disease", "description", "treatment", and "advice". No extra text, just valid JSON. Example:\n{\n  "disease": "Leaf Spot",\n  "description": "Leaf spot is characterized by small, circular, tan or brown spots on the leaves.",\n  "advice": "Ensure adequate spacing between plants to improve air circulation. Avoid overhead watering to minimize leaf wetness duration."\n}\nImage context: ${file.name}`;
+          const data = await res.json();
+          setAnalysis(data);
+          console.log(data);
+        } catch (err) {
+          setError("Failed to communicate with disease API");
+        }
+
+
+        // Include user's selected language so the AI returns fields in that language
+        // and attach the actual image data (base64 data URL) so Gemini can inspect it.
+        const imageData = ev.target.result; // data URL produced by readAsDataURL
+        const langCode = (localStorage.getItem('i18nextLng') || 'en');
+        const userLang = langCode === 'ta' ? 'Tamil' : langCode === 'en' ? 'English' : langCode;
+        const prompt = `Respond in ${userLang}. Given the following plant disease image (provided as a base64 data URL), return ONLY a JSON object with these fields: "disease", "description", "treatment", and "advice".
+                 No extra text, just valid JSON. Example:\n{\n  "disease": "Leaf Spot",\n  "description": "Leaf spot is characterized by small, circular, tan or brown spots on the leaves.",\n  "advice": 
+                 "Ensure adequate spacing between plants to improve air circulation. Avoid overhead watering to minimize leaf wetness duration."\n}\nImage data (base64 data URL): ${imageData}`;
         try {
           const res = await fetch(GEMINI_API_URL, {
             method: "POST",
@@ -75,7 +83,7 @@ function DetectDisease() {
           let result = null;
           try {
             result = JSON.parse(geminiText);
-            
+
           } catch {
             // fallback: try to extract JSON from the response
             const match = geminiText.match(/\{[\s\S]*\}/);
@@ -148,7 +156,7 @@ function DetectDisease() {
     <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-8">
       {/* Disease Detection Section */}
       <section className="bg-gray-50 rounded-lg p-6 text-center">
-        <h1 className="text-black mb-4">Disease Detection</h1>
+        <h1 className="text-black mb-4">{t('disease_detection')}</h1>
         {image ? (
           <img
             src={image}
@@ -159,7 +167,7 @@ function DetectDisease() {
           />
         ) : (
           <div className="w-[300px] h-[200px] mx-auto flex items-center justify-center bg-gray-200 rounded-md text-xs text-gray-500">
-            No image selected
+            {t('no_image_selected')}
           </div>
         )}
         <div className="mt-4 flex justify-center space-x-3">
@@ -169,14 +177,14 @@ function DetectDisease() {
             onClick={handleRetake}
             disabled={!image}
           >
-            Retake Photo
+            {t('retake_photo')}
           </button>
           <button
             className="bg-black text-white text-xs font-semibold rounded px-3 py-1"
             type="button"
             onClick={handleUploadClick}
           >
-            Upload New Image
+            {t('upload_new_image')}
           </button>
           <input
             type="file"
@@ -190,33 +198,33 @@ function DetectDisease() {
 
       {/* AI Analysis Section */}
       <section className="bg-white rounded-lg p-6 border border-gray-100 shadow-sm space-y-4">
-        <div className="text-black text-sm font-normal"><strong>AI Analysis Results</strong></div>
-        <div className="w-full h-full p-3 py-5 resize-none bg-gray-100 text-xs rounded p-1">
-          <strong>Disease Detected :</strong>
-          {loading ? "Analyzing..." :
+        <div className="text-black text-sm font-normal"><strong>{t('ai_analysis_results')}</strong></div>
+        <div className="w-full h-full p-3 py-5 resize-none bg-gray-100 text-xs rounded">
+          <strong>{t('disease_detected')} :</strong>
+          {loading ? t('analyzing') :
             analysis
               ? ` ${analysis.detected}`
               : ""}
           <br />
           <br />
-          <strong>Description :</strong>{loading ? "Analyzing..." :
+          <strong>{t('description')} :</strong>{loading ? t('analyzing') :
             analysis
               ? ` ${analysis.description}\n`
               : ""}
           <br />
-          <br/>
+          <br />
 
-          <strong>Treatment :</strong>
-          {loading ? "Analyzing..." :
+          <strong>{t('treatment')} :</strong>
+          {loading ? t('analyzing') :
             analysis
               ? ` ${analysis.treatment}`
               : ""}
 
         </div>
         <div className="bg-gray-200 rounded-md p-3 text-xs text-black text-left">
-          <strong>Advice</strong>
+          <strong>{t('advice')}</strong>
           <br />
-          {loading ? "Analyzing..." : analysis ? analysis.advice : ""}
+          {loading ? t('analyzing') : analysis ? analysis.advice : ""}
         </div>
         {error && <div className="text-red-500 text-xs mt-2">{error}</div>}
       </section>

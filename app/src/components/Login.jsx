@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaSeedling, FaSignInAlt } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next'
 
 const Login = () => {
   const [form, setForm] = useState({ email: '', password: '' });
@@ -34,6 +35,8 @@ const Login = () => {
     }
   };
 
+  const { t } = useTranslation()
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-white">
       <form
@@ -45,12 +48,12 @@ const Login = () => {
             <FaSeedling />
           </div>
           <h2 className="text-2xl font-bold text-green-700 mb-1 flex items-center gap-2">
-            <FaSignInAlt /> Login
+            <FaSignInAlt /> {t('login_title')}
           </h2>
-          <p className="text-gray-500 text-sm">Welcome back to your agri dashboard!</p>
+          <p className="text-gray-500 text-sm">{t('login_welcome')}</p>
         </div>
         <div className="mb-4">
-          <label className="block text-gray-700 mb-1">Email</label>
+          <label className="block text-gray-700 mb-1">{t('email')}</label>
           <input
             type="email"
             name="email"
@@ -62,7 +65,7 @@ const Login = () => {
           />
         </div>
         <div className="mb-6">
-          <label className="block text-gray-700 mb-1">Password</label>
+          <label className="block text-gray-700 mb-1">{t('password')}</label>
           <input
             type="password"
             name="password"
@@ -79,11 +82,11 @@ const Login = () => {
           disabled={loading}
           className="w-full bg-gradient-to-r from-green-400 to-green-600 text-white py-2 rounded-lg font-semibold shadow hover:from-green-500 hover:to-green-700 transition flex items-center justify-center gap-2"
         >
-          {loading ? 'Logging in...' : <><FaSignInAlt /> Login</>}
+          {loading ? t('logging_in') : <><FaSignInAlt /> {t('login_title')}</>}
         </button>
         <div className="text-center mt-4 text-gray-600 text-sm">
-          New to AgriTech?{' '}
-          <Link to="/signup" className="text-green-600 font-semibold hover:underline">Sign Up</Link>
+          {t('new_to_agritech')}{' '}
+          <Link to="/signup" className="text-green-600 font-semibold hover:underline">{t('sign_up')}</Link>
         </div>
       </form>
     </div>

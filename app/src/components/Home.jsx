@@ -3,8 +3,11 @@ import useDiseaseAlerts from './useDiseaseAlerts'
 import WeatherAnalysis from './WeatherAnalysis'
 import { Link, useNavigate } from 'react-router-dom'
 import { FaCloudSun, FaSeedling, FaPlus, FaTrash } from "react-icons/fa"
+import { useTranslation } from 'react-i18next'
 
 function Home() {
+  const { t } = useTranslation()
+
   // Get userId from localStorage (assuming user info is stored after login/signup)
   let userId = null;
   try {
@@ -13,7 +16,9 @@ function Home() {
       const user = JSON.parse(userStr);
       userId = user.id || user._id;
     }
-  } catch { }
+  } catch {
+
+  }
 
   useDiseaseAlerts(userId);
 
@@ -246,32 +251,15 @@ function Home() {
                 <FaCloudSun />
               </div>
               <div>
-                <h2 className={sectionTitle}>Weather</h2>
-                <p className="text-gray-500 text-sm">Your local forecast</p>
+                <h2 className={sectionTitle}>{t('weather')}</h2>
+                <p className="text-gray-500 text-sm">{t('local_forecast')}</p>
               </div>
             </div>
-            {weatherLoading ? (
-              <div className="animate-pulse h-10 bg-gray-200 rounded mb-4" />
-            ) : weatherError ? (
-              <span className="text-sm text-red-500">{weatherError}</span>
-            ) : (
-              <div className="flex items-center gap-4 mb-6">
-                <img
-                  src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
-                  alt="weather"
-                  className="w-14 h-14"
-                />
-                <div>
-                  <div className="text-3xl font-bold text-gray-800">{Math.round(weather.temp)}°C</div>
-                  <div className="text-gray-600 text-lg">{weather.desc}</div>
-                  <div className="text-xs text-gray-400">{new Date(weather.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                </div>
-              </div>
-            )}
+
             {/* Hourly Forecast */}
             {!weatherLoading && !weatherError && (
               <div className="mb-4">
-                <div className={subTitle}>Next Hours</div>
+                <div className={subTitle}>{t('next_hours')}</div>
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {hourly.map((h, idx) => (
                     <div key={idx} className="flex flex-col items-center bg-white/70 rounded-lg p-2 shadow min-w-[64px]">
@@ -286,7 +274,7 @@ function Home() {
             {/* Daily Forecast */}
             {!weatherLoading && !weatherError && (
               <div>
-                <div className={subTitle}>Next 7 Days</div>
+                <div className={subTitle}>{t('next_7_days')}</div>
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {daily.map((d, idx) => (
                     <div key={idx} className="flex flex-col items-center bg-white/70 rounded-lg p-2 shadow min-w-[64px]">
@@ -314,8 +302,8 @@ function Home() {
                 <FaSeedling />
               </div>
               <div>
-                <h2 className={sectionTitle}>My Crops</h2>
-                <p className="text-gray-500 text-sm">Manage your fields</p>
+                <h2 className={sectionTitle}>{t('my_crops')}</h2>
+                <p className="text-gray-500 text-sm">{t('manage_fields')}</p>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4">
@@ -323,14 +311,14 @@ function Home() {
                 type="text"
                 value={newCrop}
                 onChange={(e) => setNewCrop(e.target.value)}
-                placeholder="Add new crop"
+                placeholder={t('add').concat(' new crop')}
                 className={inputStyle + " flex-1"}
               />
               <button
                 onClick={handleAddCrop}
                 className={buttonStyle + " w-full sm:w-auto justify-center"}
               >
-                <FaPlus /> Add
+                <FaPlus /> {t('add')}
               </button>
 
 
@@ -340,7 +328,7 @@ function Home() {
                   className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 text-white px-4 py-2 rounded-lg shadow transition font-semibold flex items-center gap-2 w-full sm:w-auto justify-center"
                 >
                   <FaSeedling />
-                  Get Recommendation
+                  {t('get_recommendation')}
                 </Link>
               </button>
             </div>
@@ -375,7 +363,7 @@ function Home() {
             {/* Show loading state for crop operations */}
             {cropLoading && (
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <span className="text-sm text-blue-600">Processing crop operation...</span>
+                <span className="text-sm text-blue-600">{t('processing_crop_operation')}</span>
               </div>
             )}
           </div>
@@ -396,9 +384,9 @@ function Home() {
           <Link to="/disease-detection" className="transition hover:scale-105">
             <div className="rounded-2xl shadow-lg bg-gradient-to-br from-blue-50 to-white border border-blue-100 p-6 text-center h-full flex flex-col items-center">
               <i className="fas fa-search text-3xl text-blue-600 mb-4"></i>
-              <h3 className="font-semibold text-lg mb-2">Disease Detection</h3>
+              <h3 className="font-semibold text-lg mb-2">{t('disease_detection')}</h3>
               <p className="text-sm text-gray-600">
-                Upload plant images to detect diseases instantly using AI analysis.
+                {t('upload_plant_images')}
               </p>
             </div>
           </Link>
@@ -406,9 +394,9 @@ function Home() {
           <Link to="/crop-recommendation" className="transition hover:scale-105">
             <div className="rounded-2xl shadow-lg bg-gradient-to-br from-green-50 to-white border border-green-100 p-6 text-center h-full flex flex-col items-center">
               <i className="fas fa-leaf text-3xl text-green-600 mb-4"></i>
-              <h3 className="font-semibold text-lg mb-2">Crop Recommendation</h3>
+              <h3 className="font-semibold text-lg mb-2">{t('crop_recommendation')}</h3>
               <p className="text-sm text-gray-600">
-                Get best crop suggestions based on soil type, season, and water availability.
+                {t('get_best_crop_suggestions')}
               </p>
             </div>
           </Link>
@@ -416,9 +404,9 @@ function Home() {
           <Link to="/market-prices" className="transition hover:scale-105">
             <div className="rounded-2xl shadow-lg bg-gradient-to-br from-yellow-50 to-white border border-yellow-100 p-6 text-center h-full flex flex-col items-center">
               <i className="fas fa-rupee-sign text-3xl text-yellow-600 mb-4"></i>
-              <h3 className="font-semibold text-lg mb-2">Market Prices</h3>
+              <h3 className="font-semibold text-lg mb-2">{t('market_prices')}</h3>
               <p className="text-sm text-gray-600">
-                Stay updated with the latest prices of crops in nearby markets.
+                {t('stay_updated_with_latest_prices')}
               </p>
             </div>
           </Link>
@@ -426,9 +414,9 @@ function Home() {
           <Link to="/government-schemes" className="transition hover:scale-105">
             <div className="rounded-2xl shadow-lg bg-gradient-to-br from-purple-50 to-white border border-purple-100 p-6 text-center h-full flex flex-col items-center">
               <i className="fas fa-hand-holding-usd text-3xl text-purple-600 mb-4"></i>
-              <h3 className="font-semibold text-lg mb-2">Government Schemes</h3>
+              <h3 className="font-semibold text-lg mb-2">{t('government_schemes')}</h3>
               <p className="text-sm text-gray-600">
-                Find and apply for agriculture-related subsidy schemes easily.
+                {t('find_apply_agriculture_subsidy_schemes')}
               </p>
             </div>
           </Link>
@@ -439,59 +427,59 @@ function Home() {
           <div className="rounded-2xl shadow-lg bg-gradient-to-br from-blue-50 to-white border border-blue-100 p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
               <i className="fas fa-tint text-blue-600"></i>
-              Smart Irrigation Insights
+              {t('smart_irrigation_insights')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 bg-white rounded-lg shadow-sm">
-                <h4 className="font-semibold text-gray-700 mb-2">Soil Types</h4>
+                <h4 className="font-semibold text-gray-700 mb-2">{t('soil_types')}</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span>Clay:</span>
-                    <span className="text-blue-600">High retention</span>
+                    <span>{t('clay')}:</span>
+                    <span className="text-blue-600">{t('high_retention')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Sandy:</span>
-                    <span className="text-yellow-600">Low retention</span>
+                    <span>{t('sandy')}:</span>
+                    <span className="text-yellow-600">{t('low_retention')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Loamy:</span>
-                    <span className="text-green-600">Optimal</span>
+                    <span>{t('loamy')}:</span>
+                    <span className="text-green-600">{t('optimal')}</span>
                   </div>
                 </div>
               </div>
 
               <div className="p-4 bg-white rounded-lg shadow-sm">
-                <h4 className="font-semibold text-gray-700 mb-2">Crop Water Needs</h4>
+                <h4 className="font-semibold text-gray-700 mb-2">{t('crop_water_needs')}</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span>Tomatoes:</span>
-                    <span className="text-red-600">25mm/day</span>
+                    <span>{t('tomatoes')}:</span>
+                    <span className="text-red-600">25mm/{t('day')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Lettuce:</span>
-                    <span className="text-green-600">15mm/day</span>
+                    <span>{t('lettuce')}:</span>
+                    <span className="text-green-600">15mm/{t('day')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Corn:</span>
-                    <span className="text-yellow-600">30mm/day</span>
+                    <span>{t('corn')}:</span>
+                    <span className="text-yellow-600">30mm/{t('day')}</span>
                   </div>
                 </div>
               </div>
 
               <div className="p-4 bg-white rounded-lg shadow-sm">
-                <h4 className="font-semibold text-gray-700 mb-2">Alerts</h4>
+                <h4 className="font-semibold text-gray-700 mb-2">{t('alerts')}</h4>
                 <div className="space-y-2 text-sm">
                   <div className="text-orange-600">
                     <i className="fas fa-exclamation-triangle mr-2"></i>
-                    Optimal timing: 6-8 AM
+                    {t('optimal_timing')}: 6-8 AM
                   </div>
                   <div className="text-blue-600">
                     <i className="fas fa-cloud-rain mr-2"></i>
-                    Check rain forecast
+                    {t('check_rain_forecast')}
                   </div>
                   <div className="text-green-600">
                     <i className="fas fa-leaf mr-2"></i>
-                    Monitor soil moisture
+                    {t('monitor_soil_moisture')}
                   </div>
                 </div>
               </div>
