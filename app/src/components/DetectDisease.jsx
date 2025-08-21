@@ -33,11 +33,12 @@ function DetectDisease() {
     if (file) {
       const reader = new FileReader()
       reader.onload = async (ev) => {
-        setImage(ev.target.result)
+        const imageDataUrl = ev.target.result
+        setImage(imageDataUrl)
         setLoading(true);
         setError("");
 
-        //get prediction from the disease API
+        // get prediction from the disease API
         const formData = new FormData();
         formData.append("file", file);
 
@@ -48,102 +49,119 @@ function DetectDisease() {
           });
 
           if (!res.ok) {
-            const errorData = await res.json();
-            setError(errorData.detail || "Unknown error");
+            const errorData = await res.json().catch(() => ({}));
+            setError(errorData.detail || "Unknown error from prediction API");
+            setLoading(false);
             return;
           }
 
-          const data = await res.json();
-          setAnalysis(data);
-          console.log(data);
-        } catch (err) {
-          setError("Failed to communicate with disease API");
-        }
+          const pred = await res.json();
+          // pred expected shape: { class_name, class_index, confidence }
+          const predictedClass = pred.class_name || pred.className || pred.detected || "Unknown";
 
-
-        // Include user's selected language so the AI returns fields in that language
-        // and attach the actual image data (base64 data URL) so Gemini can inspect it.
-        const imageData = ev.target.result; // data URL produced by readAsDataURL
-        const langCode = (localStorage.getItem('i18nextLng') || 'en');
-        const userLang = langCode === 'ta' ? 'Tamil' : langCode === 'en' ? 'English' : langCode;
-        const prompt = `Respond in ${userLang}. Given the following plant disease image (provided as a base64 data URL), return ONLY a JSON object with these fields: "disease", "description", "treatment", and "advice".
-                 No extra text, just valid JSON. Example:\n{\n  "disease": "Leaf Spot",\n  "description": "Leaf spot is characterized by small, circular, tan or brown spots on the leaves.",\n  "advice": 
-                 "Ensure adequate spacing between plants to improve air circulation. Avoid overhead watering to minimize leaf wetness duration."\n}\nImage data (base64 data URL): ${imageData}`;
-        try {
-          const res = await fetch(GEMINI_API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }]
-            })
+          // show immediate minimal prediction
+          setAnalysis({
+            detected: predictedClass,
+            description: pred.description || "",
+            treatment: pred.treatment || "",
+            advice: pred.advice || ""
           });
-          const data = await res.json();
-          console.log(data);
-          const geminiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          let result = null;
-          try {
-            result = JSON.parse(geminiText);
 
-          } catch {
-            // fallback: try to extract JSON from the response
-            const match = geminiText.match(/\{[\s\S]*\}/);
-            if (match) {
-              try { result = JSON.parse(match[0]); } catch { }
-            }
-          }
-          if (result && result.disease && result.description && result.advice) {
-            setAnalysis({
-              detected: result.disease,
-              description: result.description,
-              treatment: result.treatment || "",
-              advice: result.advice
+          // Prepare language and prompt for Gemini — include the image URL (data URL) and the model classname
+          const langCode = (localStorage.getItem('i18nextLng') || 'en');
+          const userLang = langCode === 'ta' ? 'Tamil' : langCode === 'en' ? 'English' : langCode;
+
+          const prompt = `You must respond entirely in ${userLang} language. Given the plant disease prediction "${predictedClass}", provide detailed information about this disease. All text content including disease name, description, treatment, and advice must be written in ${userLang}. Return ONLY a JSON object with these fields: "disease", "description", "treatment", and "advice". All field values must be in ${userLang} language. No extra text, just valid JSON with ${userLang} content.`;
+
+          // Call Gemini with prompt
+          try {
+            const gRes = await fetch(GEMINI_API_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+              })
             });
-            // Notify backend of disease detection for SMS alert
-            try {
-              // Get user location from localStorage (if stored at signup) or prompt for it
-              let userLocation = null;
-              const userStr = localStorage.getItem('user');
-              if (userStr) {
-                const user = JSON.parse(userStr);
-                if (user.location && user.location.coordinates) {
-                  userLocation = user.location;
-                }
-              }
-              if (!userLocation && navigator.geolocation) {
-                await new Promise((resolve, reject) => {
-                  navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                      userLocation = {
-                        type: 'Point',
-                        coordinates: [pos.coords.longitude, pos.coords.latitude]
-                      };
-                      resolve();
-                    },
-                    (err) => resolve()
-                  );
-                });
-              }
-              if (userLocation) {
-                await fetch('http://localhost:5000/api/disease/report', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    disease: result.disease,
-                    description: result.description,
-                    location: userLocation
-                  })
-                });
-              }
-            } catch (e) {
-              // Ignore notification errors for now
+
+            if (!gRes.ok) {
+              const text = await gRes.text().catch(() => '');
+              throw new Error(`Gemini API error ${gRes.status}: ${text}`);
             }
-          } else {
-            setError("Invalid response from Gemini.");
-            toast.error("Invalid response from Gemini.");
+
+            const gData = await gRes.json();
+            const geminiText = gData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+            let result = null;
+            try {
+              result = JSON.parse(geminiText);
+            } catch {
+              const match = geminiText.match(/\{[\s\S]*\}/);
+              if (match) {
+                try { result = JSON.parse(match[0]); } catch { result = null }
+              }
+            }
+
+            if (result && result.disease) {
+              setAnalysis({
+                detected: result.disease,
+                description: result.description || "",
+                treatment: result.treatment || "",
+                advice: result.advice || ""
+              });
+
+              // Optionally notify backend of disease detection
+              try {
+                let userLocation = null;
+                const userStr = localStorage.getItem('user');
+                if (userStr) {
+                  const user = JSON.parse(userStr);
+                  if (user.location && user.location.coordinates) {
+                    userLocation = user.location;
+                  }
+                }
+                if (!userLocation && navigator.geolocation) {
+                  await new Promise((resolve) => {
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        userLocation = {
+                          type: 'Point',
+                          coordinates: [pos.coords.longitude, pos.coords.latitude]
+                        };
+                        resolve();
+                      },
+                      () => resolve()
+                    );
+                  });
+                }
+                if (userLocation) {
+                  await fetch('http://localhost:5000/api/disease/report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      disease: result.disease,
+                      description: result.description,
+                      location: userLocation
+                    })
+                  });
+                }
+              } catch (notifErr) {
+                // ignore notification errors
+              }
+
+            } else {
+              setError("Invalid response from Gemini.");
+              toast.error("Invalid response from Gemini.");
+            }
+
+          } catch (gemErr) {
+            console.error(gemErr);
+            setError("Failed to get analysis from Gemini.");
+            toast.error("Failed to get analysis from Gemini.");
           }
+
         } catch (err) {
-          setError("Failed to get analysis from Gemini.");
-          toast.error("Failed to get analysis from Gemini.");
+          console.error(err);
+          setError("Failed to communicate with disease API");
         } finally {
           setLoading(false);
         }
