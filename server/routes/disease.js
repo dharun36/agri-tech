@@ -4,6 +4,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const fetch = require('node-fetch');
 const { sendMail, testConnection } = require('../utils/mailer');
+const { sendMail: sendEnhancedMail } = require('../utils/mailer-enhanced');
 
 
 
@@ -57,6 +58,31 @@ router.post('/report', async (req, res) => {
         io.to(`user-${user._id}`).emit('new-disease-alert', {
           alert: alert,
           message: `New disease alert: ${disease} detected in your area`
+        });
+      }
+
+      // Send email notification (non-blocking)
+      if (user.email) {
+        sendEnhancedMail({
+          to: user.email,
+          subject: `🚨 Disease Alert: ${disease} detected in your area`,
+          text: `Dear ${user.name || 'Farmer'},\n\nA new disease has been detected in your area:\n\nDisease: ${disease}\nDescription: ${description}\nLocation: ${location.coordinates.join(', ')}\n\nPlease check your AgriTech app for more details.\n\nBest regards,\nAgriTech Team`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #dc2626;">🚨 Disease Alert</h2>
+              <p>Dear ${user.name || 'Farmer'},</p>
+              <p>A new disease has been detected in your area:</p>
+              <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 16px 0;">
+                <h3 style="margin: 0; color: #dc2626;">${disease}</h3>
+                <p style="margin: 8px 0 0 0;">${description}</p>
+                <p style="margin: 8px 0 0 0; font-size: 14px; color: #666;"><strong>Location:</strong> ${location.coordinates.join(', ')}</p>
+              </div>
+              <p>Please check your AgriTech app for more details and recommended actions.</p>
+              <p style="margin-top: 32px;">Best regards,<br><strong>AgriTech Team</strong></p>
+            </div>
+          `
+        }).catch(err => {
+          console.error(`Failed to send email to ${user.email}:`, err.message);
         });
       }
     }
@@ -167,46 +193,98 @@ router.post('/test-email', async (req, res) => {
   }
 });
 
-// Enhanced email test endpoint with multiple fallbacks
-router.post('/test-email-enhanced', async (req, res) => {
-  const { to, subject, text } = req.body;
 
-  if (!to || !subject || !text) {
-    return res.status(400).json({ message: 'to, subject, and text are required' });
+
+// POST /api/disease/send-summary
+// Send email summary of recent alerts for a user
+router.post('/send-summary', async (req, res) => {
+  const { userId, email, period = 7 } = req.body; // period in days
+
+  if (!userId || !email) {
+    return res.status(400).json({ message: 'userId and email are required' });
   }
 
   try {
-    // Use enhanced mailer with fallbacks
-    const { sendMail: sendMailEnhanced } = require('../utils/mailer-enhanced');
+    // Get recent alerts for the user
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - period);
 
-    const result = await sendMailEnhanced({
-      to,
-      subject,
-      text,
-      html: `<div style="font-family: Arial, sans-serif; padding: 20px; border-left: 4px solid #4CAF50;">
-        <h2 style="color: #2E7D32;">🌱 AgriTech Disease Alert</h2>
-        <p style="color: #333; line-height: 1.6;">${text}</p>
-        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="color: #666; font-size: 12px;">
-          This is an automated message from AgriTech Disease Detection System.<br>
-          Time: ${new Date().toLocaleString()}
+    const alerts = await DiseaseAlert.find({
+      user: userId,
+      createdAt: { $gte: startDate }
+    }).sort({ createdAt: -1 });
+
+    if (alerts.length === 0) {
+      return res.json({ message: 'No recent alerts to send' });
+    }
+
+    // Group alerts by disease
+    const summary = {};
+    alerts.forEach(alert => {
+      if (!summary[alert.disease]) {
+        summary[alert.disease] = {
+          count: 0,
+          latestDate: alert.createdAt,
+          description: alert.description
+        };
+      }
+      summary[alert.disease].count++;
+      if (alert.createdAt > summary[alert.disease].latestDate) {
+        summary[alert.disease].latestDate = alert.createdAt;
+      }
+    });
+
+    // Create email content
+    let emailText = `Disease Alert Summary (Last ${period} days)\n\n`;
+    let emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2E7D32;">🌱 Disease Alert Summary</h2>
+        <p>Here's your disease alert summary for the last ${period} days:</p>
+        <div style="background-color: #f9f9f9; padding: 16px; border-radius: 8px;">
+    `;
+
+    Object.entries(summary).forEach(([disease, info]) => {
+      emailText += `- ${disease}: ${info.count} alert(s), latest: ${new Date(info.latestDate).toLocaleDateString()}\n`;
+      emailHtml += `
+        <div style="margin-bottom: 16px; padding: 12px; background-color: white; border-radius: 4px; border-left: 4px solid #4CAF50;">
+          <h4 style="margin: 0; color: #2E7D32;">${disease}</h4>
+          <p style="margin: 4px 0; color: #666;">Count: ${info.count} alert(s)</p>
+          <p style="margin: 4px 0; color: #666;">Latest: ${new Date(info.latestDate).toLocaleDateString()}</p>
+        </div>
+      `;
+    });
+
+    emailHtml += `
+        </div>
+        <p style="margin-top: 20px;">Total alerts: <strong>${alerts.length}</strong></p>
+        <p style="color: #666; font-size: 12px; margin-top: 32px;">
+          This summary was generated on ${new Date().toLocaleString()}<br>
+          AgriTech Disease Detection System
         </p>
-      </div>`
+      </div>
+    `;
+
+    const result = await sendEnhancedMail({
+      to: email,
+      subject: `📊 AgriTech: Disease Alert Summary (${alerts.length} alerts)`,
+      text: emailText,
+      html: emailHtml
     });
 
     res.json({
       success: true,
-      messageId: result.messageId,
-      method: result.method,
-      message: `Email sent successfully via ${result.method}`
+      message: 'Summary email sent successfully',
+      alertCount: alerts.length,
+      method: result.method
     });
+
   } catch (error) {
-    console.error('Enhanced email test failed:', error);
+    console.error('Error sending summary email:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'All email methods failed',
-      suggestion: 'Check firewall settings or configure HTTP-based email services'
+      error: error.message
     });
   }
 });
+
 module.exports = router;
