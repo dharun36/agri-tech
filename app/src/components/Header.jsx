@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import LanguageSwitcher from './LanguageSwitcher'
+import AlertsBadge from './AlertsBadge'
 import { useTranslation } from 'react-i18next'
 
 function Header() {
@@ -8,6 +9,14 @@ function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem('token'));
   const navigate = useNavigate();
+
+  // Get user ID from localStorage (you may need to adjust this based on your auth system)
+  const userId = localStorage.getItem('userId') || "6888e92c7ff14b3bfc90158e"; // Temporary hardcode for testing
+
+  console.log('🔍 Header - userId from localStorage:', localStorage.getItem('userId'));
+  console.log('🔍 Header - final userId used:', userId);
+  console.log('🔍 Header - token from localStorage:', localStorage.getItem('token'));
+  console.log('🔍 Header - loggedIn state:', loggedIn);
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : 'auto';
@@ -24,6 +33,9 @@ function Header() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
     setLoggedIn(false);
     navigate('/login');
   };
@@ -55,6 +67,15 @@ function Header() {
           <li><Link to="/market-prices" className="px-3 py-1 rounded hover:bg-gray-800">{t('market_prices')}</Link></li>
           <li><Link to="/government-schemes" className="px-3 py-1 rounded hover:bg-gray-800">{t('government_schemes')}</Link></li>
           <li><Link to="/crop-recommendation" className="px-3 py-1 rounded hover:bg-gray-800">{t('crop_recommendation')}</Link></li>
+          {loggedIn && userId && (
+            <li>
+              <AlertsBadge
+                userId={userId}
+                onClick={() => navigate('/alerts')}
+                className="text-white hover:bg-gray-800"
+              />
+            </li>
+          )}
           <li><LanguageSwitcher /></li>
           {!loggedIn ? (
             <li>

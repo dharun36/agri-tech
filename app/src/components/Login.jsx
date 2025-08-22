@@ -25,7 +25,16 @@ const Login = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Login failed');
+
+      // Store both token and userId
       localStorage.setItem('token', data.token);
+      localStorage.setItem('userId', data.user.id);
+      console.log('🎯 Login - Retrieved userId:', data.user.id);
+      localStorage.setItem('userEmail', data.user.email);
+      localStorage.setItem('userName', data.user.name);
+
+      console.log('✅ Login successful - stored userId:', data.user.id);
+
       window.dispatchEvent(new Event('storage'));
       navigate('/');
     } catch (err) {

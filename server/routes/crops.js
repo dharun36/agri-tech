@@ -9,16 +9,32 @@ router.use(auth);
 
 // Get all crops for user
 router.get('/', async (req, res) => {
-  const crops = await Crop.find({ user: req.user._id });
-  res.json(crops);
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+    const crops = await Crop.find({ user: req.user._id });
+    res.json(crops);
+  } catch (error) {
+    console.error('Error fetching crops:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // Add crop
 router.post('/', async (req, res) => {
-  const { name, status } = req.body;
-  if (!name) return res.status(400).json({ message: 'Name required' });
-  const crop = await Crop.create({ user: req.user._id, name, status });
-  res.json(crop);
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+    const { name, status } = req.body;
+    if (!name) return res.status(400).json({ message: 'Name required' });
+    const crop = await Crop.create({ user: req.user._id, name, status });
+    res.json(crop);
+  } catch (error) {
+    console.error('Error creating crop:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // Update crop

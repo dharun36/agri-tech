@@ -3,12 +3,26 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const fetch = require('node-fetch');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
 
-dotenv.config({ path: './config.env' });
+// Load environment variables from .env in server folder
+dotenv.config();
 
 const app = express();
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"], // Multiple frontend URLs
+    methods: ["GET", "POST"]
+  }
+});
+
 app.use(cors());
 app.use(express.json());
+
+// Make io available to routes
+app.set('io', io);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -85,6 +99,21 @@ app.post('/api/weather-analysis', async (req, res) => {
 
 app.get('/', (req, res) => res.send('AgriTech Simple API Running'));
 
+// Socket.io connection handling
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
+  // Join user to their personal room for targeted alerts
+  socket.on('join-user-room', (userId) => {
+    socket.join(`user-${userId}`);
+    console.log(`User ${userId} joined their room`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
+});
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
