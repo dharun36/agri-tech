@@ -8,24 +8,137 @@ const DISEASE_API_URL = "http://127.0.0.1:8000";
 
 function DetectDisease() {
   const { t } = useTranslation();
-  const [image, setImage] = useState("https://storage.googleapis.com/a1aa/image/84ab60a5-9190-488e-7e07-7a0015dffdc7.jpg")
+  const [image, setImage] = useState("")
   const [analysis, setAnalysis] = useState({
-    detected: "Leaf Spot",
-    description: "Leaf spot is characterized by small, circular, tan or brown spots on the leaves.",
-    treatment: "Use fungicides containing chlorothalonil or copper to treat the affected plants.",
-    advice: "Ensure adequate spacing between plants to improve air circulation. Avoid overhead watering to minimize leaf wetness duration."
+    detected: "",
+    description: "",
+    treatment: "",
+    advice: ""
   })
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isSpreadable, setIsSpreadable] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [analysisData, setAnalysisData] = useState(null); // Store bilingual data
+  const [locationType, setLocationType] = useState('current'); // 'current' or 'field'
   const fileInputRef = useRef(null)
 
   const handleRetake = () => {
     setImage("")
     setAnalysis(null)
+    setAnalysisData(null)
+    setIsSpreadable(false)
+    setError("")
+    setLocationType('current')
   }
 
   const handleUploadClick = () => {
     fileInputRef.current?.click()
+  }
+
+  // Function to update display when language changes
+  const updateDisplayLanguage = () => {
+    if (analysisData) {
+      const langCode = (localStorage.getItem('i18nextLng') || 'en');
+      const currentLang = langCode === 'ta' ? 'tamil' : 'english';
+      const displayData = analysisData[currentLang];
+
+      setAnalysis({
+        detected: displayData.disease,
+        description: displayData.description || "",
+        treatment: displayData.treatment || "",
+        advice: displayData.advice || ""
+      });
+    }
+  }
+
+  // Update display when component mounts or language changes
+  React.useEffect(() => {
+    updateDisplayLanguage();
+  }, [analysisData, localStorage.getItem('i18nextLng')])
+
+  const handleReportIssue = async () => {
+    if (!analysis || !isSpreadable) return;
+
+    setReportLoading(true);
+    try {
+      let userLocation = null;
+
+      if (locationType === 'field') {
+        // Get user's field location from localStorage
+        try {
+          const userLocationStr = localStorage.getItem('userLocation');
+          console.log('UserLocation from localStorage:', userLocationStr);
+
+          if (userLocationStr) {
+            const storedLocation = JSON.parse(userLocationStr);
+            console.log('Parsed location:', storedLocation);
+
+            if (storedLocation && storedLocation.type === 'Point' && Array.isArray(storedLocation.coordinates)) {
+              userLocation = storedLocation;
+              console.log('Field location found:', userLocation);
+            } else {
+              console.log('Invalid location format:', storedLocation);
+              toast.error(t('field_location_not_set') || 'Field location not set in your profile. Please update your profile first.');
+              setReportLoading(false);
+              return;
+            }
+          } else {
+            console.log('No field location found in localStorage');
+            toast.error(t('field_location_not_set') || 'Field location not set in your profile. Please update your profile first.');
+            setReportLoading(false);
+            return;
+          }
+        } catch (parseError) {
+          console.error('Error parsing user location:', parseError);
+          toast.error(t('error_fetching_field_location') || 'Error fetching field location. Please try current location instead.');
+          setReportLoading(false);
+          return;
+        }
+      } else {
+        // Use current GPS location
+        if (navigator.geolocation) {
+          await new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                userLocation = {
+                  type: 'Point',
+                  coordinates: [pos.coords.longitude, pos.coords.latitude]
+                };
+                resolve();
+              },
+              () => resolve()
+            );
+          });
+        }
+      }
+
+      if (userLocation) {
+        const response = await fetch('http://localhost:5000/api/disease/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            disease: analysis.detected,
+            description: analysis.description,
+            location: userLocation,
+            locationType: locationType // Add location type info
+          })
+        });
+
+        if (response.ok) {
+          toast.success(t('disease_reported_successfully') || 'Disease reported successfully! Nearby farmers will be notified.');
+        } else {
+          toast.error(t('report_failed') || 'Failed to report disease. Please try again.');
+        }
+      } else {
+        toast.error(t('location_required') || 'Location access required to report disease outbreak.');
+      }
+    } catch (error) {
+      console.error('Report error:', error);
+      toast.error(t('report_error') || 'Error reporting disease. Please try again.');
+    } finally {
+      setReportLoading(false);
+    }
   }
 
   const handleFileChange = (e) => {
@@ -67,11 +180,31 @@ function DetectDisease() {
             advice: pred.advice || ""
           });
 
-          // Prepare language and prompt for Gemini — include the image URL (data URL) and the model classname
+          // Prepare language and prompt for Gemini — get response in both languages
           const langCode = (localStorage.getItem('i18nextLng') || 'en');
-          const userLang = langCode === 'ta' ? 'Tamil' : langCode === 'en' ? 'English' : langCode;
 
-          const prompt = `You must respond entirely in ${userLang} language. Given the plant disease prediction "${predictedClass}", provide detailed information about this disease. All text content including disease name, description, treatment, and advice must be written in ${userLang}. Return ONLY a JSON object with these fields: "disease", "description", "treatment", and "advice". All field values must be in ${userLang} language. No extra text, just valid JSON with ${userLang} content.`;
+          const prompt = `Given the plant disease prediction "${predictedClass}", provide detailed information about this disease in BOTH English and Tamil languages.
+
+IMPORTANT: Also determine if this disease is SPREADABLE/CONTAGIOUS to other plants (can spread from plant to plant through air, water, insects, contact, etc.).
+
+Return ONLY a JSON object with this structure:
+{
+  "english": {
+    "disease": "disease name in English",
+    "description": "description in English", 
+    "treatment": "treatment in English",
+    "advice": "advice in English"
+  },
+  "tamil": {
+    "disease": "disease name in Tamil",
+    "description": "description in Tamil",
+    "treatment": "treatment in Tamil", 
+    "advice": "advice in Tamil"
+  },
+  "spreadable": true/false
+}
+
+Ensure all Tamil text is properly written in Tamil script. No extra text, just valid JSON.`;
 
           // Call Gemini with prompt
           try {
@@ -101,58 +234,28 @@ function DetectDisease() {
               }
             }
 
-            if (result && result.disease) {
+            if (result && result.english && result.tamil) {
+              // Store bilingual data
+              setAnalysisData(result);
+
+              // Set current language display
+              const currentLang = langCode === 'ta' ? 'tamil' : 'english';
+              const displayData = result[currentLang];
+
               setAnalysis({
-                detected: result.disease,
-                description: result.description || "",
-                treatment: result.treatment || "",
-                advice: result.advice || ""
+                detected: displayData.disease,
+                description: displayData.description || "",
+                treatment: displayData.treatment || "",
+                advice: displayData.advice || ""
               });
 
-              // Optionally notify backend of disease detection
-              try {
-                let userLocation = null;
-                const userStr = localStorage.getItem('user');
-                if (userStr) {
-                  const user = JSON.parse(userStr);
-                  if (user.location && user.location.coordinates) {
-                    userLocation = user.location;
-                  }
-                }
-                if (!userLocation && navigator.geolocation) {
-                  await new Promise((resolve) => {
-                    navigator.geolocation.getCurrentPosition(
-                      (pos) => {
-                        userLocation = {
-                          type: 'Point',
-                          coordinates: [pos.coords.longitude, pos.coords.latitude]
-                        };
-                        resolve();
-                      },
-                      () => resolve()
-                    );
-                  });
-                }
-                if (userLocation) {
-                  await fetch('http://localhost:5000/api/disease/report', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      disease: result.disease,
-                      description: result.description,
-                      location: userLocation
-                    })
-                  });
-                }
-              } catch (notifErr) {
-                // ignore notification errors
-              }
+              // Set spreadable status
+              setIsSpreadable(result.spreadable === true);
 
             } else {
               setError("Invalid response from Gemini.");
               toast.error("Invalid response from Gemini.");
             }
-
           } catch (gemErr) {
             console.error(gemErr);
             setError("Failed to get analysis from Gemini.");
@@ -216,7 +319,25 @@ function DetectDisease() {
 
       {/* AI Analysis Section */}
       <section className="bg-white rounded-lg p-6 border border-gray-100 shadow-sm space-y-4">
-        <div className="text-black text-sm font-normal"><strong>{t('ai_analysis_results')}</strong></div>
+        <div className="flex justify-between items-center">
+          <div className="text-black text-sm font-normal"><strong>{t('ai_analysis_results')}</strong></div>
+          {/* Language Toggle Button */}
+          {analysisData && !loading && (
+            <div className="flex space-x-2">
+              <button
+                onClick={() => {
+                  const currentLang = localStorage.getItem('i18nextLng') || 'en';
+                  const newLang = currentLang === 'ta' ? 'en' : 'ta';
+                  localStorage.setItem('i18nextLng', newLang);
+                  updateDisplayLanguage();
+                }}
+                className="bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded transition-colors"
+              >
+                {(localStorage.getItem('i18nextLng') || 'en') === 'ta' ? 'English' : 'தமிழ்'}
+              </button>
+            </div>
+          )}
+        </div>
         <div className="w-full h-full p-3 py-5 resize-none bg-gray-100 text-xs rounded">
           <strong>{t('disease_detected')} :</strong>
           {loading ? t('analyzing') :
@@ -244,6 +365,83 @@ function DetectDisease() {
           <br />
           {loading ? t('analyzing') : analysis ? analysis.advice : ""}
         </div>
+
+        {/* Spreadable Disease Warning and Report Button */}
+        {analysis && !loading && isSpreadable && (
+          <div className="bg-orange-50 border border-orange-200 rounded-md p-3 space-y-3">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+              <span className="text-orange-800 text-xs font-medium">
+                {t('spreadable_disease_warning') || 'Warning: This disease can spread to other plants'}
+              </span>
+            </div>
+            <p className="text-orange-700 text-xs">
+              {t('report_help_farmers') || 'Report this issue to help alert nearby farmers and prevent further spread.'}
+            </p>
+
+            {/* Location Selection */}
+            <div className="space-y-2">
+              <p className="text-orange-800 text-xs font-medium">
+                {t('select_detection_location') || 'Where was this disease detected?'}
+              </p>
+              <div className="flex space-x-3">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    value="current"
+                    checked={locationType === 'current'}
+                    onChange={(e) => setLocationType(e.target.value)}
+                    className="w-3 h-3 text-orange-600"
+                  />
+                  <span className="text-xs text-orange-700">
+                    {t('current_location') || 'Current Location (GPS)'}
+                  </span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    value="field"
+                    checked={locationType === 'field'}
+                    onChange={(e) => setLocationType(e.target.value)}
+                    className="w-3 h-3 text-orange-600"
+                  />
+                  <span className="text-xs text-orange-700">
+                    {t('my_field') || 'My Field/Farm'}
+                  </span>
+                </label>
+              </div>
+              {locationType === 'field' && (
+                <p className="text-xs text-orange-600 bg-orange-100 p-2 rounded">
+                  {t('field_location_note') || 'This will use your saved field location from your profile.'}
+                </p>
+              )}
+            </div>
+
+            <button
+              onClick={handleReportIssue}
+              disabled={reportLoading}
+              className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white text-xs font-medium py-2 px-4 rounded transition-colors"
+            >
+              {reportLoading ? (t('reporting') || 'Reporting...') : (t('report_disease_outbreak') || 'Report Disease Outbreak')}
+            </button>
+          </div>
+        )}
+
+        {/* Non-spreadable Disease Info */}
+        {analysis && !loading && !isSpreadable && (
+          <div className="bg-green-50 border border-green-200 rounded-md p-3">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-green-800 text-xs font-medium">
+                {t('non_spreadable_disease') || 'This disease is not contagious to other plants'}
+              </span>
+            </div>
+            <p className="text-green-700 text-xs mt-1">
+              {t('isolated_treatment') || 'You can treat this plant individually without concern for spreading.'}
+            </p>
+          </div>
+        )}
+
         {error && <div className="text-red-500 text-xs mt-2">{error}</div>}
       </section>
     </main>

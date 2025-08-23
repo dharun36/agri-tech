@@ -29,11 +29,12 @@ const Login = () => {
       // Store both token and userId
       localStorage.setItem('token', data.token);
       localStorage.setItem('userId', data.user.id);
-      console.log('🎯 Login - Retrieved userId:', data.user.id);
       localStorage.setItem('userEmail', data.user.email);
       localStorage.setItem('userName', data.user.name);
+      if (data.user.location) {
+        localStorage.setItem('userLocation', JSON.stringify(data.user.location));
+      }
 
-      console.log('✅ Login successful - stored userId:', data.user.id);
 
       window.dispatchEvent(new Event('storage'));
       navigate('/');

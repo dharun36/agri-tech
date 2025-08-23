@@ -4,7 +4,6 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const fetch = require('node-fetch');
 const { sendMail, testConnection } = require('../utils/mailer');
-const { sendMail: sendEnhancedMail } = require('../utils/mailer-enhanced');
 
 
 
@@ -63,9 +62,9 @@ router.post('/report', async (req, res) => {
 
       // Send email notification (non-blocking)
       if (user.email) {
-        sendEnhancedMail({
+        sendMail({
           to: user.email,
-          subject: `🚨 Disease Alert: ${disease} detected in your area`,
+          subject: `Disease Alert: ${disease} detected in your area`,
           text: `Dear ${user.name || 'Farmer'},\n\nA new disease has been detected in your area:\n\nDisease: ${disease}\nDescription: ${description}\nLocation: ${location.coordinates.join(', ')}\n\nPlease check your AgriTech app for more details.\n\nBest regards,\nAgriTech Team`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

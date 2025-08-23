@@ -10,13 +10,12 @@ function Header() {
   const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem('token'));
   const navigate = useNavigate();
 
-  // Get user ID from localStorage (you may need to adjust this based on your auth system)
-  const userId = localStorage.getItem('userId') || "6888e92c7ff14b3bfc90158e"; // Temporary hardcode for testing
+  const userId = localStorage.getItem('userId');
 
-  console.log('🔍 Header - userId from localStorage:', localStorage.getItem('userId'));
-  console.log('🔍 Header - final userId used:', userId);
-  console.log('🔍 Header - token from localStorage:', localStorage.getItem('token'));
-  console.log('🔍 Header - loggedIn state:', loggedIn);
+  // console.log('🔍 Header - userId from localStorage:', localStorage.getItem('userId'));
+  // console.log('🔍 Header - final userId used:', userId);
+  // console.log('🔍 Header - token from localStorage:', localStorage.getItem('token'));
+  // console.log('🔍 Header - loggedIn state:', loggedIn);
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : 'auto';

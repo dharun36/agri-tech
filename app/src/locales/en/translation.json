@@ -175,5 +175,21 @@
   "schedule_inspection": "Schedule field inspection",
   "all_detections": "All Detections",
   "load_more": "Load More",
-  "unknown": "Unknown"
+  "unknown": "Unknown",
+  "field_location_not_set": "Field location not set in your profile. Please update your profile first.",
+  "error_fetching_field_location": "Error fetching field location. Please try current location instead.",
+  "select_detection_location": "Where was this disease detected?",
+  "current_location": "Current Location (GPS)",
+  "my_field": "My Field/Farm",
+  "field_location_note": "This will use your saved field location.",
+  "spreadable_disease_warning": "Warning: This disease can spread to other plants",
+  "report_help_farmers": "Report this issue to help alert nearby farmers and prevent further spread.",
+  "report_disease_outbreak": "Report Disease Outbreak",
+  "reporting": "Reporting...",
+  "non_spreadable_disease": "This disease is not contagious to other plants",
+  "isolated_treatment": "You can treat this plant individually without concern for spreading.",
+  "disease_reported_successfully": "Disease reported successfully! Nearby farmers will be notified.",
+  "report_failed": "Failed to report disease. Please try again.",
+  "location_required": "Location access required to report disease outbreak.",
+  "report_error": "Error reporting disease. Please try again."
 }
