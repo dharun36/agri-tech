@@ -12,6 +12,17 @@ const DiseaseAlertSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   disease: String,
   description: String,
+  // Bilingual support
+  bilingualData: {
+    english: {
+      disease: String,
+      description: String
+    },
+    tamil: {
+      disease: String,
+      description: String
+    }
+  },
   location: {
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: { type: [Number], default: [0, 0] }
@@ -24,7 +35,7 @@ const DiseaseAlert = mongoose.models.DiseaseAlert || mongoose.model('DiseaseAler
 // POST /api/disease/report
 // Body: { disease, description, location: { type: 'Point', coordinates: [lng, lat] } }
 router.post('/report', async (req, res) => {
-  const { disease, description, location } = req.body;
+  const { disease, description, location, bilingualData } = req.body;
   if (!disease || !location || !Array.isArray(location.coordinates)) {
     return res.status(400).json({ message: 'Disease and location required' });
   }
@@ -44,12 +55,19 @@ router.post('/report', async (req, res) => {
     const io = req.app.get('io'); // Get socket.io instance
 
     for (const user of usersNearby) {
-      const alert = await DiseaseAlert.create({
+      const alertData = {
         user: user._id,
         disease,
         description,
         location
-      });
+      };
+
+      // Add bilingual data if available
+      if (bilingualData && bilingualData.english && bilingualData.tamil) {
+        alertData.bilingualData = bilingualData;
+      }
+
+      const alert = await DiseaseAlert.create(alertData);
       alerts.push(alert._id);
 
       // Emit real-time alert to the specific user
@@ -142,6 +160,25 @@ router.patch('/alerts/read', async (req, res) => {
   try {
     await DiseaseAlert.updateMany({ user: userId, read: false }, { $set: { read: true } });
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// PATCH /api/disease/alerts/:alertId/read (mark single alert as read)
+router.patch('/alerts/:alertId/read', async (req, res) => {
+  const { alertId } = req.params;
+  if (!alertId) return res.status(400).json({ message: 'alertId required' });
+  try {
+    const alert = await DiseaseAlert.findByIdAndUpdate(
+      alertId,
+      { $set: { read: true } },
+      { new: true }
+    );
+    if (!alert) {
+      return res.status(404).json({ message: 'Alert not found' });
+    }
+    res.json({ success: true, alert });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }

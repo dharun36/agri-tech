@@ -47,8 +47,26 @@ function Header() {
           <i className="fas fa-seedling text-white text-lg"></i>
           <span className="text-white font-bold text-lg select-none">{t('app_name', 'AgroTech')}</span>
         </div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
 
-        {/* Hamburger Icon */}
+        <div className="lg:hidden">
+          {loggedIn && userId && (
+            <li>
+              <AlertsBadge
+                userId={userId}
+                onClick={() => navigate('/alerts')}
+                className="text-white hover:bg-gray-800"
+              />
+            </li>
+          )}
+        </div>
+        <div className="lg:hidden">
+          <LanguageSwitcher />
+        </div>
         <div className="lg:hidden">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
@@ -58,6 +76,7 @@ function Header() {
             <i className={`fas ${menuOpen ? 'fa-times' : 'fa-bars'} text-xl`}></i>
           </button>
         </div>
+
 
         {/* Desktop Navigation */}
         <ul className="hidden lg:flex space-x-4 text-xs font-semibold text-white items-center">
@@ -90,11 +109,12 @@ function Header() {
 
       {/* Mobile Navigation */}
       <div
-        className={`lg:hidden fixed top-0 left-0 h-full w-full bg-black text-white px-6 py-4 z-40 transition-transform duration-300 ${menuOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`lg:hidden fixed top-0 left-0 h-full w-full bg-black text-white px-6 py-4 transition-transform duration-300 z-50 ${menuOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
       >
         <div className="flex justify-between items-center mb-4">
           <span className="font-bold text-lg">{t('app_name', 'AgroTech')}</span>
+
           <button onClick={() => setMenuOpen(false)}>
             <i className="fas fa-times text-xl"></i>
           </button>
@@ -105,7 +125,7 @@ function Header() {
           <li><Link to="/market-prices" onClick={() => setMenuOpen(false)} className="block hover:bg-gray-800 rounded px-2 py-1">{t('market_prices')}</Link></li>
           <li><Link to="/government-schemes" onClick={() => setMenuOpen(false)} className="block hover:bg-gray-800 rounded px-2 py-1">{t('government_schemes')}</Link></li>
           <li><Link to="/crop-recommendation" onClick={() => setMenuOpen(false)} className="block hover:bg-gray-800 rounded px-2 py-1">{t('crop_recommendation')}</Link></li>
-          <li><LanguageSwitcher /></li>
+
           {!loggedIn ? (
             <li>
               <Link to="/login" onClick={() => setMenuOpen(false)} className="bg-600 hover:bg-700 text-white px-4 py-1 rounded transition font-bold block text-center">{t('sign_in')}</Link>

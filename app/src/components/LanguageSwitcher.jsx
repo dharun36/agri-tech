@@ -12,8 +12,8 @@ const LanguageSwitcher = () => {
 
   return (
     <div className="language-switcher">
-      <button onClick={() => changeLang('en')} className="mr-2">EN</button>
-      <button onClick={() => changeLang('ta')}>TA</button>
+      <button onClick={() => changeLang('en')} className="mr-2 text-white hover:bg-gray-800 p-1">EN</button>
+      <button onClick={() => changeLang('ta')} className="text-white hover:bg-gray-800 p-1">TA</button>
     </div>
   )
 }

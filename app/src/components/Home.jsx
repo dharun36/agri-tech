@@ -232,7 +232,7 @@ function Home() {
 
   // Modern UI styles - Black and Grey Theme with Animations
   const card =
-    "rounded-2xl bg-gray-100 border border-gray-200 p-8 mb-8 shadow-lg"
+    "rounded-2xl bg-gray-100 border border-gray-200 p-8 mb-8 "
   const sectionTitle =
     "text-2xl font-bold text-gray-800 mb-4 tracking-tight"
   const subTitle =
@@ -247,9 +247,9 @@ function Home() {
   return (
     <main className="min-h-screen bg-gray-50 py-8 px-2 md:px-0">
       <div className="max-w-7xl mx-auto w-full">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 min-h-96 md:grid-cols-2 gap-6 md:gap-8 ">
           {/* Weather Widget */}
-          <div className={`${card} w-full`}>
+          <div className={`${card} w-full min-h-60`}>
             <div className="flex items-center gap-4 mb-6">
               <div className={iconBox}>
                 <FaCloudSun />
@@ -290,7 +290,14 @@ function Home() {
                 </div>
               </div>
             )}
-
+            <div className="mt-8">
+              <WeatherAnalysis
+                weather={weather}
+                daily={daily}
+                formatDay={formatDay}
+                getWeatherDesc={getWeatherDesc}
+              />
+            </div>
 
           </div>
 
@@ -329,9 +336,8 @@ function Home() {
               <button>
                 <Link
                   to="/crop-recommendation"
-                  className=" text-black px-4 py-2 rounded-lg border-2 border-black transition-all duration-200 font-medium flex items-center gap-2 sm:w-auto justify-center"
+                  className="border border-gray-500 text-xs text-black rounded-lg p-3  font-medium flex items-center gap-2 sm:w-auto justify-center"
                 >
-                  <FaSeedling className="text-sm" />
                   {t('get_recommendation')}
                 </Link>
               </button>
@@ -376,14 +382,14 @@ function Home() {
         </div>
 
         {/* Weather Analysis Component */}
-        <div className="mt-8">
+        {/* <div className="mt-8">
           <WeatherAnalysis
             weather={weather}
             daily={daily}
             formatDay={formatDay}
             getWeatherDesc={getWeatherDesc}
           />
-        </div>
+        </div> */}
 
         {/* Quick Links Section */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-10 w-full">

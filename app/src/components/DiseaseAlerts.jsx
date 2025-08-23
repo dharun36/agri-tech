@@ -151,13 +151,23 @@ function DiseaseAlerts({
   }
 
   async function markSingleRead(alertId) {
-    // Update UI optimistically
-    setAlerts(prev => prev.map(alert =>
-      alert._id === alertId ? { ...alert, read: true } : alert
-    ));
+    try {
+      const res = await fetch(`${baseUrl}/api/disease/alerts/${alertId}/read`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+      });
 
-    // Note: You may want to add a single-alert read endpoint on the server
-    // For now, this just updates the UI
+      if (res.ok) {
+        // Update UI after successful API call
+        setAlerts(prev => prev.map(alert =>
+          alert._id === alertId ? { ...alert, read: true } : alert
+        ));
+      } else {
+        console.error('Failed to mark alert as read');
+      }
+    } catch (err) {
+      console.error('Error marking alert as read:', err);
+    }
   }
 
   const openMapLocation = (coordinates) => {
@@ -166,7 +176,22 @@ function DiseaseAlerts({
     window.open(mapUrl, '_blank');
   };
 
-  const getDisplayText = (disease, description) => {
+  const getDisplayText = (alertData) => {
+    const { disease, description, bilingualData } = alertData;
+
+    // Get current language preference
+    const currentLang = localStorage.getItem('i18nextLng') || 'en';
+    const langKey = currentLang === 'ta' ? 'tamil' : 'english';
+
+    // If bilingual data is available, use it based on language preference
+    if (bilingualData && bilingualData[langKey]) {
+      return {
+        title: bilingualData[langKey].disease || disease,
+        subtitle: truncateText(bilingualData[langKey].description || description || t('no_description') || 'No description available')
+      };
+    }
+
+    // Fallback to original logic
     if (!disease || disease === 'undefined') {
       return {
         title: t('unknown_disease') || 'Unknown / Needs Review',
@@ -232,6 +257,20 @@ function DiseaseAlerts({
             {loading ? (t('refreshing') || 'Refreshing...') : (t('refresh') || 'Refresh')}
           </button>
 
+          {/* Language Toggle Button */}
+          <button
+            onClick={() => {
+              const currentLang = localStorage.getItem('i18nextLng') || 'en';
+              const newLang = currentLang === 'ta' ? 'en' : 'ta';
+              localStorage.setItem('i18nextLng', newLang);
+              // Force re-render by updating state
+              setAlerts(prev => [...prev]);
+            }}
+            className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm"
+          >
+            {(localStorage.getItem('i18nextLng') || 'en') === 'ta' ? 'English' : 'தமிழ்'}
+          </button>
+
           {unreadCount > 0 && (
             <button
               onClick={markAllRead}
@@ -273,7 +312,7 @@ function DiseaseAlerts({
           </div>
         ) : (
           groupedAlerts.map((alertGroup) => {
-            const displayData = getDisplayText(alertGroup.disease, alertGroup.description);
+            const displayData = getDisplayText(alertGroup);
             const isExpanded = expandedAlert === alertGroup._id;
             const isUnread = !alertGroup.read;
 
@@ -359,7 +398,16 @@ function DiseaseAlerts({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div>
                         <strong>{t('full_description') || 'Full Description'}:</strong>
-                        <p className="mt-1 text-gray-700">{alertGroup.description || t('no_description') || 'No description available'}</p>
+                        <p className="mt-1 text-gray-700">
+                          {(() => {
+                            const currentLang = localStorage.getItem('i18nextLng') || 'en';
+                            const langKey = currentLang === 'ta' ? 'tamil' : 'english';
+                            if (alertGroup.bilingualData && alertGroup.bilingualData[langKey]) {
+                              return alertGroup.bilingualData[langKey].description || t('no_description') || 'No description available';
+                            }
+                            return alertGroup.description || t('no_description') || 'No description available';
+                          })()}
+                        </p>
                       </div>
 
                       <div>

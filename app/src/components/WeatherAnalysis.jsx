@@ -133,10 +133,10 @@ const WeatherAnalysis = ({ weather, daily, formatDay, getWeatherDesc }) => {
         <button
           onClick={analyzeWeather}
           disabled={analysisLoading}
-          className={`border-2 border-black text-black px-6 py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium flex items-center gap-2 w-full justify-center ${analysisLoading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''} ${isVisible ? 'animate-fadeInUp' : ''}`}
+          className={`border border-gray-500 text-s text-black rounded-lg p-3 py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium flex items-center gap-2 w-full justify-center ${analysisLoading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''} ${isVisible ? 'animate-fadeInUp' : ''}`}
           style={{ animationDelay: '0.3s' }}
         >
-          <i className={`fas ${analysisLoading ? 'fa-spinner fa-spin' : 'fa-cloud-sun'} text-sm`}></i>
+          <i className={`fas ${analysisLoading ? 'fa-spinner fa-spin' : ''} text-sm`}></i>
           {analysisLoading ? t('analyzing') : t('get_weather_analysis')}
         </button>
       </div>
@@ -152,7 +152,6 @@ const WeatherAnalysis = ({ weather, daily, formatDay, getWeatherDesc }) => {
             {weatherAnalysis.advice && (
               <div className="bg-white p-4 rounded-lg shadow-sm border border-blue-100">
                 <span className="font-semibold text-gray-800 flex items-center gap-2 mb-2">
-                  <i className="fas fa-thermometer-half text-orange-500"></i>
                   {t('current_conditions')}:
                 </span>
                 {renderField(weatherAnalysis.advice)}
@@ -161,7 +160,6 @@ const WeatherAnalysis = ({ weather, daily, formatDay, getWeatherDesc }) => {
             {weatherAnalysis.irrigation_tips && (
               <div className="bg-white p-4 rounded-lg shadow-sm border border-blue-100">
                 <span className="font-semibold text-black flex items-center gap-2 mb-2">
-                  <i className="fas fa-tint text-blue-400"></i>
                   {t('watering_advice')}:
                 </span>
                 {renderField(weatherAnalysis.irrigation_tips)}

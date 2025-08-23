@@ -121,7 +121,12 @@ function DetectDisease() {
             disease: analysis.detected,
             description: analysis.description,
             location: userLocation,
-            locationType: locationType // Add location type info
+            locationType: locationType,
+            // Include bilingual data if available
+            bilingualData: analysisData ? {
+              english: analysisData.english,
+              tamil: analysisData.tamil
+            } : null
           })
         });
 
