@@ -3,34 +3,14 @@ const User = require('../models/User');
 const router = express.Router();
 const mongoose = require('mongoose');
 const fetch = require('node-fetch');
-const { sendMail, testConnection } = require('../utils/mailer');
+const { sendMail } = require('../utils/mailer');
 
 
 
-const API_URL = "https://generativelanguage.googleapis.com/v1beta2/models/gemini-2.0-pro:generateContent?key=AIzaSyAqWH8BEYRNGeO9HNWYaOrVll_c4kaXPHk";
-const DiseaseAlertSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  disease: String,
-  description: String,
-  // Bilingual support
-  bilingualData: {
-    english: {
-      disease: String,
-      description: String
-    },
-    tamil: {
-      disease: String,
-      description: String
-    }
-  },
-  location: {
-    type: { type: String, enum: ['Point'], default: 'Point' },
-    coordinates: { type: [Number], default: [0, 0] }
-  },
-  createdAt: { type: Date, default: Date.now },
-  read: { type: Boolean, default: false }
-});
-const DiseaseAlert = mongoose.models.DiseaseAlert || mongoose.model('DiseaseAlert', DiseaseAlertSchema);
+
+const DiseaseAlert = require('../models/disease');
+
+
 
 // POST /api/disease/report
 // Body: { disease, description, location: { type: 'Point', coordinates: [lng, lat] } }
