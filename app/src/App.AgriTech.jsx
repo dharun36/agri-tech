@@ -21,35 +21,35 @@ function App() {
       <Router>
         <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors duration-300">
           <Header />
-        <main>
-          <Routes>
-            <Route path="/lan" element={<LandingPage />} />
-            <Route path="/" element={<Home />} />
-            <Route path="/disease-detection" element={<DetectDisease />} />
-            <Route path="/crop-recommendation" element={<CropRecommendation />} />
-            <Route path="/market-prices" element={<MarketPrices />} />
-            <Route path="/government-schemes" element={<GovSchemes />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="*" element={<Home />} />
-          </Routes>
-        </main>
-        <ToastContainer 
-          position="top-right" 
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
+          <main>
+            <Routes>
+              <Route path="/lan" element={<LandingPage />} />
+              <Route path="/" element={<Home />} />
+              <Route path="/disease-detection" element={<DetectDisease />} />
+              <Route path="/crop-recommendation" element={<CropRecommendation />} />
+              <Route path="/market-prices" element={<MarketPrices />} />
+              <Route path="/government-schemes" element={<GovSchemes />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="*" element={<Home />} />
+            </Routes>
+          </main>
+          <ToastContainer
+            position="bottom-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+          />
         </div>
       </Router>
     </ThemeProvider>
-);
+  );
 }
 
 export default App;

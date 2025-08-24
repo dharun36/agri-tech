@@ -317,30 +317,22 @@ function Home() {
                 <p className="text-gray-500 text-sm">{t('manage_fields')}</p>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4">
+            <div className="flex flex-row items-stretch sm:items-center gap-2 mb-4">
               <input
                 type="text"
                 value={newCrop}
                 onChange={(e) => setNewCrop(e.target.value)}
                 placeholder={t('add').concat(' new crop')}
-                className={inputStyle + " flex-1"}
+                className={inputStyle + "h-20 grow"}
               />
               <button
                 onClick={handleAddCrop}
-                className="bg-black  text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium flex items-center gap-2 sm:w-auto justify-center"
+                className="bg-black w-30 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium flex items-center gap-2"
               >
-                <FaPlus className="text-sm" /> {t('add')}
+                <FaPlus className="text-sm " /> {t('add')}
               </button>
 
 
-              <button>
-                <Link
-                  to="/crop-recommendation"
-                  className="border border-gray-500 text-xs text-black rounded-lg p-3  font-medium flex items-center gap-2 sm:w-auto justify-center"
-                >
-                  {t('get_recommendation')}
-                </Link>
-              </button>
             </div>
 
 
