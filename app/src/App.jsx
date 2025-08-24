@@ -9,6 +9,7 @@ import CropRecommendation from './components/CropRecommendation'
 import MarketPrices from './components/MarketPrices'
 import DiseaseAlerts from './components/DiseaseAlerts'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import ModernLandingPage from './components/ModernLandingPage';
 import GovSchemes from './components/GovSchemes'
 import LandingPage from './components/LandingPage'
 import Login from './components/Login'
@@ -31,11 +32,10 @@ function App() {
   return (
     <Router>
       <div className="container">
-        <Header />
         <main className="main">
           <Routes>
             <Route path="/lan" element={<LandingPage />} />
-            <Route path="/" element={<Home />} />
+            <Route path="/home" element={<Home />} />
             <Route path="/disease-detection" element={<DetectDisease />} />
             <Route path="/crop-recommendation" element={<CropRecommendation />} />
             <Route path="/market-prices" element={<MarketPrices />} />
@@ -47,6 +47,7 @@ function App() {
             } />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/" element={<ModernLandingPage />} />
           </Routes>
         </main>
         <ToastContainer position="bottom-right" autoClose={10000} />

@@ -40,13 +40,16 @@ function Header() {
   };
 
   return (
-    <nav className="bg-black  px-6 py-4 relative w-full z-50">
+    <nav className="bg-black py-4 relative w-full z-50">
       <div className="flex items-center justify-between max-w-screen-xl mx-auto">
         {/* Logo */}
-        <div className="flex items-center space-x-2">
-          <i className="fas fa-seedling text-white text-lg"></i>
-          <span className="text-white font-bold text-lg select-none">{t('app_name', 'AgroTech')}</span>
-        </div>
+        <Link to="/">
+          <div className="flex items-center space-x-2">
+            <i className="fas fa-seedling text-white text-lg"></i>
+            <span className="text-white font-bold text-lg select-none">{t('app_name', 'AgroTech')}</span>
+          </div>
+        </Link>
+
         <div></div>
         <div></div>
         <div></div>
@@ -80,7 +83,7 @@ function Header() {
 
         {/* Desktop Navigation */}
         <ul className="hidden lg:flex space-x-4 text-xs font-semibold text-white items-center">
-          <li><Link to="/" className="px-3 py-1 rounded hover:bg-gray-800">{t('home')}</Link></li>
+          <li><Link to="/home" className="px-3 py-1 rounded hover:bg-gray-800">{t('home')}</Link></li>
           <li><Link to="/disease-detection" className="px-3 py-1 rounded hover:bg-gray-800">{t('disease_detection')}</Link></li>
           <li><Link to="/market-prices" className="px-3 py-1 rounded hover:bg-gray-800">{t('market_prices')}</Link></li>
           <li><Link to="/government-schemes" className="px-3 py-1 rounded hover:bg-gray-800">{t('government_schemes')}</Link></li>
