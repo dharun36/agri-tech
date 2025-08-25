@@ -483,181 +483,63 @@ function Home() {
               {t('smart_irrigation_insights')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
-                <h4 className="font-semibold text-gray-700 mb-2">{t('soil_types')}</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>{t('clay')}:</span>
-                    <span className="text-blue-600 font-medium">{t('high_retention')}</span>
+              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                <h4 className="font-semibold text-gray-700 mb-3 border-b pb-2 border-gray-200">{t('soil_types')}</h4>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between bg-white p-2 rounded-md shadow-sm hover:shadow transition">
+                    <span className="font-medium">{t('clay')}:</span>
+                    <span className="text-blue-600 font-medium px-2 py-1 bg-blue-50 rounded-md">{t('high_retention')}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>{t('sandy')}:</span>
-                    <span className="text-yellow-600 font-medium">{t('low_retention')}</span>
+                  <div className="flex items-center justify-between bg-white p-2 rounded-md shadow-sm hover:shadow transition">
+                    <span className="font-medium">{t('sandy')}:</span>
+                    <span className="text-yellow-600 font-medium px-2 py-1 bg-yellow-50 rounded-md">{t('low_retention')}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>{t('loamy')}:</span>
-                    <span className="text-green-600 font-semibold">{t('optimal')}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
-                <h4 className="font-semibold text-gray-700 mb-2">{t('crop_water_needs')}</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>{t('tomatoes')}:</span>
-                    <span className="text-red-600 font-medium">25mm/{t('day')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>{t('lettuce')}:</span>
-                    <span className="text-green-600 font-medium">15mm/{t('day')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>{t('corn')}:</span>
-                    <span className="text-yellow-600 font-medium">30mm/{t('day')}</span>
+                  <div className="flex items-center justify-between bg-white p-2 rounded-md shadow-sm hover:shadow transition">
+                    <span className="font-medium">{t('loamy')}:</span>
+                    <span className="text-green-600 font-semibold px-2 py-1 bg-green-50 rounded-md">{t('optimal')}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
-                <h4 className="font-semibold text-gray-700 mb-2">{t('alerts')}</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="text-orange-600 flex items-center">
-                    <FaExclamationTriangle className="mr-2 text-xs" />
-                    <span>{t('optimal_timing')}: 6-8 AM</span>
+              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                <h4 className="font-semibold text-gray-700 mb-3 border-b pb-2 border-gray-200">{t('crop_water_needs')}</h4>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between bg-white p-2 rounded-md shadow-sm hover:shadow transition">
+                    <span className="font-medium">{t('tomatoes')}:</span>
+                    <span className="text-red-600 font-medium px-2 py-1 bg-red-50 rounded-md">25mm/{t('day')}</span>
                   </div>
-                  <div className="text-blue-600 flex items-center">
-                    <FaCloudRain className="mr-2 text-xs" />
-                    <span>{t('check_rain_forecast')}</span>
+                  <div className="flex items-center justify-between bg-white p-2 rounded-md shadow-sm hover:shadow transition">
+                    <span className="font-medium">{t('lettuce')}:</span>
+                    <span className="text-green-600 font-medium px-2 py-1 bg-green-50 rounded-md">15mm/{t('day')}</span>
                   </div>
-                  <div className="text-green-600 flex items-center">
-                    <FaLeaf className="mr-2 text-xs" />
-                    <span>{t('monitor_soil_moisture')}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="mt-6">
-          <div className="rounded-xl shadow-md bg-white border border-gray-200 p-5">
-            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <FaTint className="text-blue-600" />
-              {t('smart_irrigation_insights')}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
-                <h4 className="font-semibold text-gray-700 mb-2">{t('soil_types')}</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>{t('clay')}:</span>
-                    <span className="text-blue-600 font-medium">{t('high_retention')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>{t('sandy')}:</span>
-                    <span className="text-yellow-600 font-medium">{t('low_retention')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>{t('loamy')}:</span>
-                    <span className="text-green-600 font-semibold">{t('optimal')}</span>
+                  <div className="flex items-center justify-between bg-white p-2 rounded-md shadow-sm hover:shadow transition">
+                    <span className="font-medium">{t('corn')}:</span>
+                    <span className="text-yellow-600 font-medium px-2 py-1 bg-yellow-50 rounded-md">30mm/{t('day')}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
-                <h4 className="font-semibold text-gray-700 mb-2">{t('crop_water_needs')}</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>{t('tomatoes')}:</span>
-                    <span className="text-red-600 font-medium">25mm/{t('day')}</span>
+              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                <h4 className="font-semibold text-gray-700 mb-3 border-b pb-2 border-gray-200">{t('alerts')}</h4>
+                <div className="space-y-3 text-sm">
+                  <div className="bg-white p-2 rounded-md shadow-sm hover:shadow transition">
+                    <div className="flex items-center text-orange-600">
+                      <FaExclamationTriangle className="mr-2" />
+                      <span className="font-medium">{t('optimal_timing')}</span>
+                    </div>
+                    <div className="mt-1 pl-6 text-gray-700">6-8 AM</div>
                   </div>
-                  <div className="flex justify-between">
-                    <span>{t('lettuce')}:</span>
-                    <span className="text-green-600 font-medium">15mm/{t('day')}</span>
+                  <div className="bg-white p-2 rounded-md shadow-sm hover:shadow transition">
+                    <div className="flex items-center text-blue-600">
+                      <FaCloudRain className="mr-2" />
+                      <span className="font-medium">{t('check_rain_forecast')}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span>{t('corn')}:</span>
-                    <span className="text-yellow-600 font-medium">30mm/{t('day')}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
-                <h4 className="font-semibold text-gray-700 mb-2">{t('alerts')}</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="text-orange-600 flex items-center">
-                    <FaExclamationTriangle className="mr-2 text-xs" />
-                    <span>{t('optimal_timing')}: 6-8 AM</span>
-                  </div>
-                  <div className="text-blue-600 flex items-center">
-                    <FaCloudRain className="mr-2 text-xs" />
-                    <span>{t('check_rain_forecast')}</span>
-                  </div>
-                  <div className="text-green-600 flex items-center">
-                    <FaLeaf className="mr-2 text-xs" />
-                    <span>{t('monitor_soil_moisture')}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div><div className="mt-6">
-          <div className="rounded-xl shadow-md bg-white border border-gray-200 p-5">
-            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <FaTint className="text-blue-600" />
-              {t('smart_irrigation_insights')}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
-                <h4 className="font-semibold text-gray-700 mb-2">{t('soil_types')}</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>{t('clay')}:</span>
-                    <span className="text-blue-600 font-medium">{t('high_retention')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>{t('sandy')}:</span>
-                    <span className="text-yellow-600 font-medium">{t('low_retention')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>{t('loamy')}:</span>
-                    <span className="text-green-600 font-semibold">{t('optimal')}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
-                <h4 className="font-semibold text-gray-700 mb-2">{t('crop_water_needs')}</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>{t('tomatoes')}:</span>
-                    <span className="text-red-600 font-medium">25mm/{t('day')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>{t('lettuce')}:</span>
-                    <span className="text-green-600 font-medium">15mm/{t('day')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>{t('corn')}:</span>
-                    <span className="text-yellow-600 font-medium">30mm/{t('day')}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
-                <h4 className="font-semibold text-gray-700 mb-2">{t('alerts')}</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="text-orange-600 flex items-center">
-                    <FaExclamationTriangle className="mr-2 text-xs" />
-                    <span>{t('optimal_timing')}: 6-8 AM</span>
-                  </div>
-                  <div className="text-blue-600 flex items-center">
-                    <FaCloudRain className="mr-2 text-xs" />
-                    <span>{t('check_rain_forecast')}</span>
-                  </div>
-                  <div className="text-green-600 flex items-center">
-                    <FaLeaf className="mr-2 text-xs" />
-                    <span>{t('monitor_soil_moisture')}</span>
+                  <div className="bg-white p-2 rounded-md shadow-sm hover:shadow transition">
+                    <div className="flex items-center text-green-600">
+                      <FaLeaf className="mr-2" />
+                      <span className="font-medium">{t('monitor_soil_moisture')}</span>
+                    </div>
                   </div>
                 </div>
               </div>

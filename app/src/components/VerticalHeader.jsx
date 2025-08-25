@@ -57,7 +57,7 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
   };
 
   return (
-    <div className={`h-screen bg-white shadow-md fixed top-0 left-0 z-40 transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'} border-r border-gray-200`}>
+    <div className={`h-screen bg-white shadow-md fixed top-0 left-0 z-40 transition-width duration-300 ${collapsed ? 'w-16' : 'w-64'} border-r border-gray-200`}>
       {/* Logo and Collapse Button */}
       <div className="flex items-center justify-between p-4 border-b border-gray-100">
         {!collapsed && (
@@ -142,7 +142,7 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
       </div>
 
       {/* Bottom Section - User Controls */}
-      <div className={`absolute bottom-0 left-0 w-full pb-4 border-t border-gray-100 pt-4 ${collapsed ? 'px-2' : 'px-4'}`}>
+      <div className={`absolute bottom-0 left-0 w-full pb-4 border-t border-gray-100 pt-4 ${collapsed ? 'px-2' : 'px-4'} bg-white`}>
         <div className={`flex ${collapsed ? 'flex-col items-center' : 'items-center justify-between'} mb-3 space-y-2`}>
           {/* Alert Badge */}
           <div className={`${!collapsed ? "flex-1" : ""}`}>
@@ -167,22 +167,41 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
 
           {/* Language Switcher */}
           <div className={`${collapsed ? "mt-2" : ""} language-switcher`}>
-            <div className="flex items-center rounded-md bg-gray-100 p-1">
-              <button
-                onClick={() => i18n.changeLanguage('en')}
-                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${i18n.language === 'en' ? 'bg-green-600 text-white' : 'text-gray-700'}`}
-                title="English"
-              >
-                EN
-              </button>
-              <button
-                onClick={() => i18n.changeLanguage('ta')}
-                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${i18n.language === 'ta' ? 'bg-green-600 text-white' : 'text-gray-700'}`}
-                title="Tamil"
-              >
-                TA
-              </button>
-            </div>
+            {collapsed ? (
+              <div className="flex flex-col items-center space-y-2">
+                <button
+                  onClick={() => i18n.changeLanguage('en')}
+                  className={`w-8 h-8 text-xs font-medium rounded-full flex items-center justify-center transition-colors ${i18n.language === 'en' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  title="English"
+                >
+                  EN
+                </button>
+                <button
+                  onClick={() => i18n.changeLanguage('ta')}
+                  className={`w-8 h-8 text-xs font-medium rounded-full flex items-center justify-center transition-colors ${i18n.language === 'ta' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  title="Tamil"
+                >
+                  TA
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center rounded-md bg-gray-100 p-1">
+                <button
+                  onClick={() => i18n.changeLanguage('en')}
+                  className={`px-2 py-1 text-xs font-medium rounded transition-colors ${i18n.language === 'en' ? 'bg-green-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
+                  title="English"
+                >
+                  EN
+                </button>
+                <button
+                  onClick={() => i18n.changeLanguage('ta')}
+                  className={`px-2 py-1 text-xs font-medium rounded transition-colors ${i18n.language === 'ta' ? 'bg-green-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
+                  title="Tamil"
+                >
+                  TA
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

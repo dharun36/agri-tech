@@ -11,6 +11,19 @@
   }
 }
 
+/* Horizontal-only slide animation to prevent vertical jumps */
+@keyframes slideInLeftHorizontal {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 @keyframes slideInRight {
   0% {
     transform: translateX(100%);
@@ -36,6 +49,14 @@
 /* Apply animations to elements */
 .sidebar-animate-in {
   animation: slideInLeft 0.3s ease forwards;
+}
+
+/* New container for sidebar without animation to prevent unwanted movement */
+.sidebar-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
 }
 
 .mobile-header-animate {

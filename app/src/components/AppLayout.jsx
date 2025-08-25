@@ -24,16 +24,20 @@ const AppLayout = ({ children }) => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  // Use media query for initial collapsed state
+  // Use media query for responsive states with device breakpoints
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
   const [isMobile, setIsMobile] = useState(windowWidth < 768);
+  const [isTablet, setIsTablet] = useState(windowWidth >= 768 && windowWidth < 1024);
+  const [isDesktop, setIsDesktop] = useState(windowWidth >= 1024);
 
-  // Update window width on resize
+  // Update window width and device states on resize
   useEffect(() => {
     const handleResize = () => {
       const newWidth = window.innerWidth;
       setWindowWidth(newWidth);
       setIsMobile(newWidth < 768);
+      setIsTablet(newWidth >= 768 && newWidth < 1024);
+      setIsDesktop(newWidth >= 1024);
     };
 
     window.addEventListener('resize', handleResize);
@@ -48,10 +52,10 @@ const AppLayout = ({ children }) => {
       {/* Navigation components */}
       {!isExcludedPath && (
         <>
-          {/* Desktop sidebar - only visible on medium screens and above */}
+          {/* Desktop/Tablet sidebar - only visible on medium screens and above */}
           {!isMobile && (
-            <div className="sidebar-animate-in">
-              <VerticalHeader collapsed={false} />
+            <div className="sidebar-container">
+              <VerticalHeader collapsed={isTablet} />
             </div>
           )}
 
@@ -83,9 +87,14 @@ const AppLayout = ({ children }) => {
         className={`transition-all duration-300 flex flex-col ${!isExcludedPath ?
           isMobile ?
             'with-vertical-header with-mobile-bottom-nav' :
-            'with-vertical-header'
+            isTablet ?
+              'with-vertical-header with-collapsed-sidebar' :
+              'with-vertical-header'
           : ''}`}
-        style={{ minHeight: isExcludedPath ? '100vh' : isMobile ? 'calc(100vh - 9rem)' : '100vh' }}
+        style={{
+          minHeight: isExcludedPath ? '100vh' : isMobile ? 'calc(100vh - 9rem)' : '100vh',
+          overflowX: 'hidden'
+        }}
         onClick={() => mobileMenuOpen && setMobileMenuOpen(false)}
       >
         {children}
