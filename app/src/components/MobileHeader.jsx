@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FaSeedling, FaBars, FaBell, FaTimes } from 'react-icons/fa';
+import { FaSeedling, FaBars, FaBell, FaTimes, FaUser } from 'react-icons/fa';
 import AlertsBadge from './AlertsBadge';
 
 const MobileHeader = ({ onMenuToggle, isMenuOpen }) => {
@@ -23,7 +23,7 @@ const MobileHeader = ({ onMenuToggle, isMenuOpen }) => {
     <div className="fixed top-0 left-0 right-0 h-14 bg-white shadow-sm flex items-center justify-between px-4 z-40 md:hidden">
       {/* Center logo with title */}
       <div
-        className="flex items-center cursor-pointer mx-auto"
+        className="flex items-start cursor-pointer mx-auto"
         onClick={() => navigate('/home')}
       >
         <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white mr-2">
@@ -37,6 +37,28 @@ const MobileHeader = ({ onMenuToggle, isMenuOpen }) => {
 
       {/* Right side controls */}
       <div className="flex items-center gap-3 absolute right-3">
+        {/* User Profile */}
+        {loggedIn && (
+          <button
+            onClick={() => navigate('/profile')}
+            className="p-2 rounded-full hover:bg-gray-100"
+            aria-label="User Profile"
+            title={t('profile') || 'Profile'}
+          >
+            <FaUser className="text-gray-700" />
+          </button>
+        )}
+
+        {/* Alerts Icon - Show only if logged in */}
+        {loggedIn && userId && (
+          <AlertsBadge
+            userId={userId}
+            onClick={() => navigate('/alerts')}
+            className="text-gray-700 hover:bg-gray-100 p-2 rounded-full"
+            showCount={true}
+          />
+        )}
+
         {/* Language switcher */}
         <div className="relative">
           <button

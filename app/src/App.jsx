@@ -13,6 +13,7 @@ import GovSchemes from './components/GovSchemes'
 import LandingPage from './components/LandingPage'
 import Login from './components/Login'
 import Signup from './components/Signup'
+import Profile from './components/Profile'
 import AppLayout from './components/AppLayout'
 import { useEffect } from 'react'
 
@@ -47,6 +48,7 @@ function App() {
             } />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/" element={<ModernLandingPage />} />
           </Routes>
         </main>

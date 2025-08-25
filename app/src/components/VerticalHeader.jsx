@@ -15,7 +15,9 @@ import {
   FaTimes,
   FaChevronLeft,
   FaChevronRight,
-  FaBell
+  FaBell,
+  FaUser,
+  FaCog
 } from 'react-icons/fa';
 
 const VerticalHeader = ({ collapsed: propCollapsed }) => {
@@ -93,6 +95,18 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
       {/* Navigation Links */}
       <div className="py-4">
         <ul className="space-y-1">
+          {/* User Profile - Top of the navigation */}
+          {loggedIn && (
+            <li>
+              <Link
+                to="/profile"
+                className={`flex items-center ${collapsed ? 'justify-center' : 'px-4'} py-3 ${isActive('/profile') ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'}`}
+              >
+                <FaUser className={`${collapsed ? 'text-xl' : 'text-lg mr-3'}`} />
+                {!collapsed && <span>{t('profile') || 'Profile'}</span>}
+              </Link>
+            </li>
+          )}
           <li>
             <Link
               to="/home"
