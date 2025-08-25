@@ -67,31 +67,17 @@ const MobileBottomNav = ({ userId }) => {
           <span className="text-xs font-medium">{t('schemes')}</span>
         </Link>
 
-        {/* Alerts or Crop Recommendation */}
-        {loggedIn ? (
-          <Link
-            to="/alerts"
-            className={`flex flex-col items-center justify-center ${isActive('/alerts')
-              ? 'text-green-600 border-t-2 border-green-600 -mt-[2px]'
-              : 'text-gray-600'} relative`}
-          >
-            <FaBell className={`${isActive('/alerts') ? 'text-xl scale-110' : 'text-lg'} mb-1 transition-transform`} />
-            <span className="text-xs font-medium">{t('alerts')}</span>
-            {userId && (
-              <div className="absolute top-0 right-4 w-2.5 h-2.5 bg-red-500 rounded-full notification-pulse"></div>
-            )}
-          </Link>
-        ) : (
-          <Link
-            to="/crop-recommendation"
-            className={`flex flex-col items-center justify-center ${isActive('/crop-recommendation')
-              ? 'text-green-600 border-t-2 border-green-600 -mt-[2px]'
-              : 'text-gray-600'}`}
-          >
-            <FaLeaf className={`${isActive('/crop-recommendation') ? 'text-xl scale-110' : 'text-lg'} mb-1 transition-transform`} />
-            <span className="text-xs font-medium">{t('crops')}</span>
-          </Link>
-        )}
+        {/* Crop Recommendation */}
+
+        <Link
+          to="/crop-recommendation"
+          className={`flex flex-col items-center justify-center ${isActive('/crop-recommendation')
+            ? 'text-green-600 border-t-2 border-green-600 -mt-[2px]'
+            : 'text-gray-600'}`}
+        >
+          <FaLeaf className={`${isActive('/crop-recommendation') ? 'text-xl scale-110' : 'text-lg'} mb-1 transition-transform`} />
+          <span className="text-xs font-medium">{t('crops')}</span>
+        </Link>
       </div>
     </div>
   );

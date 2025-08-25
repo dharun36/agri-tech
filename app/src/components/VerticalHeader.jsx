@@ -63,29 +63,57 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
       {/* Logo and Collapse Button */}
       <div className="flex items-center justify-between p-4 border-b border-gray-100">
         {!collapsed && (
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white">
-              <FaSeedling className="text-lg" />
-            </div>
-            <div>
-              <span className="font-bold text-xl">
-                <span className="text-green-600">Agri</span>
-                <span className="text-yellow-500">Tech</span>
-              </span>
-            </div>
-          </Link>
+          <div className="flex items-center justify-between w-full">
+            <Link to="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white">
+                <FaSeedling className="text-lg" />
+              </div>
+              <div>
+                <span className="font-bold text-xl">
+                  <span className="text-green-600">Agri</span>
+                  <span className="text-yellow-500">Tech</span>
+                </span>
+              </div>
+            </Link>
+
+            {/* Profile Icon */}
+            {loggedIn && (
+              <Link
+                to="/profile"
+                className="p-2 rounded-full hover:bg-gray-100 text-gray-700"
+                title={t('profile') || 'Profile'}
+              >
+                <FaUser />
+              </Link>
+            )}
+          </div>
         )}
         {collapsed && (
-          <Link to="/" className="w-full flex justify-center">
-            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white">
-              <FaSeedling className="text-lg" />
-            </div>
-          </Link>
+          <div className="w-full flex justify-center">
+            {/* In tablet view, show only profile icon instead of logo */}
+            {loggedIn ? (
+              <Link
+                to="/profile"
+                className="p-2 rounded-full hover:bg-gray-100"
+                title={t('profile') || 'Profile'}
+              >
+                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-green-500 text-white">
+                  <FaUser className="text-lg" />
+                </div>
+              </Link>
+            ) : (
+              <Link to="/" className="flex justify-center">
+                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white">
+                  <FaSeedling className="text-lg" />
+                </div>
+              </Link>
+            )}
+          </div>
         )}
         {propCollapsed === undefined && (
           <button
             onClick={() => setInternalCollapsed(!internalCollapsed)}
-            className="text-gray-500 hover:bg-gray-100 p-2 rounded-full"
+            className="text-gray-500 hover:bg-gray-100 p-2 rounded-full absolute right-2 top-4"
           >
             {collapsed ? <FaChevronRight /> : <FaChevronLeft />}
           </button>
@@ -95,18 +123,6 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
       {/* Navigation Links */}
       <div className="py-4">
         <ul className="space-y-1">
-          {/* User Profile - Top of the navigation */}
-          {loggedIn && (
-            <li>
-              <Link
-                to="/profile"
-                className={`flex items-center ${collapsed ? 'justify-center' : 'px-4'} py-3 ${isActive('/profile') ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'}`}
-              >
-                <FaUser className={`${collapsed ? 'text-xl' : 'text-lg mr-3'}`} />
-                {!collapsed && <span>{t('profile') || 'Profile'}</span>}
-              </Link>
-            </li>
-          )}
           <li>
             <Link
               to="/home"

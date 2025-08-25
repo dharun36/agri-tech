@@ -21,9 +21,11 @@ const MobileHeader = ({ onMenuToggle, isMenuOpen }) => {
 
   return (
     <div className="fixed top-0 left-0 right-0 h-14 bg-white shadow-sm flex items-center justify-between px-4 z-40 md:hidden">
-      {/* Center logo with title */}
+      
+      {/* Left - App name */}
+
       <div
-        className="flex items-start cursor-pointer mx-auto"
+        className="flex items-center cursor-pointer"
         onClick={() => navigate('/home')}
       >
         <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white mr-2">
@@ -35,20 +37,9 @@ const MobileHeader = ({ onMenuToggle, isMenuOpen }) => {
         </span>
       </div>
 
-      {/* Right side controls */}
-      <div className="flex items-center gap-3 absolute right-3">
-        {/* User Profile */}
-        {loggedIn && (
-          <button
-            onClick={() => navigate('/profile')}
-            className="p-2 rounded-full hover:bg-gray-100"
-            aria-label="User Profile"
-            title={t('profile') || 'Profile'}
-          >
-            <FaUser className="text-gray-700" />
-          </button>
-        )}
 
+      {/* Right side controls */}
+      <div className="flex items-center gap-2">
         {/* Alerts Icon - Show only if logged in */}
         {loggedIn && userId && (
           <AlertsBadge
@@ -58,6 +49,8 @@ const MobileHeader = ({ onMenuToggle, isMenuOpen }) => {
             showCount={true}
           />
         )}
+
+
 
         {/* Language switcher */}
         <div className="relative">
@@ -86,6 +79,19 @@ const MobileHeader = ({ onMenuToggle, isMenuOpen }) => {
             </div>
           )}
         </div>
+
+        {/* User Profile - Always at the far right */}
+
+        {loggedIn && (
+          <button
+            onClick={() => navigate('/profile')}
+            className="p-2 rounded-full hover:bg-gray-100"
+            aria-label="User Profile"
+            title={t('profile') || 'Profile'}
+          >
+            <FaUser className="text-gray-700" />
+          </button>
+        )}
       </div>
     </div>
   );
