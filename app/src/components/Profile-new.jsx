@@ -64,64 +64,29 @@ const Profile = () => {
       setLoading(true);
       try {
         const userId = localStorage.getItem('userId');
-        // Check if backend server is available
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-        try {
-          // Using the correct endpoint from auth.js: /api/auth/user/:id
-          const response = await fetch(`http://localhost:5000/api/auth/user/${userId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            },
-            signal: controller.signal
-          });
-
-          clearTimeout(timeoutId);
-
-          if (!response.ok) {
-            throw new Error('Failed to fetch user data');
+        const response = await fetch(`/api/users/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
           }
+        });
 
-          const data = await response.json();
-
-          // Check if the user object exists in the response
-          if (!data.user) {
-            throw new Error('Invalid server response: user data missing');
-          }
-
-          const userData = data.user; // Extract user data from the response
-
-
-          setFormData({
-            name: userData.name || localStorage.getItem('userName') || '',
-            email: userData.email || localStorage.getItem('userEmail') || '',
-            // Format location if it's stored as GeoJSON
-            location: userData.location?.coordinates ?
-              `${userData.location.coordinates[1]}, ${userData.location.coordinates[0]}` : '',
-            phone: userData.phone || '',
-            farmSize: userData.farm_size || '',
-            primaryCrops: userData.primaryCrop || '',
-            soilType: userData.soilType || '',
-            farmingExperience: userData.farmingExperience || '',
-            preferredLanguage: userData.preferred_language || localStorage.getItem('i18nextLng') || 'en',
-            notificationsEnabled: userData.notifications_enabled ||
-              localStorage.getItem('notificationsEnabled') !== 'false'
-          });
-
-          // Set profile image if available
-          if (userData.profile_img) {
-            setProfileImage(userData.profile_img);
-          }
-
-          // If we get here, server is working properly
-          setError('');
-        } catch (fetchError) {
-          // Handle timeout or network error by loading from localStorage
-          console.warn('Server connection failed. Loading from local data:', fetchError);
-          throw new Error('Server connection failed. Loading from local data.');
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
         }
 
+        const userData = await response.json();
+        setFormData({
+          name: userData.name || localStorage.getItem('userName') || '',
+          email: userData.email || localStorage.getItem('userEmail') || '',
+          location: userData.location || '',
+          phone: userData.phone || '',
+          farmSize: userData.farmSize || '',
+          primaryCrops: userData.primaryCrops || '',
+          soilType: userData.soilType || '',
+          farmingExperience: userData.farmingExperience || '',
+          preferredLanguage: localStorage.getItem('i18nextLng') || 'en',
+          notificationsEnabled: localStorage.getItem('notificationsEnabled') !== 'false'
+        });
       } catch (err) {
         console.error('Error fetching user data:', err);
         setError('Failed to load profile data. Please try again later.');
@@ -158,43 +123,11 @@ const Profile = () => {
   const handleProfileImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Check file size (limit to 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image size must be less than 5MB');
-        return;
-      }
-
-      // Check file type
-      if (!file.type.match('image.*')) {
-        setError('Only image files are allowed');
-        return;
-      }
-
       const reader = new FileReader();
       reader.onloadend = () => {
-        try {
-          const imageData = reader.result;
-
-          // Create a new Image object to verify the image can be loaded
-          const img = new Image();
-          img.onload = () => {
-            // Image loads successfully, use it
-            setProfileImage(imageData);
-            localStorage.setItem('profileImage', imageData);
-            setError(''); // Clear any previous errors
-          };
-          img.onerror = () => {
-            console.error('Selected image cannot be loaded properly');
-            setError('Selected image cannot be processed. Please try another image.');
-          };
-          img.src = imageData;
-        } catch (err) {
-          console.error('Error processing image:', err);
-          setError('Error processing the selected image.');
-        }
-      };
-      reader.onerror = () => {
-        setError('Failed to read the selected file.');
+        const imageData = reader.result;
+        setProfileImage(imageData);
+        localStorage.setItem('profileImage', imageData);
       };
       reader.readAsDataURL(file);
     }
@@ -235,43 +168,6 @@ const Profile = () => {
     window.location.reload();
   };
 
-  // Separate function to upload profile image
-  const uploadProfileImage = async (userId, token) => {
-    if (!profileImage || profileImage.startsWith('http')) {
-      return null; // No new image to upload or it's already a URL
-    }
-
-    try {
-      // Convert base64 to blob for upload
-      const base64Response = await fetch(profileImage);
-      const blob = await base64Response.blob();
-
-      // Create form data for image upload
-      const imageFormData = new FormData();
-      imageFormData.append('profileImage', blob, 'profile-image.jpg');
-
-      // Upload the image to the server
-      const uploadResponse = await fetch(`http://localhost:5000/api/auth/user/${userId}/profile-image`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-        body: imageFormData
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload profile image');
-      }
-
-      const uploadData = await uploadResponse.json();
-      return uploadData.imageUrl; // Return the URL of the uploaded image
-    } catch (error) {
-      console.error('Error uploading profile image:', error);
-      // We'll continue with profile update even if image upload fails
-      return null;
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -282,77 +178,25 @@ const Profile = () => {
       const token = localStorage.getItem('token');
       const userId = localStorage.getItem('userId');
 
-      // Transform form data to match backend expected format
-      const updatedUserData = {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        // Map the fields to match your backend schema
-        farm_size: formData.farmSize,
-        primaryCrop: formData.primaryCrops,
-        soilType: formData.soilType,
-        farmingExperience: formData.farmingExperience,
-        preferred_language: formData.preferredLanguage,
-        notifications_enabled: formData.notificationsEnabled
-      };
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
 
-      // First update local storage regardless of server status
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      // Update localStorage with new values
       localStorage.setItem('userName', formData.name);
       localStorage.setItem('userEmail', formData.email);
       localStorage.setItem('notificationsEnabled', formData.notificationsEnabled.toString());
-      localStorage.setItem('i18nextLng', formData.preferredLanguage);
 
-      // Save profile image to localStorage if it's a data URL
-      if (profileImage && profileImage.startsWith('data:')) {
-        localStorage.setItem('profileImage', profileImage);
-      }
-
-      // Set a timeout for the server request
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-      try {
-        // Upload profile image first if there's a new one
-        let imageUrl = null;
-        if (profileImage && !profileImage.startsWith('http')) {
-          imageUrl = await uploadProfileImage(userId, token);
-        }
-
-        // Add profile image URL if available
-        if (imageUrl) {
-          updatedUserData.profile_img = imageUrl;
-        } else if (profileImage && profileImage.startsWith('http')) {
-          updatedUserData.profile_img = profileImage;
-        }
-
-        // Use the correct endpoint from your auth.js file
-        const response = await fetch(`http://localhost:5000/api/auth/user/${userId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify(updatedUserData),
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update profile');
-        }
-
-        const data = await response.json();
-        console.log('Profile updated successfully:', data);
-
-        setMessage('Profile updated successfully!');
-      } catch (serverError) {
-        // Handle offline mode or server error
-        console.error('Server error:', serverError);
-        setMessage('Profile saved locally. Changes will sync when connection is restored.');
-      }
-
+      setMessage('Profile updated successfully!');
       setIsEditing(false);
 
       // Simulate message disappearing after 3 seconds
@@ -374,45 +218,11 @@ const Profile = () => {
           <div className="flex flex-col items-center justify-center mb-8">
             <div className="relative">
               <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-md">
-                {profileImage ? (
-                  <img
-                    src={profileImage}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      // Only handle error once
-                      if (e.target.hasAttribute('data-error-handled')) {
-                        return;
-                      }
-
-                      console.log('Profile image failed to load in edit mode');
-                      e.target.setAttribute('data-error-handled', 'true');
-                      e.target.style.display = 'none';
-
-                      // Clear the problematic image from state and localStorage if it's a URL
-                      if (typeof profileImage === 'string' && profileImage.startsWith('http')) {
-                        setProfileImage(null);
-                        localStorage.removeItem('profileImage');
-                      }
-
-                      // Create a fallback div with icon
-                      const parent = e.target.parentNode;
-                      if (!parent.querySelector('.fallback-icon')) {
-                        const fallbackDiv = document.createElement('div');
-                        fallbackDiv.className = 'w-full h-full bg-gray-200 flex items-center justify-center fallback-icon';
-                        const iconEl = document.createElement('span');
-                        iconEl.className = 'text-gray-400 text-4xl';
-                        iconEl.innerHTML = '👤'; // Simple user emoji as fallback
-                        fallbackDiv.appendChild(iconEl);
-                        parent.appendChild(fallbackDiv);
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                    <FaUser className="text-gray-400 text-4xl" />
-                  </div>
-                )}
+                <img
+                  src={profileImage || 'https://via.placeholder.com/150?text=Profile'}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
               </div>
               <label htmlFor="profile-image" className="absolute bottom-0 right-0 bg-green-600 rounded-full p-2 cursor-pointer shadow-md">
                 <FaCamera className="text-white text-sm" />
@@ -578,45 +388,11 @@ const Profile = () => {
           {/* Profile Overview */}
           <div className="flex flex-col items-center justify-center mb-8">
             <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-md">
-              {profileImage ? (
-                <img
-                  src={profileImage}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // Only handle error once
-                    if (e.target.hasAttribute('data-error-handled')) {
-                      return;
-                    }
-
-                    console.log('Profile image failed to load');
-                    e.target.setAttribute('data-error-handled', 'true');
-                    e.target.style.display = 'none';
-
-                    // Clear the problematic image from state and localStorage if it's a URL
-                    if (typeof profileImage === 'string' && profileImage.startsWith('http')) {
-                      setProfileImage(null);
-                      localStorage.removeItem('profileImage');
-                    }
-
-                    // Create a fallback div with icon
-                    const parent = e.target.parentNode;
-                    if (!parent.querySelector('.fallback-icon')) {
-                      const fallbackDiv = document.createElement('div');
-                      fallbackDiv.className = 'w-full h-full bg-gray-200 flex items-center justify-center fallback-icon';
-                      const iconEl = document.createElement('span');
-                      iconEl.className = 'text-gray-400 text-4xl';
-                      iconEl.innerHTML = '👤'; // Simple user emoji as fallback
-                      fallbackDiv.appendChild(iconEl);
-                      parent.appendChild(fallbackDiv);
-                    }
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                  <FaUser className="text-gray-400 text-4xl" />
-                </div>
-              )}
+              <img
+                src={profileImage || 'https://via.placeholder.com/150?text=Profile'}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
             </div>
             <h2 className="mt-4 text-xl font-bold">{formData.name}</h2>
             <p className="text-gray-600">{formData.email}</p>

@@ -43,6 +43,7 @@ const Signup = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
     try {
       const payload = { ...form };
       if (form.latitude && form.longitude) {
@@ -53,18 +54,38 @@ const Signup = () => {
         delete payload.latitude;
         delete payload.longitude;
       }
+
+      // Log the payload for debugging
+      console.log('Sending payload:', payload);
+
       const res = await fetch('http://localhost:5000/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      // Log the response status
+      console.log('Response status:', res.status);
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Signup failed');
+      console.log('Response data:', data);
+
+      if (!res.ok) {
+        throw new Error(data.message || data.error || 'Signup failed');
+      }
+
+      // Store user info in addition to token
       localStorage.setItem('token', data.token);
+      localStorage.setItem('userId', data.user.id || data.user._id);
+      localStorage.setItem('userName', data.user.name);
+      localStorage.setItem('userEmail', data.user.email);
+
+      // Notify other components about auth state change
       window.dispatchEvent(new Event('storage'));
       navigate('/');
     } catch (err) {
-      setError(err.message);
+      console.error('Signup error:', err);
+      setError(err.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }

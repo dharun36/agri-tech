@@ -14,13 +14,15 @@ function AlertsBadge({
   const [loading, setLoading] = useState(false);
 
   // Real-time socket connection
-  const { newAlerts, clearNewAlerts } = useSocket(userId, baseUrl);
+  const { newAlerts = [], clearNewAlerts } = useSocket(userId, baseUrl) || {};
 
   // Update unread count when new alerts arrive
   useEffect(() => {
-    if (newAlerts.length > 0) {
+    if (newAlerts && newAlerts.length > 0) {
       setUnreadCount(prev => prev + newAlerts.length);
-      clearNewAlerts();
+      if (typeof clearNewAlerts === 'function') {
+        clearNewAlerts();
+      }
     }
   }, [newAlerts, clearNewAlerts]);
 
@@ -32,20 +34,37 @@ function AlertsBadge({
 
     setLoading(true);
     try {
+      // Set a timeout to prevent long waiting times if server is down
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+
       const url = `${baseUrl}/api/disease/alerts?userId=${userId}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: controller.signal });
+
+      clearTimeout(timeoutId);
 
       if (res.ok) {
         const data = await res.json();
         const count = (data.alerts || []).filter(alert => !alert.read).length;
         setUnreadCount(count);
+
+        // Save to local storage for offline use
+        localStorage.setItem(`alerts-count-${userId}`, count);
       }
     } catch (err) {
       console.error('Failed to fetch alert count:', err);
+
+      // Use cached count from localStorage if available
+      const cachedCount = localStorage.getItem(`alerts-count-${userId}`);
+      if (cachedCount !== null) {
+        setUnreadCount(parseInt(cachedCount, 10));
+      }
     } finally {
       setLoading(false);
     }
-  } useEffect(() => {
+  }
+
+  useEffect(() => {
     fetchUnreadCount();
 
     // Poll for new alerts every 30 seconds

@@ -1,5 +1,18 @@
 {
   "app_name": "AgroTech",
+  "notifications": {
+    "enableTitle": "Enable Notifications",
+    "enableDescription": "Get timely alerts about disease outbreaks in your area to protect your crops.",
+    "enable": "Enable",
+    "later": "Maybe Later"
+  },
+  "notificationTest": {
+    "title": "Notifications Enabled",
+    "body": "You will now receive alerts about crop diseases in your area."
+  },
+  "common": {
+    "close": "Close"
+  },
   "home": "Home",
   "disease_detection": "Disease Detection",
   "market_prices": "Market Prices",

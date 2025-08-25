@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import './index.css';
 import './theme.css';
 import { ToastContainer } from 'react-toastify';
@@ -13,6 +13,7 @@ import GovSchemes from './components/GovSchemes';
 import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import Signup from './components/Signup';
+import NotificationPermission from './components/NotificationPermission';
 import { ThemeProvider } from './contexts/ThemeContext';
 
 function App() {
@@ -34,6 +35,8 @@ function App() {
               <Route path="*" element={<Home />} />
             </Routes>
           </main>
+          {/* Notification permission request banner */}
+          <NotificationPermission />
           <ToastContainer
             position="bottom-right"
             autoClose={5000}
