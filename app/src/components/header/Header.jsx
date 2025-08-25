@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import LanguageSwitcher from './LanguageSwitcher'
-import AlertsBadge from './AlertsBadge'
+import LanguageSwitcher from '../LanguageSwitcher'
+import AlertsBadge from '../AlertsBadge'
 import { useTranslation } from 'react-i18next'
 import { FaSeedling, FaHome, FaSearch, FaRupeeSign, FaHandHoldingUsd, FaLeaf, FaSignInAlt, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa'
 

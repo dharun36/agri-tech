@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FaSeedling, FaBars, FaBell, FaTimes, FaUser } from 'react-icons/fa';
-import AlertsBadge from './AlertsBadge';
+import AlertsBadge from '../AlertsBadge';
 
 const MobileHeader = ({ onMenuToggle, isMenuOpen }) => {
   const { t, i18n } = useTranslation();
@@ -21,7 +21,7 @@ const MobileHeader = ({ onMenuToggle, isMenuOpen }) => {
 
   return (
     <div className="fixed top-0 left-0 right-0 h-14 bg-white shadow-sm flex items-center justify-between px-4 z-40 md:hidden">
-      
+
       {/* Left - App name */}
 
       <div

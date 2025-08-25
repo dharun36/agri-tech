@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import VerticalHeader from './VerticalHeader';
-import MobileHeader from './MobileHeader';
-import MobileBottomNav from './MobileBottomNav';
+import MobileHeader from './header/MobileHeader';
+import MobileBottomNav from './header/MobileBottomNav';
 import '../styles/layout.css';
 import '../styles/animations.css';
 
