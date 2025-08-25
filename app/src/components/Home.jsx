@@ -251,7 +251,7 @@ function Home() {
 
   // Modern UI styles - Green theme to match other components
   const card =
-    "rounded-xl bg-white border border-gray-200 p-6 shadow-md mb-6"
+    "bg-white sm:p-1 rounded-md sm:px-1 md:px-3 xl:px-6 shadow shadow-sm shadow-gray-200 p-4  m-0"
   const sectionTitle =
     "text-xl font-bold text-gray-800 mb-2 tracking-tight"
   const subTitle =
@@ -264,7 +264,7 @@ function Home() {
     "flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-green-50 to-green-100 shadow text-green-600 text-2xl"
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4">
+    <div className="min-h-screen bg-gray-50 py-6 sm:px-1 md:px-4 mx:px-6">
       <div className="max-w-7xl mx-auto w-full">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Weather Widget */}

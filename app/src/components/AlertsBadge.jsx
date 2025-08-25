@@ -106,4 +106,5 @@ function AlertsBadge({
   );
 }
 
+// Make sure there's a default export for this component
 export default AlertsBadge;

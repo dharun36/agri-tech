@@ -8,20 +8,20 @@ const DISEASE_API_URL = "http://127.0.0.1:8000";
 
 function DetectDisease() {
   const { t } = useTranslation();
-  const [image, setImage] = useState("")
+  const [image, setImage] = useState("");
   const [analysis, setAnalysis] = useState({
     detected: "",
     description: "",
     treatment: "",
     advice: ""
-  })
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isSpreadable, setIsSpreadable] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [analysisData, setAnalysisData] = useState(null); // Store bilingual data
   const [locationType, setLocationType] = useState('current'); // 'current' or 'field'
-  const fileInputRef = useRef(null)
+  const fileInputRef = useRef(null);
 
   const handleRetake = () => {
     setImage("")
@@ -55,7 +55,17 @@ function DetectDisease() {
   // Update display when component mounts or language changes
   React.useEffect(() => {
     updateDisplayLanguage();
-  }, [analysisData, localStorage.getItem('i18nextLng')])
+    // Using localStorage directly in the dependency array is incorrect
+    // Instead, we should set up an event listener for storage changes
+    const handleStorageChange = () => {
+      updateDisplayLanguage();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [analysisData]);
 
   const handleReportIssue = async () => {
     if (!analysis || !isSpreadable) return;
@@ -278,237 +288,251 @@ Ensure all Tamil text is properly written in Tamil script. No extra text, just v
     }
   }
 
-  // Modern UI styles - Green theme to match Home component
-  const card = "rounded-xl bg-white border border-gray-200 p-6 shadow-md mb-6"
-  const sectionTitle = "text-xl font-bold text-gray-800 mb-2 tracking-tight"
-  const subTitle = "text-md font-semibold text-gray-600 mb-2"
-  const buttonPrimary = "bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow transition"
-  const buttonSecondary = "bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg shadow transition"
-  const iconBox = "flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-green-50 to-green-100 shadow text-green-600 text-2xl"
+
+  const card = "bg-white sm:p-1  rounded-md sm:px-1 md:px-3 xl:px-6 shadow shadow-sm shadow-gray-200 p-4  m-0";
+  const sectionTitle = "text-xl font-bold text-gray-800 mb-2 tracking-tight";
+  const subTitle = "text-md font-semibold text-gray-600 mb-2";
+  const buttonPrimary = "bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow transition";
+  const buttonSecondary = "bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg shadow transition";
+  const iconBox = "flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-green-50 to-green-100 shadow text-green-600 text-2xl";
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4">
+    <div className="min-h-screen bg-gray-50   sm:px-0 md:px-3 xl:px-6 py-6">
       <div className="max-w-7xl mx-auto">
         {/* Disease Detection Section */}
         <div className={`${card} w-full`}>
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-4 sm:gap-0 mb-4">
             <div className={iconBox}>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <div>
-              <h2 className={sectionTitle}>{t('disease_detection')}</h2>
+            <div className='pl-4'>
+              <h2 className={`${sectionTitle}   `}>{t('disease_detection')}</h2>
               <p className="text-gray-500 text-sm">{t('upload_plant_images')}</p>
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-6">
-            <div className="w-full md:w-1/2">
+          {/* Image Upload Container - Full Width */}
+          <div className="w-full mb-6 overflow-visible">
+            <div className="overflow-visible">
               {image ? (
-                <div className="relative rounded-lg overflow-hidden shadow-md border border-gray-100 aspect-video">
+                <div className=" rounded-lg overflow-hidden shadow-lg border border-gray-200 h-80 w-full max-w-3xl mx-auto">
                   <img
                     src={image}
                     alt="Uploaded plant leaf"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
+                  <div className="absolute top-2 right-2">
+                    <button
+                      className="bg-white/80 hover:bg-white p-2 rounded-full shadow-md transition"
+                      onClick={handleRetake}
+                      title={t('retake_photo')}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-center bg-gray-100 border border-gray-200 rounded-lg h-64 shadow-inner">
-                  <div className="text-center text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <p className="mt-2">{t('no_image_selected')}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-4 flex flex-wrap justify-center gap-3">
-                <button
-                  className={buttonSecondary}
-                  type="button"
-                  onClick={handleRetake}
-                  disabled={!image}
-                >
-                  {t('retake_photo')}
-                </button>
-                <button
-                  className={buttonPrimary}
-                  type="button"
-                  onClick={handleUploadClick}
-                >
-                  {t('upload_new_image')}
-                </button>
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-              </div>
-            </div>
-
-            <div className="w-full md:w-1/2">
-              <div className="mb-4 flex justify-between items-center">
-                <h3 className={subTitle}>{t('ai_analysis_results')}</h3>
-
-                {/* Language Toggle Button */}
-                {analysisData && !loading && (
-                  <button
-                    onClick={() => {
-                      const currentLang = localStorage.getItem('i18nextLng') || 'en';
-                      const newLang = currentLang === 'ta' ? 'en' : 'ta';
-                      localStorage.setItem('i18nextLng', newLang);
-                      updateDisplayLanguage();
-                    }}
-                    className="bg-blue-100 hover:bg-blue-200 text-blue-800 text-sm px-3 py-1 rounded-lg transition-colors shadow-sm"
-                  >
-                    {(localStorage.getItem('i18nextLng') || 'en') === 'ta' ? 'English' : 'தமிழ்'}
-                  </button>
-                )}
-              </div>
-
-              {loading ? (
-                <div className="p-6 flex flex-col items-center justify-center">
-                  <div className="w-12 h-12 border-4 border-gray-200 border-t-green-600 rounded-full animate-spin mb-4"></div>
-                  <p className="text-gray-600">{t('analyzing')}</p>
-                </div>
-              ) : analysis ? (
-                <div className="space-y-4">
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow transition">
-                    <div className="flex items-center mb-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                      <h4 className="font-semibold text-gray-800">{t('disease_detected')}</h4>
-                    </div>
-                    <p className="text-gray-700">{analysis.detected}</p>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow transition">
-                    <div className="flex items-center mb-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                      <h4 className="font-semibold text-gray-800">{t('description')}</h4>
-                    </div>
-                    <p className="text-gray-700">{analysis.description}</p>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow transition">
-                    <div className="flex items-center mb-2">
-                      <div className="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
-                      <h4 className="font-semibold text-gray-800">{t('treatment')}</h4>
-                    </div>
-                    <p className="text-gray-700">{analysis.treatment}</p>
-                  </div>
-
-                  <div className="bg-green-50 rounded-lg p-4 border border-green-100 shadow-sm hover:shadow transition">
-                    <div className="flex items-center mb-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <div className="flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-dashed border-gray-300 rounded-lg h-80 w-full max-w-3xl mx-auto hover:border-green-500 transition duration-300 cursor-pointer overflow-visible" onClick={handleUploadClick}>
+                  <div className="text-center p-6">
+                    <div className="mb-4 bg-green-50 p-4 rounded-full inline-flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <h4 className="font-semibold text-green-800">{t('advice')}</h4>
                     </div>
-                    <p className="text-green-700">{analysis.advice}</p>
-                  </div>
-                </div>
-              ) : null}
-
-              {error && (
-                <div className="bg-red-50 text-red-600 p-4 rounded-lg border border-red-100 shadow-sm">
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>{error}</span>
+                    <h3 className="text-lg font-medium text-gray-700 mb-2">{t('upload_plant_images')}</h3>
+                    <p className="text-sm text-gray-500 mb-4">{t('drag_and_drop') || 'Drag and drop your image here or click to browse'}</p>
+                    <button className={buttonPrimary + " inline-flex items-center"}>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      {t('upload_new_image')}
+                    </button>
                   </div>
                 </div>
               )}
-
-              {/* Spreadable Disease Warning and Report Button */}
-              {analysis && !loading && isSpreadable && (
-                <div className="mt-6 bg-orange-50 border border-orange-200 rounded-lg p-4 shadow-sm">
-                  <div className="flex items-center mb-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-orange-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <span className="text-orange-800 font-medium">
-                      {t('spreadable_disease_warning') || 'Warning: This disease can spread to other plants'}
-                    </span>
-                  </div>
-                  <p className="text-orange-700 mb-4">
-                    {t('report_help_farmers') || 'Report this issue to help alert nearby farmers and prevent further spread.'}
-                  </p>
-
-                  {/* Location Selection */}
-                  <div className="space-y-2">
-                    <p className="text-orange-800 text-xs font-medium">
-                      {t('select_detection_location') || 'Where was this disease detected?'}
-                    </p>
-                    <div className="flex space-x-3">
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          value="current"
-                          checked={locationType === 'current'}
-                          onChange={(e) => setLocationType(e.target.value)}
-                          className="w-3 h-3 text-orange-600"
-                        />
-                        <span className="text-xs text-orange-700">
-                          {t('current_location') || 'Current Location (GPS)'}
-                        </span>
-                      </label>
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          value="field"
-                          checked={locationType === 'field'}
-                          onChange={(e) => setLocationType(e.target.value)}
-                          className="w-3 h-3 text-orange-600"
-                        />
-                        <span className="text-xs text-orange-700">
-                          {t('my_field') || 'My Field/Farm'}
-                        </span>
-                      </label>
-                    </div>
-                    {locationType === 'field' && (
-                      <p className="text-xs text-orange-600 bg-orange-100 p-2 rounded">
-                        {t('field_location_note') || 'This will use your saved field location from your profile.'}
-                      </p>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={handleReportIssue}
-                    disabled={reportLoading}
-                    className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white text-xs font-medium py-2 px-4 rounded transition-colors"
-                  >
-                    {reportLoading ? (t('reporting') || 'Reporting...') : (t('report_disease_outbreak') || 'Report Disease Outbreak')}
-                  </button>
-                </div>
-              )}
-
-              {/* Non-spreadable Disease Info */}
-              {analysis && !loading && !isSpreadable && (
-                <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-green-800 text-xs font-medium">
-                      {t('non_spreadable_disease') || 'This disease is not contagious to other plants'}
-                    </span>
-                  </div>
-                  <p className="text-green-700 text-xs mt-1">
-                    {t('isolated_treatment') || 'You can treat this plant individually without concern for spreading.'}
-                  </p>
-                </div>
-              )}
-
-              {error && <div className="text-red-500 text-xs mt-2">{error}</div>}
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
+              />
             </div>
+          </div>
+
+          {/* AI Analysis Results - Full Width */}
+          <div className="w-full clear-both">
+            <div className="mb-4 flex justify-between items-center">
+              <h3 className={`${sectionTitle} `}>{t('ai_analysis_results')}</h3>
+
+              {/* Language Toggle Button */}
+              {analysisData && !loading && (
+                <button
+                  onClick={() => {
+                    const currentLang = localStorage.getItem('i18nextLng') || 'en';
+                    const newLang = currentLang === 'ta' ? 'en' : 'ta';
+                    localStorage.setItem('i18nextLng', newLang);
+                    updateDisplayLanguage();
+                  }}
+                  className="bg-blue-100 hover:bg-blue-200 text-blue-800 text-sm px-3 py-1 rounded-lg transition-colors shadow-sm"
+                >
+                  {(localStorage.getItem('i18nextLng') || 'en') === 'ta' ? 'English' : 'தமிழ்'}
+                </button>
+              )}
+            </div>
+
+            {loading ? (
+              <div className="p-6 flex flex-col items-center justify-center">
+                <div className="w-12 h-12 border-4 border-gray-200 border-t-green-600 rounded-full animate-spin mb-4"></div>
+                <p className="text-gray-600">{t('analyzing')}</p>
+              </div>
+            ) : analysis ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow transition">
+                  <div className="flex items-center mb-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                    <h4 className=" font-semibold text-gray-800">{t('disease_detected')}</h4>
+                  </div>
+                  <p className="text-gray-700">{analysis.detected}</p>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow transition">
+                  <div className="flex items-center mb-2">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                    <h4 className="font-semibold text-gray-800">{t('description')}</h4>
+                  </div>
+                  <p className="text-gray-700">{analysis.description}</p>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow transition">
+                  <div className="flex items-center mb-2">
+                    <div className="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
+                    <h4 className="font-semibold text-gray-800">{t('treatment')}</h4>
+                  </div>
+                  <p className="text-gray-700">{analysis.treatment}</p>
+                </div>
+
+                <div className="bg-green-50 rounded-lg p-4 border border-green-100 shadow-sm hover:shadow transition">
+                  <div className="flex items-center mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h4 className="font-semibold text-green-800">{t('advice')}</h4>
+                  </div>
+                  <p className="text-green-700">{analysis.advice}</p>
+                </div>
+              </div>
+            ) : null}
+
+            {error && (
+              <div className="bg-red-50 text-red-600 p-4 rounded-lg border border-red-100 shadow-sm">
+                <div className="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{error}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Spreadable Disease Warning and Report Button */}
+            {analysis && !loading && isSpreadable && (
+              <div className="mt-6 bg-orange-50 border border-orange-200 rounded-lg p-4 shadow-sm">
+                <div className="flex items-center mb-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-orange-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span className="text-orange-800 font-medium">
+                    {t('spreadable_disease_warning') || 'Warning: This disease can spread to other plants'}
+                  </span>
+                </div>
+                <p className="text-orange-700 mb-4">
+                  {t('report_help_farmers') || 'Report this issue to help alert nearby farmers and prevent further spread.'}
+                </p>
+
+                {/* Location Selection */}
+                <div className="space-y-3 mt-2">
+                  <p className="text-orange-800 font-medium">
+                    {t('select_detection_location') || 'Where was this disease detected?'}
+                  </p>
+                  <div className="flex flex-wrap gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer hover:bg-orange-100 p-2 rounded-lg transition">
+                      <input
+                        type="radio"
+                        value="current"
+                        checked={locationType === 'current'}
+                        onChange={(e) => setLocationType(e.target.value)}
+                        className="w-4 h-4 text-orange-600 focus:ring-orange-500"
+                      />
+                      <span className="text-orange-700">
+                        {t('current_location') || 'Current Location (GPS)'}
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer hover:bg-orange-100 p-2 rounded-lg transition">
+                      <input
+                        type="radio"
+                        value="field"
+                        checked={locationType === 'field'}
+                        onChange={(e) => setLocationType(e.target.value)}
+                        className="w-4 h-4 text-orange-600 focus:ring-orange-500"
+                      />
+                      <span className="text-orange-700">
+                        {t('my_field') || 'My Field/Farm'}
+                      </span>
+                    </label>
+                  </div>
+                  {locationType === 'field' && (
+                    <p className="text-orange-600 bg-orange-100 p-3 rounded-lg">
+                      {t('field_location_note') || 'This will use your saved field location from your profile.'}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleReportIssue}
+                  disabled={reportLoading}
+                  className="w-full mt-4 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-medium py-2 px-4 rounded-lg shadow transition-colors"
+                >
+                  {reportLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      {t('reporting') || 'Reporting...'}
+                    </span>
+                  ) : (
+                    t('report_disease_outbreak') || 'Report Disease Outbreak'
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Non-spreadable Disease Info */}
+            {analysis && !loading && !isSpreadable && (
+              <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4 shadow-sm">
+                <div className="flex items-center mb-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-green-800 font-medium">
+                    {t('non_spreadable_disease') || 'This disease is not contagious to other plants'}
+                  </span>
+                </div>
+                <p className="text-green-700">
+                  {t('isolated_treatment') || 'You can treat this plant individually without concern for spreading.'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default DetectDisease
+export default DetectDisease;

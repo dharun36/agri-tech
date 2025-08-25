@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import AlertsBadge from './AlertsBadge';
+import AlertsBadge from './AlertsBadge.jsx';
 import { useTranslation } from 'react-i18next';
 import {
   FaSeedling,
@@ -97,7 +97,7 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
                 className="p-2 rounded-full hover:bg-gray-100"
                 title={t('profile') || 'Profile'}
               >
-                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-green-500 text-white">
+                <div className="w-9 h-9 flex items-center justify-center border p-2 border-gray-200 rounded-full bg-white text-gray-500">
                   <FaUser className="text-lg" />
                 </div>
               </Link>
