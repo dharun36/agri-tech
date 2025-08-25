@@ -127,25 +127,22 @@ const WeatherAnalysis = ({ weather, daily, formatDay, getWeatherDesc }) => {
   const buttonStyle = "bg-black text-white rounded hover:bg-gray-800 transition font-semibold flex items-center gap-2";
 
   return (
-    <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+    <div>
       {/* Weather Analysis Button */}
       <div className="mt-4">
         <button
           onClick={analyzeWeather}
           disabled={analysisLoading}
-          className={`border border-gray-500 text-s text-black rounded-lg p-3 py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium flex items-center gap-2 w-full justify-center ${analysisLoading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''} ${isVisible ? 'animate-fadeInUp' : ''}`}
-          style={{ animationDelay: '0.3s' }}
+          className={`bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition flex items-center gap-2 w-full justify-center ${analysisLoading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
         >
-          <i className={`fas ${analysisLoading ? 'fa-spinner fa-spin' : ''} text-sm`}></i>
           {analysisLoading ? t('analyzing') : t('get_weather_analysis')}
         </button>
       </div>
 
       {/* Weather Analysis Results */}
       {weatherAnalysis && (
-        <div className={`mt-6 p-6  border-blue-200 rounded-xl shadow-md transition-all duration-800 ${isVisible ? 'animate-fadeInUp' : 'opacity-0'}`} style={{ animationDelay: '0.4s' }}>
-          <h3 className="font-bold text-black mb-4 flex items-center gap-2 text-lg">
-            <i className="fas fa-chart-line text-black"></i>
+        <div className="mt-4 bg-white border border-gray-200 rounded-lg shadow-sm p-4">
+          <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
             {t('weather_analysis')}
           </h3>
           <div className="space-y-4 text-sm">

@@ -2,9 +2,20 @@ import React, { useEffect, useState } from 'react'
 import useDiseaseAlerts from './useDiseaseAlerts'
 import WeatherAnalysis from './WeatherAnalysis'
 import { Link, useNavigate } from 'react-router-dom'
-import { FaCloudSun, FaSeedling, FaPlus, FaTrash } from "react-icons/fa"
+import {
+  FaCloudSun,
+  FaSeedling,
+  FaPlus,
+  FaTrash,
+  FaSearch,
+  FaLeaf,
+  FaRupeeSign,
+  FaHandHoldingUsd,
+  FaTint,
+  FaExclamationTriangle,
+  FaCloudRain
+} from "react-icons/fa"
 import { useTranslation } from 'react-i18next'
-// No animations or transitions: UI will render statically
 
 function Home() {
   const { t } = useTranslation()
@@ -90,9 +101,17 @@ function Home() {
       setCrops([...crops, crop]);
       setNewCrop("");
     } catch (err) {
-      setCropError('Failed to add crop');
+      setCropError(t('failed_to_add_crop'));
     } finally {
       setCropLoading(false);
+    }
+  };
+
+  // Handle Enter key press in the input field
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && newCrop.trim()) {
+      e.preventDefault();
+      handleAddCrop();
     }
   };
 
@@ -230,27 +249,27 @@ function Home() {
     return date.toLocaleDateString(undefined, { weekday: 'short' })
   }
 
-  // Modern UI styles - Black and Grey Theme with Animations
+  // Modern UI styles - Green theme to match other components
   const card =
-    "rounded-2xl bg-gray-100 border border-gray-200 p-8 mb-8 "
+    "rounded-xl bg-white border border-gray-200 p-6 shadow-md mb-6"
   const sectionTitle =
-    "text-2xl font-bold text-gray-800 mb-4 tracking-tight"
+    "text-xl font-bold text-gray-800 mb-2 tracking-tight"
   const subTitle =
-    "text-lg font-semibold text-gray-600 mb-2"
+    "text-md font-semibold text-gray-600 mb-2"
   const inputStyle =
-    "border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 text-base"
+    "border border-gray-200 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition "
   const buttonStyle =
-    "bg-black text-white px-4 py-2 rounded-lg shadow"
+    "bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow transition"
   const iconBox =
-    "flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 shadow text-blue-600 text-2xl mb-2"
+    "flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-green-50 to-green-100 shadow text-green-600 text-2xl"
 
   return (
-    <main className="min-h-screen bg-gray-50 py-8 px-2 md:px-0">
+    <div className="min-h-screen bg-gray-50 py-6 px-4">
       <div className="max-w-7xl mx-auto w-full">
-        <div className="grid grid-cols-1 min-h-96 md:grid-cols-2 gap-6 md:gap-8 ">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Weather Widget */}
-          <div className={`${card} w-full min-h-60`}>
-            <div className="flex items-center gap-4 mb-6">
+          <div className={`${card} w-full`}>
+            <div className="flex items-center gap-4 mb-4">
               <div className={iconBox}>
                 <FaCloudSun />
               </div>
@@ -260,31 +279,46 @@ function Home() {
               </div>
             </div>
 
+            {/* Weather Loading/Error States */}
+            {weatherLoading && (
+              <div className="flex justify-center items-center p-6">
+                <div className="animate-pulse text-gray-400">Loading weather data...</div>
+              </div>
+            )}
+
+            {weatherError && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">
+                <p>{weatherError}</p>
+                <p className="text-sm mt-1">Please check your location settings and try again.</p>
+              </div>
+            )}
+
             {/* Hourly Forecast */}
             {!weatherLoading && !weatherError && (
               <div className="mb-4">
                 <div className={subTitle}>{t('next_hours')}</div>
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {hourly.map((h, idx) => (
-                    <div key={idx} className="flex flex-col items-center bg-white/70 rounded-lg p-2 shadow min-w-[64px]">
-                      <span className="font-semibold text-gray-700">{formatHour(h.time)}</span>
+                    <div key={idx} className="flex flex-col items-center bg-gray-50 rounded-lg p-2 shadow-sm border border-gray-100 min-w-[64px] hover:shadow transition">
+                      <span className="font-medium text-gray-700 text-sm">{formatHour(h.time)}</span>
                       <img src={`https://openweathermap.org/img/wn/${getWeatherIcon(h.values.weatherCode)}.png`} alt="" className="w-8 h-8" />
-                      <span className="text-base font-bold text-gray-800">{Math.round(h.values.temperature)}°C</span>
+                      <span className="text-sm font-bold text-gray-800">{Math.round(h.values.temperature)}°C</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
             {/* Daily Forecast */}
             {!weatherLoading && !weatherError && (
               <div>
                 <div className={subTitle}>{t('next_7_days')}</div>
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {daily.map((d, idx) => (
-                    <div key={idx} className="flex flex-col items-center bg-white/70 rounded-lg p-2 shadow min-w-[64px]">
-                      <span className="font-semibold text-gray-700">{formatDay(d.time)}</span>
+                    <div key={idx} className="flex flex-col items-center bg-gray-50 rounded-lg p-2 shadow-sm border border-gray-100 min-w-[64px] hover:shadow transition">
+                      <span className="font-medium text-gray-700 text-sm">{formatDay(d.time)}</span>
                       <img src={`https://openweathermap.org/img/wn/${getWeatherIcon(d.values.weatherCodeMax)}.png`} alt="" className="w-8 h-8" />
-                      <span className="text-base font-bold text-gray-800">{Math.round(d.values.temperatureMax)}°C</span>
+                      <span className="text-sm font-bold text-gray-800">{Math.round(d.values.temperatureMax)}°C</span>
                     </div>
                   ))}
                 </div>
@@ -307,9 +341,8 @@ function Home() {
 
           {/* Crop Management */}
           <div className={`${card} w-full`}>
-            {/* ...crop card content... */}
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-green-100 to-green-200 shadow text-green-600 text-2xl mb-2">
+            <div className="flex items-center gap-4 mb-4">
+              <div className={iconBox}>
                 <FaSeedling />
               </div>
               <div>
@@ -317,59 +350,70 @@ function Home() {
                 <p className="text-gray-500 text-sm">{t('manage_fields')}</p>
               </div>
             </div>
-            <div className="flex flex-row items-stretch sm:items-center gap-2 mb-4">
+            <div className="flex flex-row items-center gap-2 mb-4">
               <input
                 type="text"
                 value={newCrop}
                 onChange={(e) => setNewCrop(e.target.value)}
+                onKeyPress={handleKeyPress}
                 placeholder={t('add').concat(' new crop')}
-                className={inputStyle + "h-20 grow"}
+                className={`${inputStyle} grow h-10`}
               />
               <button
                 onClick={handleAddCrop}
-                className="bg-black w-30 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium flex items-center gap-2"
+                className={`${buttonStyle} flex items-center gap-2`}
               >
-                <FaPlus className="text-sm " /> {t('add')}
+                <FaPlus className="text-sm" /> {t('add')}
               </button>
 
 
             </div>
 
 
-            <ul className="space-y-2">
-              {crops.map((crop, idx) => (
-                <li key={idx} className={`flex items-center justify-between bg-white px-4 py-3 rounded-lg border border-gray-200`}>
-                  <span className="flex items-center gap-3">
-                    <FaSeedling className="text-green-600 transform transition-transform duration-300 hover:scale-125" />
-                    <div>
-                      <span className="font-medium text-gray-800">{crop.name}</span>
-                      <span className="text-xs text-gray-500 ml-2 px-2 py-1 bg-gray-100 rounded-full">({crop.status})</span>
-                    </div>
-                  </span>
-                  <button
-                    onClick={() => handleRemoveCrop(idx)}
-                    className="text-red-500 p-2 rounded-full"
-                    title="Remove"
-                  >
-                    <FaTrash className="text-xs" />
-                  </button>
-                </li>
-              ))}
+            <ul className="space-y-2 mt-4">
+              {crops.length === 0 ? (
+                <li className="text-center py-4 text-gray-500">{t('no_crops_added')}</li>
+              ) : (
+                crops.map((crop, idx) => (
+                  <li key={idx} className={`flex items-center justify-between bg-white px-4 py-3 rounded-lg border border-gray-200 hover:shadow-md transition`}>
+                    <span className="flex items-center gap-3">
+                      <FaSeedling className="text-green-600" />
+                      <div>
+                        <span className="font-medium text-gray-800">{crop.name}</span>
+                        {crop.status && (
+                          <span className="text-xs text-gray-500 ml-2 px-2 py-1 bg-gray-100 rounded-full">({crop.status})</span>
+                        )}
+                      </div>
+                    </span>
+                    <button
+                      onClick={() => handleRemoveCrop(idx)}
+                      className="text-red-500 p-2 hover:bg-red-50 rounded-full transition"
+                      title="Remove"
+                    >
+                      <FaTrash className="text-xs" />
+                    </button>
+                  </li>
+                ))
+              )}
             </ul>
 
-            {/* Display Crop Error */}
-            {cropError && (
-              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <span className="text-sm text-red-600">{cropError}</span>
-              </div>
-            )}
+            {/* Status Messages */}
+            <div className="mt-4">
+              {/* Display Crop Error */}
+              {cropError && (
+                <div className="p-3 bg-red-50 border border-red-100 rounded-lg mb-2 flex items-center">
+                  <span className="text-sm text-red-600">{cropError}</span>
+                </div>
+              )}
 
-            {/* Show loading state for crop operations */}
-            {cropLoading && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <span className="text-sm text-blue-600">{t('processing_crop_operation')}</span>
-              </div>
-            )}
+              {/* Show loading state for crop operations */}
+              {cropLoading && (
+                <div className="p-3 bg-green-50 border border-green-100 rounded-lg mb-2 flex items-center">
+                  <div className="animate-pulse w-3 h-3 bg-green-600 rounded-full mr-2"></div>
+                  <span className="text-sm text-green-600">{t('processing_crop_operation')}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -384,54 +428,62 @@ function Home() {
         </div> */}
 
         {/* Quick Links Section */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-10 w-full">
-          <Link to="/disease-detection" className="">
-            <div className="rounded-2xl shadow-lg bg-gray-100 border border-gray-200 p-6 text-center h-full flex flex-col items-center">
-              <i className="fas fa-search text-3xl text-blue-600 mb-4 transform transition-all duration-300 hover:scale-125 hover:rotate-12"></i>
-              <h3 className="font-semibold text-lg mb-2">{t('disease_detection')}</h3>
+        {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8 w-full">
+          <Link to="/disease-detection" className="hover:no-underline">
+            <div className="rounded-xl shadow-md bg-white border border-gray-200 p-5 text-center h-full flex flex-col items-center hover:shadow-lg transition">
+              <div className="w-12 h-12 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 mb-3">
+                <FaSearch className="text-xl" />
+              </div>
+              <h3 className="font-semibold text-gray-800 mb-2">{t('disease_detection')}</h3>
               <p className="text-sm text-gray-600">
                 {t('upload_plant_images')}
               </p>
             </div>
           </Link>
-          <Link to="/crop-recommendation" className="">
-            <div className="rounded-2xl shadow-lg bg-gray-100 border border-gray-200 p-6 text-center h-full flex flex-col items-center">
-              <i className="fas fa-leaf text-3xl text-green-600 mb-4 transform transition-all duration-300 hover:scale-125 hover:rotate-12"></i>
-              <h3 className="font-semibold text-lg mb-2">{t('crop_recommendation')}</h3>
+          <Link to="/crop-recommendation" className="hover:no-underline">
+            <div className="rounded-xl shadow-md bg-white border border-gray-200 p-5 text-center h-full flex flex-col items-center hover:shadow-lg transition">
+              <div className="w-12 h-12 flex items-center justify-center rounded-full bg-green-100 text-green-600 mb-3">
+                <FaLeaf className="text-xl" />
+              </div>
+              <h3 className="font-semibold text-gray-800 mb-2">{t('crop_recommendation')}</h3>
               <p className="text-sm text-gray-600">
                 {t('get_best_crop_suggestions')}
               </p>
             </div>
           </Link>
-          <Link to="/market-prices" className="">
-            <div className="rounded-2xl shadow-lg bg-gray-100 border border-gray-200 p-6 text-center h-full flex flex-col items-center">
-              <i className="fas fa-rupee-sign text-3xl text-yellow-600 mb-4 transform transition-all duration-300 hover:scale-125 hover:rotate-12"></i>
-              <h3 className="font-semibold text-lg mb-2">{t('market_prices')}</h3>
+          <Link to="/market-prices" className="hover:no-underline">
+            <div className="rounded-xl shadow-md bg-white border border-gray-200 p-5 text-center h-full flex flex-col items-center hover:shadow-lg transition">
+              <div className="w-12 h-12 flex items-center justify-center rounded-full bg-yellow-100 text-yellow-600 mb-3">
+                <FaRupeeSign className="text-xl" />
+              </div>
+              <h3 className="font-semibold text-gray-800 mb-2">{t('market_prices')}</h3>
               <p className="text-sm text-gray-600">
                 {t('stay_updated_with_latest_prices')}
               </p>
             </div>
           </Link>
-          <Link to="/government-schemes" className="">
-            <div className="rounded-2xl shadow-lg bg-gray-100 border border-gray-200 p-6 text-center h-full flex flex-col items-center">
-              <i className="fas fa-hand-holding-usd text-3xl text-purple-600 mb-4 transform transition-all duration-300 hover:scale-125 hover:rotate-12"></i>
-              <h3 className="font-semibold text-lg mb-2">{t('government_schemes')}</h3>
+          <Link to="/government-schemes" className="hover:no-underline">
+            <div className="rounded-xl shadow-md bg-white border border-gray-200 p-5 text-center h-full flex flex-col items-center hover:shadow-lg transition">
+              <div className="w-12 h-12 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 mb-3">
+                <FaHandHoldingUsd className="text-xl" />
+              </div>
+              <h3 className="font-semibold text-gray-800 mb-2">{t('government_schemes')}</h3>
               <p className="text-sm text-gray-600">
                 {t('find_apply_agriculture_subsidy_schemes')}
               </p>
             </div>
           </Link>
-        </div>
+        </div> */}
 
         {/* Smart Irrigation Insights */}
-        <div className="mt-8">
-          <div className="rounded-2xl shadow-lg bg-gray-100 border border-gray-200 p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <i className="fas fa-tint text-blue-600"></i>
+        <div className="mt-6">
+          <div className="rounded-xl shadow-md bg-white border border-gray-200 p-5">
+            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <FaTint className="text-blue-600" />
               {t('smart_irrigation_insights')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
                 <h4 className="font-semibold text-gray-700 mb-2">{t('soil_types')}</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -449,7 +501,7 @@ function Home() {
                 </div>
               </div>
 
-              <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
                 <h4 className="font-semibold text-gray-700 mb-2">{t('crop_water_needs')}</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -467,19 +519,19 @@ function Home() {
                 </div>
               </div>
 
-              <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
                 <h4 className="font-semibold text-gray-700 mb-2">{t('alerts')}</h4>
                 <div className="space-y-2 text-sm">
                   <div className="text-orange-600 flex items-center">
-                    <i className="fas fa-exclamation-triangle mr-2"></i>
+                    <FaExclamationTriangle className="mr-2 text-xs" />
                     <span>{t('optimal_timing')}: 6-8 AM</span>
                   </div>
                   <div className="text-blue-600 flex items-center">
-                    <i className="fas fa-cloud-rain mr-2"></i>
+                    <FaCloudRain className="mr-2 text-xs" />
                     <span>{t('check_rain_forecast')}</span>
                   </div>
                   <div className="text-green-600 flex items-center">
-                    <i className="fas fa-leaf mr-2"></i>
+                    <FaLeaf className="mr-2 text-xs" />
                     <span>{t('monitor_soil_moisture')}</span>
                   </div>
                 </div>
@@ -487,8 +539,134 @@ function Home() {
             </div>
           </div>
         </div>
+        <div className="mt-6">
+          <div className="rounded-xl shadow-md bg-white border border-gray-200 p-5">
+            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <FaTint className="text-blue-600" />
+              {t('smart_irrigation_insights')}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
+                <h4 className="font-semibold text-gray-700 mb-2">{t('soil_types')}</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>{t('clay')}:</span>
+                    <span className="text-blue-600 font-medium">{t('high_retention')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('sandy')}:</span>
+                    <span className="text-yellow-600 font-medium">{t('low_retention')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('loamy')}:</span>
+                    <span className="text-green-600 font-semibold">{t('optimal')}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
+                <h4 className="font-semibold text-gray-700 mb-2">{t('crop_water_needs')}</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>{t('tomatoes')}:</span>
+                    <span className="text-red-600 font-medium">25mm/{t('day')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('lettuce')}:</span>
+                    <span className="text-green-600 font-medium">15mm/{t('day')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('corn')}:</span>
+                    <span className="text-yellow-600 font-medium">30mm/{t('day')}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
+                <h4 className="font-semibold text-gray-700 mb-2">{t('alerts')}</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="text-orange-600 flex items-center">
+                    <FaExclamationTriangle className="mr-2 text-xs" />
+                    <span>{t('optimal_timing')}: 6-8 AM</span>
+                  </div>
+                  <div className="text-blue-600 flex items-center">
+                    <FaCloudRain className="mr-2 text-xs" />
+                    <span>{t('check_rain_forecast')}</span>
+                  </div>
+                  <div className="text-green-600 flex items-center">
+                    <FaLeaf className="mr-2 text-xs" />
+                    <span>{t('monitor_soil_moisture')}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div><div className="mt-6">
+          <div className="rounded-xl shadow-md bg-white border border-gray-200 p-5">
+            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <FaTint className="text-blue-600" />
+              {t('smart_irrigation_insights')}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
+                <h4 className="font-semibold text-gray-700 mb-2">{t('soil_types')}</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>{t('clay')}:</span>
+                    <span className="text-blue-600 font-medium">{t('high_retention')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('sandy')}:</span>
+                    <span className="text-yellow-600 font-medium">{t('low_retention')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('loamy')}:</span>
+                    <span className="text-green-600 font-semibold">{t('optimal')}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
+                <h4 className="font-semibold text-gray-700 mb-2">{t('crop_water_needs')}</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>{t('tomatoes')}:</span>
+                    <span className="text-red-600 font-medium">25mm/{t('day')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('lettuce')}:</span>
+                    <span className="text-green-600 font-medium">15mm/{t('day')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('corn')}:</span>
+                    <span className="text-yellow-600 font-medium">30mm/{t('day')}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
+                <h4 className="font-semibold text-gray-700 mb-2">{t('alerts')}</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="text-orange-600 flex items-center">
+                    <FaExclamationTriangle className="mr-2 text-xs" />
+                    <span>{t('optimal_timing')}: 6-8 AM</span>
+                  </div>
+                  <div className="text-blue-600 flex items-center">
+                    <FaCloudRain className="mr-2 text-xs" />
+                    <span>{t('check_rain_forecast')}</span>
+                  </div>
+                  <div className="text-green-600 flex items-center">
+                    <FaLeaf className="mr-2 text-xs" />
+                    <span>{t('monitor_soil_moisture')}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
-    </main>
+    </div>
   )
 }
 

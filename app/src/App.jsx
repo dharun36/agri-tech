@@ -3,7 +3,6 @@ import './App.css'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import DetectDisease from './components/DetectDisease'
-import Header from './components/Header'
 import Home from './components/Home'
 import CropRecommendation from './components/CropRecommendation'
 import MarketPrices from './components/MarketPrices'
@@ -14,6 +13,7 @@ import GovSchemes from './components/GovSchemes'
 import LandingPage from './components/LandingPage'
 import Login from './components/Login'
 import Signup from './components/Signup'
+import AppLayout from './components/AppLayout'
 import { useEffect } from 'react'
 
 function App() {
@@ -31,8 +31,8 @@ function App() {
 
   return (
     <Router>
-      <div className="container">
-        <main className="main">
+      <AppLayout>
+        <main className="main" style={{ flex: '1', display: 'flex', flexDirection: 'column' }}>
           <Routes>
             <Route path="/lan" element={<LandingPage />} />
             <Route path="/home" element={<Home />} />
@@ -51,7 +51,7 @@ function App() {
           </Routes>
         </main>
         <ToastContainer position="bottom-right" autoClose={10000} />
-      </div>
+      </AppLayout>
     </Router>
   )
 }

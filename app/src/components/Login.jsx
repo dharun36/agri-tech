@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaSeedling, FaSignInAlt } from 'react-icons/fa';
+import { FaSeedling, FaSignInAlt, FaEnvelope, FaLock } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next'
 
 const Login = () => {
@@ -8,6 +8,13 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  // Check if already logged in
+  useEffect(() => {
+    if (localStorage.getItem('token')) {
+      navigate('/');
+    }
+  }, [navigate]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -35,7 +42,6 @@ const Login = () => {
         localStorage.setItem('userLocation', JSON.stringify(data.user.location));
       }
 
-
       window.dispatchEvent(new Event('storage'));
       navigate('/');
     } catch (err) {
@@ -45,60 +51,113 @@ const Login = () => {
     }
   };
 
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-white">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md border border-green-100 flex flex-col justify-center"
-      >
-        <div className="flex flex-col items-center mb-6">
-          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-green-100 to-green-300 shadow text-green-600 text-3xl mb-2">
-            <FaSeedling />
+    <div className="min-h-screen bg-white">
+      {/* Header for login page */}
+      <header className="bg-white py-4 px-6 shadow-sm">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <Link to="/">
+            <div className="flex items-center">
+              <div>
+                <span className="font-bold text-2xl text-green-600">Agri</span>
+                <span className="font-bold text-2xl text-yellow-500">Tech</span>
+              </div>
+            </div>
+          </Link>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-6 py-20 flex flex-col md:flex-row items-center justify-center gap-12">
+        {/* Left Column with Image and Text */}
+        <div className="w-full md:w-1/2 flex flex-col items-center md:items-start">
+          <div className="mb-8 text-center md:text-left">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-4">
+              Welcome Back to <span className="text-green-600">AgriTech</span>
+            </h1>
+            <p className="text-lg md:text-xl text-gray-600 max-w-md">
+              Login to access your personalized farming solutions and continue your journey to sustainable agriculture.
+            </p>
           </div>
-          <h2 className="text-2xl font-bold text-green-700 mb-1 flex items-center gap-2">
-            <FaSignInAlt /> {t('login_title')}
-          </h2>
-          <p className="text-gray-500 text-sm">{t('login_welcome')}</p>
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-1">{t('email')}</label>
-          <input
-            type="email"
-            name="email"
-            value={form.email}
-            onChange={handleChange}
-            required
-            className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition"
-            placeholder="you@email.com"
+          <img
+            src="https://source.unsplash.com/IZ01rjX0XQA"
+            alt="Farming Community"
+            className="w-full max-w-md rounded-lg shadow-xl hidden md:block"
           />
         </div>
-        <div className="mb-6">
-          <label className="block text-gray-700 mb-1">{t('password')}</label>
-          <input
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            required
-            className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition"
-            placeholder="Your password"
-          />
+
+        {/* Right Column with Login Form */}
+        <div className="w-full md:w-1/2 max-w-md">
+          <form
+            onSubmit={handleSubmit}
+            className="bg-white rounded-xl p-8"
+          >
+            <div className="flex flex-col items-center mb-6">
+              <div className="w-16 h-16 bg-green-600 text-white rounded-full flex items-center justify-center text-3xl mb-3">
+                <FaSeedling />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                {t('login_title')}
+              </h2>
+              <p className="text-gray-600">{t('login_welcome')}</p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-gray-700 font-medium mb-2">{t('email')}</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FaEnvelope className="text-gray-400" />
+                </div>
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                  className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition"
+                  placeholder="you@email.com"
+                />
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-gray-700 font-medium mb-2">{t('password')}</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FaLock className="text-gray-400" />
+                </div>
+                <input
+                  type="password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                  className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition"
+                  placeholder="Your password"
+                />
+              </div>
+            </div>
+
+            {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-6">{error}</div>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+            >
+              {loading ? t('logging_in') : <>{t('login_title')} <FaSignInAlt /></>}
+            </button>
+
+            <div className="text-center mt-6 text-gray-600">
+              {t('new_to_agritech')}{' '}
+              <Link to="/signup" className="text-green-600 font-semibold hover:underline">
+                {t('sign_up')}
+              </Link>
+            </div>
+          </form>
         </div>
-        {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-gradient-to-r from-green-400 to-green-600 text-white py-2 rounded-lg font-semibold shadow hover:from-green-500 hover:to-green-700 transition flex items-center justify-center gap-2"
-        >
-          {loading ? t('logging_in') : <><FaSignInAlt /> {t('login_title')}</>}
-        </button>
-        <div className="text-center mt-4 text-gray-600 text-sm">
-          {t('new_to_agritech')}{' '}
-          <Link to="/signup" className="text-green-600 font-semibold hover:underline">{t('sign_up')}</Link>
-        </div>
-      </form>
+      </div>
     </div>
   );
 };
