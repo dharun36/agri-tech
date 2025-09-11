@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { FaSearch, FaFilter, FaSyncAlt, FaLeaf, FaMapMarkerAlt, FaRupeeSign } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
-const GOV_API_KEY = "579b464db66ec23bdd0000013f7611f40d8544e97c38a95e33add5b7";
+// Get API key from environment variables
+const GOV_API_KEY = import.meta.env.VITE_GOV_API_KEY;
 const GOV_API_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070";
 
 const DATA_ID = "9ef84268-d588-465a-a308-a864a43d0070";
@@ -343,7 +344,7 @@ const MarketPrices = () => {
 
               {/* Crop Type Filter */}
               <div className="flex items-center gap-2">
-                
+
                 <select
                   value={selectedCropType}
                   onChange={handleCropTypeChange}

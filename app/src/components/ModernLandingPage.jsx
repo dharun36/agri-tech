@@ -58,7 +58,7 @@ export default function ModernLandingPage() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/" className="font-medium hover:text-green-600 transition-colors">Home</Link>
+            <Link to="/home" className="font-medium hover:text-green-600 transition-colors">Home</Link>
             <Link to="/disease-detection" className="font-medium hover:text-green-600 transition-colors">Plant Detection</Link>
             <Link to="/crop-recommendation" className="font-medium hover:text-green-600 transition-colors">Crop Advisor</Link>
             <Link to="/market-prices" className="font-medium hover:text-green-600 transition-colors">Market</Link>

@@ -9,8 +9,8 @@ if (typeof document !== 'undefined' && !document.getElementById('weather-analysi
   document.head.appendChild(styleSheet);
 }
 
-const GEMINI_API_KEY = "AIzaSyAqWH8BEYRNGeO9HNWYaOrVll_c4kaXPHk";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY;
+// Get API key from environment variables
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + import.meta.env.VITE_GEMINI_API_KEY;
 
 const WeatherAnalysis = ({ weather, daily, formatDay, getWeatherDesc }) => {
   const [weatherAnalysis, setWeatherAnalysis] = useState(null);

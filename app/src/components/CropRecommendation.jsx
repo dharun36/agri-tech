@@ -3,9 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const GEMINI_API_KEY = "AIzaSyAqWH8BEYRNGeO9HNWYaOrVll_c4kaXPHk";
-
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY;
+// Get API key from environment variables
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + import.meta.env.VITE_GEMINI_API_KEY;
 
 const cropImages = {
   Wheat: "https://storage.googleapis.com/a1aa/image/18887521-1e5e-44ed-dfda-46e29786e047.jpg",
@@ -972,7 +971,7 @@ Example format:
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
                     </svg>
-                    <span className="text-xs text-green-500">{t('fill_form_left')}</span>
+                    <span className="text-xs text-green-500">{t('fill_form')}</span>
                   </div>
                 </div>
               ) : (

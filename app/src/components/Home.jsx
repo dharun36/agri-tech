@@ -150,7 +150,7 @@ function Home() {
       (pos) => {
         const { latitude, longitude } = pos.coords
         fetch(
-          `https://api.tomorrow.io/v4/weather/forecast?location=${latitude},${longitude}&apikey=thltkMYhfQUiGEr01K7HDwN5vEGq4fiW&timesteps=1h,1d&units=metric`
+          `https://api.tomorrow.io/v4/weather/forecast?location=${latitude},${longitude}&apikey=${import.meta.env.VITE_WEATHER_API_KEY}&timesteps=1h,1d&units=metric`
         )
           .then((res) => res.json())
           .then((data) => {
@@ -251,7 +251,7 @@ function Home() {
 
   // Modern UI styles - Green theme to match other components
   const card =
-    "bg-white sm:p-1 rounded-md sm:px-1 md:px-3 xl:px-6 shadow shadow-sm shadow-gray-200 p-4  m-0"
+    "bg-white sm:p-1 md:py-5 xl:py-6 rounded-md sm:px-1 md:px-3 xl:px-6 shadow shadow-sm shadow-gray-200 p-4  m-0"
   const sectionTitle =
     "text-xl font-bold text-gray-800 mb-2 tracking-tight"
   const subTitle =

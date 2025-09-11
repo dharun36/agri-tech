@@ -1,10 +1,10 @@
 import React, { use, useRef, useState } from 'react'
 import { toast } from 'react-toastify';
-import dotenv from 'dotenv';
 import { useTranslation } from 'react-i18next'
-const GEMINI_API_KEY = "AIzaSyAqWH8BEYRNGeO9HNWYaOrVll_c4kaXPHk";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY;
-const DISEASE_API_URL = "http://127.0.0.1:8000";
+
+// Get API keys and URLs from environment variables
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + import.meta.env.VITE_GEMINI_API_KEY;
+const DISEASE_API_URL = import.meta.env.VITE_DISEASE_API_URL || "http://127.0.0.1:8000";
 
 function DetectDisease() {
   const { t } = useTranslation();
