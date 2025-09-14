@@ -11,16 +11,20 @@ import {
   faRulerCombined,
   faLayerGroup,
   faCloudSun,
-  faFlask
+  faFlask,
+  faWater,
+  faClipboard
 } from '@fortawesome/free-solid-svg-icons';
 import axios from 'axios';
 import { format } from 'date-fns';
-
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import CropStatusHistory from './CropStatusHistory';
 import { EventFormSelector } from './CropEventForms';
+
+// Define the API base URL to ensure all requests go to the backend server
+const API_BASE_URL = 'http://localhost:5000';
 
 const CropDetails = () => {
   const { id } = useParams();
@@ -30,11 +34,12 @@ const CropDetails = () => {
   const [crop, setCrop] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [activeEventForm, setActiveEventForm] = useState(null);
 
-  // Fetch crop details
+  // Fetch crop details and activities
   useEffect(() => {
-    const fetchCrop = async () => {
+    const fetchCropDetails = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
@@ -42,20 +47,35 @@ const CropDetails = () => {
           navigate('/login');
           return;
         }
-        const response = await axios.get(`http://localhost:5000/api/crops/${id}`, {
+
+        // Fetch crop details
+        const cropResponse = await axios.get(`${API_BASE_URL}/api/crops/${id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        setCrop(response.data);
+        setCrop(cropResponse.data);
+
+        // Fetch activities for this crop
+        const activitiesResponse = await axios.get(`${API_BASE_URL}/api/activities/crop/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        // Assign activities to the crop object to be used by CropStatusHistory
+        const cropWithActivities = {
+          ...cropResponse.data,
+          activities: activitiesResponse.data.activities || []
+        };
+
+        setCrop(cropWithActivities);
       } catch (err) {
         console.error('Error fetching crop details:', err);
-        setError('Failed to load crop details');
+        setError('Failed to load crop data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCrop();
-  }, [id]);
+    fetchCropDetails();
+  }, [id, navigate]);
 
   const handleAddEvent = (eventType) => {
     setActiveEventForm(eventType);
@@ -64,55 +84,101 @@ const CropDetails = () => {
   const handleSubmitEvent = async (eventType, formData) => {
     try {
       setLoading(true);
+      // Clear any existing messages
+      setError(null);
+      setSuccess(null);
       const token = localStorage.getItem('token');
 
-      // Determine the endpoint based on eventType
+      console.log('Submitting event:', eventType, 'with form data:', formData);
+
+      // Prepare the request URL and data
+      const cropId = id;
       let endpoint;
+      let updatedFormData = { ...formData };
+
+      // Handle special cases for different event types
       switch (eventType) {
-        case 'irrigation':
-          endpoint = `/api/crops/${id}/irrigation`;
-          break;
-        case 'fertilization':
-          endpoint = `/api/crops/${id}/fertilization`;
+        case 'activity':
+          endpoint = `/api/activities`;
+          updatedFormData.cropId = cropId;
           break;
         case 'pestDisease':
-          endpoint = `/api/crops/${id}/pest-disease`;
-          break;
-        case 'growth':
-          endpoint = `/api/crops/${id}/growth`;
-          break;
-        case 'harvest':
-          endpoint = `/api/crops/${id}/harvest`;
-          break;
-        case 'weather':
-          endpoint = `/api/crops/${id}/weather`;
-          break;
-        case 'cost':
-          endpoint = `/api/crops/${id}/costs`;
-          break;
-        case 'labor':
-          endpoint = `/api/crops/${id}/labor`;
-          break;
-        case 'note':
-          endpoint = `/api/crops/${id}/notes`;
+          endpoint = `/api/crops/${cropId}/pest-disease`;
           break;
         default:
-          throw new Error('Unknown event type');
+          endpoint = `/api/crops/${cropId}/${eventType.toLowerCase()}`;
       }
 
-      const response = await axios.post(endpoint, formData, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      console.log(`Preparing to submit ${eventType} event to endpoint: ${endpoint}`);
 
-      setCrop(response.data);
-      setActiveEventForm(null);
+      // Build the full URL with base API URL
+      const fullEndpoint = `${API_BASE_URL}${endpoint}`;
+      console.log('Full API URL:', fullEndpoint);
+
+      // Make the API request with enhanced error handling
+      try {
+        const response = await axios.post(fullEndpoint, updatedFormData, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        console.log('API response received:', response.status);
+
+        // Update local state
+        setCrop(response.data);
+        setActiveEventForm(null);
+
+        // Show success message
+        setSuccess(`Successfully added ${eventType} event`);
+      } catch (apiError) {
+        console.error(`API error for ${eventType} event:`, apiError);
+
+        // Extract and format detailed error information
+        let errorMessage;
+        let errorDetails = '';
+
+        if (apiError.response) {
+          // Server responded with non-2xx status
+          console.error('Error response status:', apiError.response.status);
+          console.error('Error response data:', apiError.response.data);
+
+          // Extract error message from response data
+          errorMessage = apiError.response.data.error ||
+            apiError.response.data.message ||
+            `Error ${apiError.response.status}: Server error`;
+
+          // Handle validation errors
+          if (apiError.response.data.errors) {
+            errorDetails = Object.entries(apiError.response.data.errors)
+              .map(([field, message]) => `${field}: ${message}`)
+              .join('; ');
+          }
+        } else if (apiError.request) {
+          // Request made but no response received
+          console.error('No response received:', apiError.request);
+          errorMessage = 'No response from server. Please check your connection.';
+        } else {
+          // Error setting up the request
+          errorMessage = apiError.message || 'Unknown error occurred';
+        }
+
+        // Show comprehensive error to user
+        const fullErrorMessage = errorDetails
+          ? `${errorMessage} (${errorDetails})`
+          : errorMessage;
+
+        setError(`Failed to add ${eventType}: ${fullErrorMessage}`);
+        throw apiError; // Re-throw to be caught by the outer catch
+      }
     } catch (err) {
-      console.error(`Error adding ${eventType} event:`, err);
-      setError(`Failed to add ${eventType} event`);
+      console.error(`Error in event submission flow for ${eventType}:`, err);
+      // This catch handles any errors not caught by the inner try-catch
     } finally {
       setLoading(false);
     }
   };
+
+  // All activities are now handled through the standard event system
+  // No separate activity handling functions needed
 
   if (loading && !crop) {
     return (
@@ -162,6 +228,26 @@ const CropDetails = () => {
         {t('back_to_dashboard')}
       </Button>
 
+      {/* Success message */}
+      {success && (
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 flex justify-between items-center">
+          <span>{success}</span>
+          <button onClick={() => setSuccess(null)} className="text-green-700">
+            <span className="text-xl">&times;</span>
+          </button>
+        </div>
+      )}
+
+      {/* Error message */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex justify-between items-center">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="text-red-700">
+            <span className="text-xl">&times;</span>
+          </button>
+        </div>
+      )}
+
       {/* Crop header */}
       <div className="bg-white border border-green-200 shadow-md rounded-lg p-6 mb-6">
         <div className="flex items-center">
@@ -203,11 +289,24 @@ const CropDetails = () => {
             <div className="mb-4">
               <div className="flex items-center text-gray-500 mb-1">
                 <FontAwesomeIcon icon={faLeaf} className="mr-2" />
-                {t('planting_method')}
+                {t('growth_days')}
               </div>
               <div className="text-lg">
-                {crop.plantingMethod
-                  ? t(crop.plantingMethod.replace(' ', '_'))
+                {crop.growthDays
+                  ? `${crop.growthDays} ${t('days')}`
+                  : 'N/A'
+                }
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <div className="flex items-center text-gray-500 mb-1">
+                <FontAwesomeIcon icon={faWater} className="mr-2" />
+                {t('irrigation_type')}
+              </div>
+              <div className="text-lg">
+                {crop.irrigationType
+                  ? t(crop.irrigationType.toLowerCase() + '_irrigation')
                   : 'N/A'
                 }
               </div>
@@ -221,7 +320,7 @@ const CropDetails = () => {
                 {t('field_location')}
               </div>
               <div className="text-lg">
-                {crop.location?.name || crop.fieldId || 'N/A'}
+                {crop.locationName || crop.fieldId || 'N/A'}
               </div>
             </div>
 
@@ -231,8 +330,8 @@ const CropDetails = () => {
                 {t('area')}
               </div>
               <div className="text-lg">
-                {crop.location?.area
-                  ? `${crop.location.area} ${crop.location.areaUnit || 'units'}`
+                {crop.locationArea
+                  ? `${crop.locationArea} ${crop.locationAreaUnit || 'units'}`
                   : 'N/A'
                 }
               </div>
@@ -243,7 +342,12 @@ const CropDetails = () => {
                 <FontAwesomeIcon icon={faLayerGroup} className="mr-2" />
                 {t('soil_type')}
               </div>
-              <div className="text-lg">{crop.soilType || 'N/A'}</div>
+              <div className="text-lg">
+                {crop.soilType
+                  ? t(crop.soilType.toLowerCase())
+                  : 'N/A'
+                }
+              </div>
             </div>
           </div>
         </div>
@@ -255,28 +359,14 @@ const CropDetails = () => {
             {t('growing_conditions')}
           </div>
           <div className="mb-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <div className="text-sm text-gray-500">{t('previous_crop')}</div>
                 <div>{crop.previousCrop || 'N/A'}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-500">{t('companion_crops')}</div>
-                <div>
-                  {crop.companionCrops && crop.companionCrops.length
-                    ? crop.companionCrops.join(', ')
-                    : 'N/A'
-                  }
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-500">{t('trap_crops')}</div>
-                <div>
-                  {crop.trapCrops && crop.trapCrops.length
-                    ? crop.trapCrops.join(', ')
-                    : 'N/A'
-                  }
-                </div>
+                <div className="text-sm text-gray-500">{t('seed_source')}</div>
+                <div>{crop.seedSource || 'N/A'}</div>
               </div>
             </div>
           </div>
@@ -299,6 +389,18 @@ const CropDetails = () => {
             )}
           </div>
         </div>
+
+        {crop.notes && (
+          <div className="mt-4">
+            <div className="flex items-center text-gray-500 mb-1">
+              <FontAwesomeIcon icon={faClipboard} className="mr-2" />
+              {t('crop_notes')}
+            </div>
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg text-gray-700">
+              {crop.notes}
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Crop Status History component */}

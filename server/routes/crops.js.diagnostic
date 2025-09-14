@@ -1,0 +1,99 @@
+// This file contains a diagnostic version of the irrigation endpoint
+// with improved error handling and data validation
+
+router.post('/:id/irrigation', async (req, res) => {
+  try {
+    console.log('Irrigation endpoint hit with params:', req.params);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('User ID from auth middleware:', req.user?._id);
+
+    // Validate user ID
+    if (!req.user || !req.user._id) {
+      console.error('Missing or invalid user ID in auth middleware');
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    // Validate crop ID
+    if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+      console.error('Invalid crop ID:', req.params.id);
+      return res.status(400).json({ message: 'Invalid crop ID format' });
+    }
+
+    // Find the crop with explicit user ID check
+    const crop = await Crop.findOne({ 
+      _id: req.params.id, 
+      user: req.user._id 
+    });
+    
+    console.log('Crop found:', crop ? 'Yes' : 'No', crop ? `(Name: ${crop.name})` : '');
+    
+    if (!crop) {
+      return res.status(404).json({ message: 'Crop not found or access denied' });
+    }
+
+    const {
+      date, duration, amount, method,
+      waterSource, soilMoistureBefore, soilMoistureAfter, notes
+    } = req.body;
+
+    // Input validation
+    if (!date) {
+      return res.status(400).json({ message: 'Date is required' });
+    }
+
+    // Type safety
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ message: 'Invalid date format' });
+    }
+
+    // Create the irrigation event with proper type conversion
+    const irrigationEvent = {
+      date: parsedDate,
+      duration: duration !== undefined && duration !== '' ? Number(duration) : undefined,
+      amount: amount !== undefined && amount !== '' ? Number(amount) : undefined,
+      method: method || undefined,
+      waterSource: waterSource || undefined,
+      soilMoistureBefore: soilMoistureBefore !== undefined && soilMoistureBefore !== '' ? 
+        Number(soilMoistureBefore) : undefined,
+      soilMoistureAfter: soilMoistureAfter !== undefined && soilMoistureAfter !== '' ? 
+        Number(soilMoistureAfter) : undefined,
+      notes: notes || undefined
+    };
+
+    console.log('Processed irrigation event:', JSON.stringify(irrigationEvent, null, 2));
+    
+    // Check if irrigation history array exists
+    if (!Array.isArray(crop.irrigationHistory)) {
+      console.log('Creating new irrigationHistory array');
+      crop.irrigationHistory = [];
+    }
+    
+    // Add event
+    crop.irrigationHistory.push(irrigationEvent);
+
+    // Save with validation error capture
+    try {
+      await crop.save();
+      console.log('Crop saved successfully with new irrigation event');
+      return res.status(200).json(crop);
+    } catch (validationError) {
+      console.error('Validation error when saving crop:', validationError);
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        details: validationError.message,
+        errors: validationError.errors
+      });
+    }
+  } catch (error) {
+    console.error('Error adding irrigation event:', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    return res.status(500).json({ 
+      message: 'Server error processing irrigation event', 
+      error: error.message,
+      type: error.name
+    });
+  }
+});

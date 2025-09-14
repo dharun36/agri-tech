@@ -22,6 +22,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
+
 // Serve static files from uploads directory
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -44,6 +46,7 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/crops', require('./routes/crops'));
 app.use('/api/disease', require('./routes/disease'));
+app.use('/api/activities', require('./routes/activities'));
 
 // Weather Analysis Endpoint using Gemini AI
 app.post('/api/weather-analysis', async (req, res) => {
@@ -122,6 +125,28 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
+});
+
+// Global error handler middleware - must be after all routes
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  console.error('Error stack:', err.stack);
+  res.status(500).json({
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'production' ? 'Something went wrong' : err.message
+  });
+});
+
+// Process-level error handling
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  console.error(error.stack);
+  // In production, you might want to restart the server or perform cleanup here
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // In production, you might want to restart the server or perform cleanup here
 });
 
 const PORT = process.env.PORT || 5000;

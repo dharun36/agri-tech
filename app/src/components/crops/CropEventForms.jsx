@@ -72,13 +72,67 @@ export const IrrigationForm = ({ onSubmit, onCancel }) => {
     notes: ''
   });
 
+  // Add validation state
+  const [validationErrors, setValidationErrors] = useState({});
+
   const handleChange = (field, value) => {
+    // Clear validation error when field is changed
+    const newErrors = { ...validationErrors };
+    delete newErrors[field];
+    setValidationErrors(newErrors);
+
     setFormData({ ...formData, [field]: value });
+  };
+
+  // Validate numeric field
+  const validateNumeric = (value, fieldName) => {
+    if (value === '' || value === undefined) return true;
+
+    const num = Number(value);
+    if (isNaN(num)) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [fieldName]: `${fieldName} must be a valid number`
+      }));
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+
+    // Validate required fields and numeric values
+    const errors = {};
+    if (!formData.date) errors.date = 'Date is required';
+
+    // Validate numeric fields
+    const fieldsToValidate = ['duration', 'amount', 'soilMoistureBefore', 'soilMoistureAfter'];
+    let hasNumericError = false;
+
+    fieldsToValidate.forEach(field => {
+      if (!validateNumeric(formData[field], field)) {
+        hasNumericError = true;
+      }
+    });
+
+    // If there are validation errors, don't submit
+    if (Object.keys(errors).length > 0 || hasNumericError) {
+      setValidationErrors(prev => ({ ...prev, ...errors }));
+      return;
+    }
+
+    // Ensure numeric fields are properly typed before submission
+    const processedData = {
+      ...formData,
+      duration: formData.duration === '' ? undefined : Number(formData.duration),
+      amount: formData.amount === '' ? undefined : Number(formData.amount),
+      soilMoistureBefore: formData.soilMoistureBefore === '' ? undefined : Number(formData.soilMoistureBefore),
+      soilMoistureAfter: formData.soilMoistureAfter === '' ? undefined : Number(formData.soilMoistureAfter)
+    };
+
+    console.log('Submitting irrigation data:', processedData);
+    onSubmit(processedData);
   };
 
   return (
@@ -528,6 +582,150 @@ export const GrowthForm = ({ onSubmit, onCancel }) => {
 
 // Forms for other event types can be implemented similarly
 
+// ActivityForm component
+const ActivityForm = ({ onSubmit, onCancel }) => {
+  const { t } = useTranslation();
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    activityType: 'general',
+    date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD
+    duration: '',
+    personnel: [],
+    tags: []
+  });
+
+  const activityTypes = [
+    { value: 'general', label: t('activity_type_general') },
+    { value: 'inspection', label: t('activity_type_inspection') },
+    { value: 'maintenance', label: t('activity_type_maintenance') },
+    { value: 'training', label: t('activity_type_training') },
+    { value: 'pruning', label: t('activity_type_pruning') },
+    { value: 'thinning', label: t('activity_type_thinning') },
+    { value: 'mulching', label: t('activity_type_mulching') },
+    { value: 'other', label: t('activity_type_other') }
+  ];
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handlePersonnelChange = (e) => {
+    // Split by comma and trim each entry
+    const personnel = e.target.value
+      .split(',')
+      .map(p => p.trim())
+      .filter(p => p !== '');
+
+    setFormData(prev => ({
+      ...prev,
+      personnel
+    }));
+  };
+
+  const handleTagsChange = (e) => {
+    // Split by comma and trim each entry
+    const tags = e.target.value
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag !== '');
+
+    setFormData(prev => ({
+      ...prev,
+      tags
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <EventFormBase title={t('add_activity')} onSubmit={handleSubmit} onCancel={onCancel}>
+      <div className="mb-3">
+        <label className="block mb-1 text-sm font-medium">{t('title')}</label>
+        <Input
+          type="text"
+          name="title"
+          value={formData.title}
+          onChange={handleChange}
+          placeholder={t('activity_title_placeholder')}
+          required
+        />
+      </div>
+
+      <DateField value={formData.date} onChange={(date) => setFormData(prev => ({ ...prev, date }))} />
+
+      <div className="mb-3">
+        <label className="block mb-1 text-sm font-medium">{t('activity_type')}</label>
+        <select
+          name="activityType"
+          value={formData.activityType}
+          onChange={handleChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+          required
+        >
+          {activityTypes.map(type => (
+            <option key={type.value} value={type.value}>
+              {type.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mb-3">
+        <label className="block mb-1 text-sm font-medium">{t('description')}</label>
+        <textarea
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
+          placeholder={t('activity_description_placeholder')}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 min-h-[100px]"
+        />
+      </div>
+
+      <div className="mb-3">
+        <label className="block mb-1 text-sm font-medium">{t('duration')} ({t('minutes')})</label>
+        <Input
+          type="number"
+          name="duration"
+          value={formData.duration}
+          onChange={handleChange}
+          placeholder="60"
+          min="0"
+        />
+      </div>
+
+      <div className="mb-3">
+        <label className="block mb-1 text-sm font-medium">{t('personnel')}</label>
+        <Input
+          type="text"
+          value={formData.personnel.join(', ')}
+          onChange={handlePersonnelChange}
+          placeholder={t('personnel_placeholder')}
+        />
+        <p className="text-xs text-gray-500 mt-1">{t('comma_separated')}</p>
+      </div>
+
+      <div className="mb-3">
+        <label className="block mb-1 text-sm font-medium">{t('tags')}</label>
+        <Input
+          type="text"
+          value={formData.tags.join(', ')}
+          onChange={handleTagsChange}
+          placeholder={t('tags_placeholder')}
+        />
+        <p className="text-xs text-gray-500 mt-1">{t('comma_separated')}</p>
+      </div>
+    </EventFormBase>
+  );
+};
+
 // EventFormSelector - A component that returns the appropriate form based on the event type
 export const EventFormSelector = ({ eventType, onSubmit, onCancel }) => {
   switch (eventType) {
@@ -539,7 +737,18 @@ export const EventFormSelector = ({ eventType, onSubmit, onCancel }) => {
       return <PestDiseaseForm onSubmit={onSubmit} onCancel={onCancel} />;
     case 'growth':
       return <GrowthForm onSubmit={onSubmit} onCancel={onCancel} />;
-    // Add other form types here
+    case 'harvest':
+      return <HarvestForm onSubmit={onSubmit} onCancel={onCancel} />;
+    case 'weather':
+      return <WeatherForm onSubmit={onSubmit} onCancel={onCancel} />;
+    case 'cost':
+      return <CostForm onSubmit={onSubmit} onCancel={onCancel} />;
+    case 'labor':
+      return <LaborForm onSubmit={onSubmit} onCancel={onCancel} />;
+    case 'note':
+      return <NoteForm onSubmit={onSubmit} onCancel={onCancel} />;
+    case 'activity':
+      return <ActivityForm onSubmit={onSubmit} onCancel={onCancel} />;
     default:
       return null;
   }

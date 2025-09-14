@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Crop = require('../models/Crop');
 const auth = require('../middleware/auth');
 
@@ -87,7 +88,18 @@ router.post('/', async (req, res) => {
     if (seedSource) cropData.seedSource = seedSource;
     if (plantingMethod) cropData.plantingMethod = plantingMethod;
     if (fieldId) cropData.fieldId = fieldId;
-    if (location) cropData.location = location;
+
+    // Handle flattened location structure
+    if (location) {
+      if (location.name) cropData.locationName = location.name;
+      if (location.coordinates) {
+        if (location.coordinates.latitude) cropData.locationLatitude = location.coordinates.latitude;
+        if (location.coordinates.longitude) cropData.locationLongitude = location.coordinates.longitude;
+      }
+      if (location.area) cropData.locationArea = Number(location.area);
+      if (location.areaUnit) cropData.locationAreaUnit = location.areaUnit;
+    }
+
     if (soilType) cropData.soilType = soilType;
     if (previousCrop) cropData.previousCrop = previousCrop;
     if (companionCrops) cropData.companionCrops = companionCrops;
@@ -149,65 +161,216 @@ router.delete('/:id', async (req, res) => {
 // Add irrigation event
 router.post('/:id/irrigation', async (req, res) => {
   try {
-    const crop = await Crop.findOne({ _id: req.params.id, user: req.user._id });
-    if (!crop) return res.status(404).json({ message: 'Crop not found' });
+    console.log('Irrigation endpoint hit with params:', req.params);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('User ID from auth middleware:', req.user?._id);
+
+    // Validate user ID
+    if (!req.user || !req.user._id) {
+      console.error('Missing or invalid user ID in auth middleware');
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    // Validate crop ID
+    if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+      console.error('Invalid crop ID:', req.params.id);
+      return res.status(400).json({ message: 'Invalid crop ID format' });
+    }
+
+    // Find the crop with explicit user ID check
+    const crop = await Crop.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    }).lean(); // Use lean() to get a plain JS object without Mongoose document methods
+
+    console.log('Crop found:', crop ? 'Yes' : 'No', crop ? `(Name: ${crop.name})` : '');
+
+    if (!crop) {
+      return res.status(404).json({ message: 'Crop not found or access denied' });
+    }
 
     const {
       date, duration, amount, method,
       waterSource, soilMoistureBefore, soilMoistureAfter, notes
     } = req.body;
 
-    if (!date) return res.status(400).json({ message: 'Date required' });
+    // Input validation
+    if (!date) {
+      return res.status(400).json({ message: 'Date is required' });
+    }
 
-    crop.irrigationHistory.push({
-      date: new Date(date),
-      duration,
-      amount,
-      method,
-      waterSource,
-      soilMoistureBefore,
-      soilMoistureAfter,
-      notes
-    });
+    // Type safety
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ message: 'Invalid date format' });
+    }
 
-    await crop.save();
-    res.json(crop);
+    // Create the irrigation event with proper type conversion
+    const irrigationEvent = {
+      date: parsedDate,
+      duration: duration !== undefined && duration !== '' ? Number(duration) : undefined,
+      amount: amount !== undefined && amount !== '' ? Number(amount) : undefined,
+      method: method || undefined,
+      waterSource: waterSource || undefined,
+      soilMoistureBefore: soilMoistureBefore !== undefined && soilMoistureBefore !== '' ?
+        Number(soilMoistureBefore) : undefined,
+      soilMoistureAfter: soilMoistureAfter !== undefined && soilMoistureAfter !== '' ?
+        Number(soilMoistureAfter) : undefined,
+      notes: notes || undefined
+    };
+
+    console.log('Processed irrigation event:', JSON.stringify(irrigationEvent, null, 2));
+
+    // Create or update directly with Mongoose without validation issues
+    const result = await Crop.findByIdAndUpdate(
+      req.params.id,
+      { $push: { irrigationHistory: irrigationEvent } },
+      { new: true, runValidators: false }
+    );
+
+    if (!result) {
+      return res.status(404).json({ message: 'Could not update crop' });
+    }
+
+    console.log('Crop updated successfully with new irrigation event');
+    return res.status(200).json(result);
   } catch (error) {
     console.error('Error adding irrigation event:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    return res.status(500).json({
+      message: 'Server error processing irrigation event',
+      error: error.message,
+      type: error.name
+    });
   }
 });
 
 // Update irrigation event
 router.put('/:id/irrigation/:eventId', async (req, res) => {
   try {
-    const crop = await Crop.findOne({ _id: req.params.id, user: req.user._id });
-    if (!crop) return res.status(404).json({ message: 'Crop not found' });
+    console.log('Update irrigation endpoint hit with params:', req.params);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
 
-    const irrigationEvent = crop.irrigationHistory.id(req.params.eventId);
-    if (!irrigationEvent) return res.status(404).json({ message: 'Irrigation event not found' });
+    if (!req.user || !req.user._id) {
+      console.error('Missing or invalid user ID in auth middleware');
+      return res.status(401).json({ message: 'Authentication required' });
+    }
 
-    Object.assign(irrigationEvent, req.body);
-    await crop.save();
-    res.json(crop);
+    if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+      console.error('Invalid crop ID:', req.params.id);
+      return res.status(400).json({ message: 'Invalid crop ID format' });
+    }
+
+    if (!req.params.eventId || !mongoose.Types.ObjectId.isValid(req.params.eventId)) {
+      console.error('Invalid event ID:', req.params.eventId);
+      return res.status(400).json({ message: 'Invalid event ID format' });
+    }
+
+    // Process and validate numeric fields
+    const updateData = {};
+    if (req.body.date) {
+      const parsedDate = new Date(req.body.date);
+      if (isNaN(parsedDate.getTime())) {
+        return res.status(400).json({ message: 'Invalid date format' });
+      }
+      updateData['irrigationHistory.$.date'] = parsedDate;
+    }
+
+    const numericFields = ['duration', 'amount', 'soilMoistureBefore', 'soilMoistureAfter'];
+    numericFields.forEach(field => {
+      if (req.body[field] !== undefined && req.body[field] !== '') {
+        const numValue = Number(req.body[field]);
+        if (isNaN(numValue)) {
+          return res.status(400).json({ message: `Invalid numeric value for ${field}` });
+        }
+        updateData[`irrigationHistory.$.${field}`] = numValue;
+      }
+    });
+
+    // String fields
+    const stringFields = ['method', 'waterSource', 'notes'];
+    stringFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updateData[`irrigationHistory.$.${field}`] = req.body[field];
+      }
+    });
+
+    // Use direct MongoDB update to avoid validation issues
+    const result = await Crop.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        user: req.user._id,
+        'irrigationHistory._id': req.params.eventId
+      },
+      { $set: updateData },
+      { new: true, runValidators: false }
+    );
+
+    if (!result) {
+      return res.status(404).json({ message: 'Crop or irrigation event not found' });
+    }
+
+    console.log('Irrigation event updated successfully');
+    res.json(result);
   } catch (error) {
     console.error('Error updating irrigation event:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      message: 'Server error updating irrigation event',
+      error: error.message
+    });
   }
 });
 
 // Delete irrigation event
 router.delete('/:id/irrigation/:eventId', async (req, res) => {
   try {
-    const crop = await Crop.findOne({ _id: req.params.id, user: req.user._id });
-    if (!crop) return res.status(404).json({ message: 'Crop not found' });
+    console.log('Delete irrigation endpoint hit with params:', req.params);
 
-    crop.irrigationHistory.id(req.params.eventId).remove();
-    await crop.save();
-    res.json(crop);
+    if (!req.user || !req.user._id) {
+      console.error('Missing or invalid user ID in auth middleware');
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+      console.error('Invalid crop ID:', req.params.id);
+      return res.status(400).json({ message: 'Invalid crop ID format' });
+    }
+
+    if (!req.params.eventId || !mongoose.Types.ObjectId.isValid(req.params.eventId)) {
+      console.error('Invalid event ID:', req.params.eventId);
+      return res.status(400).json({ message: 'Invalid event ID format' });
+    }
+
+    // Use direct MongoDB update to avoid validation issues
+    const result = await Crop.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        user: req.user._id
+      },
+      { $pull: { irrigationHistory: { _id: req.params.eventId } } },
+      { new: true, runValidators: false }
+    );
+
+    if (!result) {
+      return res.status(404).json({ message: 'Crop not found' });
+    }
+
+    console.log('Irrigation event deleted successfully');
+    res.json(result);
   } catch (error) {
     console.error('Error deleting irrigation event:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      message: 'Server error deleting irrigation event',
+      error: error.message
+    });
   }
 });
 

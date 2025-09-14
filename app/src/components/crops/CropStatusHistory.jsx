@@ -11,7 +11,8 @@ import {
   faCloudRain,
   faMoneyBill,
   faBusinessTime,
-  faNoteSticky
+  faNoteSticky,
+  faClipboardCheck
 } from '@fortawesome/free-solid-svg-icons';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -25,7 +26,8 @@ const EventTypeIcons = {
   weather: faCloudRain,
   cost: faMoneyBill,
   labor: faBusinessTime,
-  note: faNoteSticky
+  note: faNoteSticky,
+  activity: faClipboardCheck
 };
 
 const TabButton = ({ active, onClick, icon, label }) => (
@@ -65,6 +67,8 @@ const CropStatusHistory = ({ crop, onAddEvent }) => {
         return crop.laborHours || [];
       case 'note':
         return crop.notes || [];
+      case 'activity':
+        return crop.activities || [];
       default:
         return [];
     }
@@ -176,6 +180,18 @@ const CropStatusHistory = ({ crop, onAddEvent }) => {
           </>
         );
 
+      case 'activity':
+        return (
+          <>
+            <div className="font-semibold">{event.title || 'Activity'}</div>
+            <div>{event.activityType && `Type: ${event.activityType}`}</div>
+            {event.description && <div>{event.description}</div>}
+            {event.duration && <div>Duration: {event.duration} minutes</div>}
+            {event.personnel && event.personnel.length > 0 && <div>Personnel: {event.personnel.join(', ')}</div>}
+            {event.tags && event.tags.length > 0 && <div>Tags: {event.tags.join(', ')}</div>}
+          </>
+        );
+
       default:
         return <div>No data available</div>;
     }
@@ -193,6 +209,7 @@ const CropStatusHistory = ({ crop, onAddEvent }) => {
       case 'cost': return 'Add Cost';
       case 'labor': return 'Add Labor';
       case 'note': return 'Add Note';
+      case 'activity': return 'Add Activity';
       default: return 'Add Event';
     }
   };
@@ -256,6 +273,12 @@ const CropStatusHistory = ({ crop, onAddEvent }) => {
           onClick={() => setActiveTab('note')}
           icon={EventTypeIcons.note}
           label={t('notes')}
+        />
+        <TabButton
+          active={activeTab === 'activity'}
+          onClick={() => setActiveTab('activity')}
+          icon={EventTypeIcons.activity}
+          label={t('activities')}
         />
       </div>
 

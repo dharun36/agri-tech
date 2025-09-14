@@ -74,14 +74,15 @@ const cropSchema = new mongoose.Schema({
 
   // Field information
   fieldId: String,
-  location: {
-    name: String,
-    coordinates: {
-      latitude: Number,
-      longitude: Number
-    },
-    area: { type: Number, comment: "Area in square meters or acres" },
-    areaUnit: { type: String, default: 'acres', enum: ['acres', 'hectares', 'square meters', 'square feet'] }
+  // Use a flat structure for location to avoid GeoJSON schema conflicts
+  locationName: String,
+  locationLatitude: Number,
+  locationLongitude: Number,
+  locationArea: Number,
+  locationAreaUnit: {
+    type: String,
+    default: 'acres',
+    enum: ['acres', 'hectares', 'square meters', 'square feet']
   },
   soilType: String,
   previousCrop: String,
