@@ -59,7 +59,7 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
   };
 
   return (
-    <div className={`h-screen bg-white shadow-md fixed top-0 left-0 z-40 transition-width duration-300 ${collapsed ? 'w-16' : 'w-64'} border-r border-gray-200`}>
+    <div className={`h-screen bg-white shadow-sm fixed top-0 left-0 z-40 transition-width duration-300 ${collapsed ? 'w-16' : 'w-64'} border-r border-gray-200`}>
       {/* Logo and Collapse Button */}
       <div className="flex items-center justify-between p-4 border-b border-gray-100">
         {!collapsed && (

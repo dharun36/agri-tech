@@ -12,27 +12,23 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    // Check localStorage first, then system preference
+    // Check localStorage first, then default to light
     const savedTheme = localStorage.getItem('agritech-theme');
     if (savedTheme) {
       return savedTheme;
     }
-    
-    // Check system preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
-    }
-    
+
+    // Default to light theme
     return 'light';
   });
 
   useEffect(() => {
     // Save theme to localStorage
     localStorage.setItem('agritech-theme', theme);
-    
+
     // Apply theme to document
     document.documentElement.setAttribute('data-theme', theme);
-    
+
     // Update body class for theme-specific styling
     if (theme === 'dark') {
       document.body.classList.add('dark');

@@ -12,7 +12,7 @@ const Login = () => {
   // Check if already logged in
   useEffect(() => {
     if (localStorage.getItem('token')) {
-      navigate('/');
+      navigate('/home');
     }
   }, [navigate]);
 
@@ -43,7 +43,7 @@ const Login = () => {
       }
 
       window.dispatchEvent(new Event('storage'));
-      navigate('/');
+      navigate('/home');
     } catch (err) {
       setError(err.message);
     } finally {
