@@ -2,7 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const fetch = require('node-fetch');
+// node-fetch v3 is ESM only - either use import or downgrade to v2
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 

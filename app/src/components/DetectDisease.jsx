@@ -166,26 +166,31 @@ function DetectDisease() {
         setLoading(true);
         setError("");
 
-        // get prediction from the disease API
+        // get prediction from our new disease prediction endpoint
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("image", file); // The server expects 'image' as the field name
 
         try {
-          const res = await fetch("http://127.0.0.1:8000/predict", {
+          // Call our new endpoint on the server
+          const res = await fetch("http://localhost:5000/api/disease/predict", {
             method: "POST",
             body: formData, // Use FormData for file uploads
           });
 
           if (!res.ok) {
             const errorData = await res.json().catch(() => ({}));
-            setError(errorData.detail || "Unknown error from prediction API");
+            setError(errorData.error || "Unknown error from prediction API");
             setLoading(false);
             return;
           }
 
           const pred = await res.json();
-          // pred expected shape: { class_name, class_index, confidence }
-          const predictedClass = pred.class_name || pred.className || pred.detected || "Unknown";
+          // The prediction result from the disease prediction endpoint
+          console.log("Disease prediction results:", pred);
+
+          // Extract the top disease prediction from the array of predictions
+          const predictedClass = pred[0]?.label || "Unknown";
+          console.log("Top predicted disease:", predictedClass, "with confidence score:", pred[0]?.score);
 
           // show immediate minimal prediction
           setAnalysis({

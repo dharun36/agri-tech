@@ -2,11 +2,25 @@ const express = require('express');
 const User = require('../models/User');
 const router = express.Router();
 const mongoose = require('mongoose');
-const fetch = require('node-fetch');
+// node-fetch v3 is ESM only - either use import or downgrade to v2
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const { sendMail } = require('../utils/mailer');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
 
-
-
+// Configure multer for image uploads
+const upload = multer({
+  dest: 'uploads/disease-images/',
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 const DiseaseAlert = require('../models/disease');
 
@@ -89,6 +103,58 @@ router.post('/report', async (req, res) => {
   }
 });
 
+
+// POST /api/disease/predict - Endpoint to predict plant disease from image
+router.post('/predict', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image uploaded' });
+    }
+
+    // Read the image file
+    const imagePath = path.join(__dirname, '..', req.file.path);
+    const imageBuffer = fs.readFileSync(imagePath);
+    const base64Image = imageBuffer.toString('base64');
+
+    // Call the Hugging Face model API
+    console.log(`Calling Hugging Face API for image: ${req.file.path}`);
+
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/linkanjarad/mobilenet_v2_1.0_224-plant-disease-identification",
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HF_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+        body: JSON.stringify({ inputs: base64Image }),
+      }
+    );
+
+    // Delete the temporary file after sending to the API
+    fs.unlinkSync(imagePath);
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Hugging Face API error:', errorData);
+      return res.status(response.status).json({ error: 'Disease prediction failed', details: errorData });
+    }
+
+    const result = await response.json();
+    console.log('HF API response:', JSON.stringify(result).substring(0, 200) + '...');
+
+    // Make sure the response is in expected format
+    const formattedResult = Array.isArray(result) ? result : [{
+      label: result.label || "Unknown",
+      score: result.score || 0
+    }];
+
+    return res.json(formattedResult);
+  } catch (error) {
+    console.error('Disease prediction error:', error);
+    return res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
 
 // GET /api/disease/alerts?userId=xxx
 router.get('/alerts', async (req, res) => {
