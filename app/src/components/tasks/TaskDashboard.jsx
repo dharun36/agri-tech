@@ -1,0 +1,200 @@
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import {
+  FaSeedling,
+  FaTasks,
+  FaLeaf,
+  FaChevronRight,
+  FaChevronLeft,
+  FaSpinner
+} from 'react-icons/fa';
+import TaskList from './TaskList';
+
+/**
+ * Multi-crop task dashboard component
+ * Shows task management for multiple crops using tabs
+ */
+const TaskDashboard = ({ cropId }) => {
+  const { t } = useTranslation(['translation', 'tasks']);
+  const navigate = useNavigate();
+  const [crops, setCrops] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeCropIndex, setActiveCropIndex] = useState(0);
+
+  // Fetch user's crops on mount
+  useEffect(() => {
+    const fetchCrops = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const res = await fetch('http://localhost:5000/api/crops', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch crops: ${res.status}`);
+        }
+
+        const cropData = await res.json();
+        setCrops(cropData);
+
+        // If cropId is provided, set the active crop index accordingly
+        if (cropId) {
+          const cropIndex = cropData.findIndex(crop => crop._id === cropId);
+          if (cropIndex >= 0) {
+            setActiveCropIndex(cropIndex);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching crops:', err);
+        setError(t('failed_to_load_crops'));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCrops();
+  }, [t, cropId]);
+
+  // Handle next crop navigation
+  const handleNextCrop = () => {
+    if (activeCropIndex < crops.length - 1) {
+      setActiveCropIndex(activeCropIndex + 1);
+      // Update the URL to reflect the new crop
+      navigate(`/tasks/${crops[activeCropIndex + 1]._id}`);
+    } else {
+      setActiveCropIndex(0); // Loop back to first crop
+      navigate(`/tasks/${crops[0]._id}`);
+    }
+  };
+
+  // Handle previous crop navigation
+  const handlePrevCrop = () => {
+    if (activeCropIndex > 0) {
+      setActiveCropIndex(activeCropIndex - 1);
+      // Update the URL to reflect the new crop
+      navigate(`/tasks/${crops[activeCropIndex - 1]._id}`);
+    } else {
+      setActiveCropIndex(crops.length - 1); // Loop to last crop
+      navigate(`/tasks/${crops[crops.length - 1]._id}`);
+    }
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6 flex justify-center items-center">
+        <FaSpinner className="animate-spin text-green-600 text-3xl" />
+      </div>
+    );
+  }
+
+  // Show error message
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-red-100 border border-red-300 text-red-800 p-4 rounded-md">
+          {error}
+        </div>
+      </div>
+    );
+  }
+
+  // Show message if no crops are available
+  if (crops.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6 text-center">
+        <FaSeedling className="text-green-600 text-4xl mx-auto mb-4" />
+        <h3 className="text-xl font-semibold mb-2">{t('no_crops_available', { ns: 'tasks' })}</h3>
+        <p className="text-gray-600 mb-4">
+          {t('add_crops_to_manage_tasks', { ns: 'tasks' })}
+        </p>
+      </div>
+    );
+  }
+
+  // Get the currently active crop
+  const activeCrop = crops[activeCropIndex];
+
+  // Determine crop status icon and class
+  const getCropStatusIcon = (status) => {
+    switch (status) {
+      case 'Growing':
+        return <FaLeaf className="text-green-600" />;
+      case 'Harvested':
+        return <FaTasks className="text-orange-500" />;
+      case 'Planning':
+        return <FaSeedling className="text-blue-500" />;
+      default:
+        return <FaSeedling className="text-gray-500" />;
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-md">
+      {/* Crop Navigation Header */}
+      <div className="flex justify-between items-center border-b p-4">
+        <button
+          onClick={handlePrevCrop}
+          className="text-green-600 p-2 rounded-full hover:bg-green-50 disabled:text-gray-300"
+          disabled={crops.length <= 1}
+        >
+          <FaChevronLeft />
+        </button>
+
+        <div className="text-center">
+          <h2 className="text-xl font-bold flex items-center justify-center">
+            {getCropStatusIcon(activeCrop.status)}
+            <span className="mx-2">{activeCrop.name}</span>
+            {activeCrop.variety && (
+              <span className="text-sm text-gray-500">({activeCrop.variety})</span>
+            )}
+          </h2>
+          <div className="text-xs text-gray-500 mt-1">
+            {activeCrop.plantingDate && (
+              <span>{t('planted', { ns: 'tasks' })}: {new Date(activeCrop.plantingDate).toLocaleDateString()}</span>
+            )}
+            {activeCrop.status === 'Growing' && activeCrop.harvestDate && (
+              <span> • {t('expected_harvest', { ns: 'tasks' })}: {new Date(activeCrop.harvestDate).toLocaleDateString()}</span>
+            )}
+          </div>
+        </div>
+
+        <button
+          onClick={handleNextCrop}
+          className="text-green-600 p-2 rounded-full hover:bg-green-50 disabled:text-gray-300"
+          disabled={crops.length <= 1}
+        >
+          <FaChevronRight />
+        </button>
+      </div>
+
+      {/* Crop Index Indicators (for multiple crops) */}
+      {crops.length > 1 && (
+        <div className="flex justify-center py-2 gap-1">
+          {crops.map((_, index) => (
+            <button
+              key={index}
+              className={`w-2 h-2 rounded-full ${index === activeCropIndex ? 'bg-green-600' : 'bg-gray-300'}`}
+              onClick={() => {
+                setActiveCropIndex(index);
+                navigate(`/tasks/${crops[index]._id}`);
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Task List for Active Crop */}
+      <TaskList cropId={activeCrop._id} />
+    </div>
+  );
+};
+
+export default TaskDashboard;

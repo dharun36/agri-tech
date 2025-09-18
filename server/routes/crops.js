@@ -70,7 +70,7 @@ router.post('/', async (req, res) => {
       name, status, variety, plantingDate, harvestDate,
       seedSource, plantingMethod, fieldId, location,
       soilType, previousCrop, companionCrops, trapCrops,
-      beneficialPlants, notes
+      beneficialPlants, notes, initialCost
     } = req.body;
 
     if (!name) return res.status(400).json({ message: 'Name required' });
@@ -109,6 +109,16 @@ router.post('/', async (req, res) => {
     // Add initial note if provided
     if (notes) {
       cropData.notes = [{ date: new Date(), text: notes }];
+    }
+
+    // Add initial cost if provided
+    if (initialCost && initialCost.amount > 0) {
+      cropData.costs = [{
+        date: new Date(),
+        category: initialCost.category || 'seeds',
+        amount: parseFloat(initialCost.amount),
+        description: initialCost.description || `Initial ${initialCost.category || 'seed'} cost`
+      }];
     }
 
     const crop = await Crop.create(cropData);
@@ -157,6 +167,43 @@ router.delete('/:id', async (req, res) => {
 });
 
 // === Event-specific endpoints ===
+
+// Add expense to crop
+router.post('/:id/costs', async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    const { description, category, amount } = req.body;
+
+    if (!description || !category || amount === undefined) {
+      return res.status(400).json({ message: 'Description, category and amount are required' });
+    }
+
+    const newExpense = {
+      date: new Date(),
+      category,
+      amount: parseFloat(amount),
+      description
+    };
+
+    const crop = await Crop.findOneAndUpdate(
+      { _id: req.params.id, user: req.user._id },
+      { $push: { costs: newExpense } },
+      { new: true }
+    );
+
+    if (!crop) {
+      return res.status(404).json({ message: 'Crop not found' });
+    }
+
+    res.json(crop);
+  } catch (error) {
+    console.error('Error adding expense:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // Add irrigation event
 router.post('/:id/irrigation', async (req, res) => {

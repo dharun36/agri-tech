@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// Crop status badge with appropriate coloring
+
+// Get API key from environment variables
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + import.meta.env.VITE_GEMINI_API_KEY;
+
 // Format date helper
 const formatDate = (date) => {
   if (!date) return 'Not set';
@@ -44,6 +47,7 @@ const CropStatusBadge = ({ status }) => {
     </span>
   );
 };
+
 import {
   faCloudSun,
   faSeedling,
@@ -56,18 +60,16 @@ import {
   faFilter,
   faExclamationTriangle,
   faInfoCircle,
-  faCloudRain,
   faMapMarkerAlt,
-  faTemperatureHigh,
-  faTemperatureLow,
-  faWind,
-  faTachometerAlt,
-  faUmbrella,
-  faBrain,
-  faTrash
-}
-  from '@fortawesome/free-solid-svg-icons';
-import WeatherAnalysis from '../WeatherAnalysis';
+  faDollarSign,
+  faClipboardList,
+  faCheckCircle,
+  faArrowRight,
+  faTrash,
+  faList,
+  faSpinner,
+  faMagic
+} from '@fortawesome/free-solid-svg-icons';
 import CropModal from '../CropModal';
 
 const LightThemeHome = () => {
@@ -80,33 +82,19 @@ const LightThemeHome = () => {
     navigate('/login');
   }
 
-  // Weather state
-  const [weather, setWeather] = useState(null);
-  const [hourly, setHourly] = useState([]);
-  const [dailyForecast, setDailyForecast] = useState([]);
-  const [activeWeatherView, setActiveWeatherView] = useState('hourly'); // 'hourly' or 'daily'
-  const [weatherLoading, setWeatherLoading] = useState(true);
-  const [weatherError, setWeatherError] = useState(null);
-
   // Crop management state
-  const [crops, setCrops] = useState([
-    {
-      _id: '1',
-      name: 'Maize',
-      status: 'Planning',
-      plantingDate: null,
-      growthStage: null,
-      lastIrrigation: null,
-      lastFertilization: null
-    }
-  ]);
-  const [filteredCrops, setFilteredCrops] = useState(crops);
-  const [newCrop, setNewCrop] = useState('');
+  const [crops, setCrops] = useState([]);
+  const [filteredCrops, setFilteredCrops] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all_status');
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [currentCropId, setCurrentCropId] = useState(null);
+  const [expense, setExpense] = useState({ description: '', category: 'Fertilizer', amount: 0 });
   const [cropLoading, setCropLoading] = useState(false);
   const [cropError, setCropError] = useState('');
+  const [preloadedCropDetails, setPreloadedCropDetails] = useState(null);
+  const [cropNameInput, setCropNameInput] = useState('');
 
   // Fetch crops from backend
   useEffect(() => {
@@ -119,25 +107,23 @@ const LightThemeHome = () => {
         }
 
         const res = await fetch('http://localhost:5000/api/crops', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
 
-        if (res.status === 401) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('userId');
-          localStorage.removeItem('userEmail');
-          localStorage.removeItem('userName');
-          navigate('/login');
-          return;
-        }
-
-        if (!res.ok) {
-          throw new Error(`Error: ${res.status}`);
-        }
+        if (!res.ok) throw new Error('Failed to fetch crops');
 
         const data = await res.json();
-        setCrops(data);
-        setFilteredCrops(data);
+
+        // Add next action suggestions for each crop based on status
+        const dataWithNextActions = data.map(crop => {
+          const nextActions = generateNextActions(crop);
+          return { ...crop, nextActions };
+        });
+
+        setCrops(dataWithNextActions);
+        setFilteredCrops(dataWithNextActions);
       } catch (err) {
         console.error('Fetch error:', err);
       }
@@ -146,162 +132,304 @@ const LightThemeHome = () => {
     fetchCrops();
   }, [navigate]);
 
-  // Weather code to description
-  const getWeatherDesc = (code) => {
-    const map = {
-      1000: "Clear",
-      1100: "Mostly Clear",
-      1101: "Partly Cloudy",
-      1102: "Mostly Cloudy",
-      1001: "Cloudy",
-      2000: "Fog",
-      2100: "Light Fog",
-      4000: "Drizzle",
-      4001: "Rain",
-      4200: "Light Rain",
-      4201: "Heavy Rain",
-      5000: "Snow",
-      5001: "Flurries",
-      5100: "Light Snow",
-      5101: "Heavy Snow",
-      6000: "Freezing Drizzle",
-      6001: "Freezing Rain",
-      6200: "Light Freezing Rain",
-      6201: "Heavy Freezing Rain",
-      7000: "Ice Pellets",
-      7101: "Heavy Ice Pellets",
-      7102: "Light Ice Pellets",
-      8000: "Thunderstorm",
-    };
-    return map[code] || "Unknown";
-  };
+  // Generate next actions based on crop data
+  const generateNextActions = (crop) => {
+    const actions = [];
 
-  // Weather code to icon
-  const getWeatherIcon = (code) => {
-    // Map weather codes to FontAwesome icons
-    const iconMap = {
-      1000: faCloudSun, // Clear
-      1100: faCloudSun, // Mostly Clear
-      1101: faCloudSun, // Partly Cloudy
-      1102: faCloudSun, // Mostly Cloudy
-      1001: faCloudSun, // Cloudy
-      2000: faCloudSun, // Fog
-      2100: faCloudSun, // Light Fog
-      4000: faCloudRain, // Drizzle
-      4001: faCloudRain, // Rain
-      4200: faCloudRain, // Light Rain
-      4201: faCloudRain, // Heavy Rain
-      5000: faCloudRain, // Snow
-      5001: faCloudRain, // Flurries
-      5100: faCloudRain, // Light Snow
-      5101: faCloudRain, // Heavy Snow
-      6000: faCloudRain, // Freezing Drizzle
-      6001: faCloudRain, // Freezing Rain
-      6200: faCloudRain, // Light Freezing Rain
-      6201: faCloudRain, // Heavy Freezing Rain
-      7000: faCloudRain, // Ice Pellets
-      7101: faCloudRain, // Heavy Ice Pellets
-      7102: faCloudRain, // Light Ice Pellets
-      8000: faCloudRain, // Thunderstorm
-    };
-    return iconMap[code] || faCloudSun;
-  };
+    if (crop.status === 'Planning') {
+      actions.push('Prepare soil', 'Purchase seeds', 'Plan planting schedule');
+    } else if (crop.status === 'Growing') {
+      // Check if irrigation is needed
+      if (!crop.lastIrrigation) {
+        actions.push('Water the crop');
+      } else {
+        const lastIrrigDate = new Date(crop.lastIrrigation);
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+        if (lastIrrigDate < threeDaysAgo) {
+          actions.push('Water the crop');
+        }
+      }
 
-  // Format hour
-  const formatHour = (iso) => {
-    const date = new Date(iso);
-    return date.getHours() + ":00";
-  };
+      // Check if fertilization is needed
+      if (!crop.lastFertilization) {
+        actions.push('Apply fertilizer');
+      } else {
+        const lastFertDate = new Date(crop.lastFertilization);
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        if (lastFertDate < twoWeeksAgo) {
+          actions.push('Apply fertilizer');
+        }
+      }
 
-  // Format day
-  const formatDay = (iso) => {
-    const date = new Date(iso);
-    return date.toLocaleDateString(undefined, { weekday: 'short' });
-  };
-
-  // Fetch weather data
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setWeatherError("Geolocation not supported");
-      setWeatherLoading(false);
-      return;
+      // Check growth stage
+      if (!crop.growthStage || crop.growthStage === 'Seedling') {
+        actions.push('Update growth stage', 'Monitor for pests');
+      } else if (crop.growthStage === 'Vegetative') {
+        actions.push('Check for diseases', 'Consider adding supports');
+      } else if (crop.growthStage === 'Reproductive') {
+        actions.push('Monitor fruit development', 'Prepare for harvest');
+      }
+    } else if (crop.status === 'Harvested') {
+      actions.push('Record yield data', 'Plan for next season', 'Analyze crop performance');
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        fetch(
-          `https://api.tomorrow.io/v4/weather/forecast?location=${latitude},${longitude}&apikey=${import.meta.env.VITE_WEATHER_API_KEY}&timesteps=1h,1d&units=metric`
-        )
-          .then((res) => res.json())
-          .then((data) => {
-            const current = data.timelines.hourly[0];
-            setWeather({
-              temp: Math.round(current.values.temperature) + '°C',
-              desc: getWeatherDesc(current.values.weatherCode),
-              condition: getWeatherDesc(current.values.weatherCode),
-              icon: getWeatherIcon(current.values.weatherCode),
-              time: current.time,
-              humidity: Math.round(current.values.humidity) + '%',
-              wind: Math.round(current.values.windSpeed) + ' km/h',
-              pressure: Math.round(current.values.pressureSurfaceLevel) + ' hPa'
-            });
+    return actions;
+  };
 
-            // Process hourly data
-            const hourlyData = data.timelines.hourly.slice(0, 6).map(hour => ({
-              time: formatHour(hour.time),
-              temp: Math.round(hour.values.temperature) + '°C',
-              icon: getWeatherIcon(hour.values.weatherCode)
-            }));
-            setHourly(hourlyData);
-
-            // Process daily data
-            const dailyData = data.timelines.daily.slice(0, 7).map((day, index) => ({
-              day: index === 0 ? 'Today' : formatDay(day.time),
-              temp: Math.round(day.values.temperatureAvg) + '°C',
-              high: Math.round(day.values.temperatureMax) + '°C',
-              low: Math.round(day.values.temperatureMin) + '°C',
-              condition: getWeatherDesc(day.values.weatherCodeMax),
-              icon: getWeatherIcon(day.values.weatherCodeMax),
-              weatherCode: day.values.weatherCodeMax,
-              precipitation: Math.round(day.values.precipitationProbabilityAvg)
-            }));
-            setDailyForecast(dailyData);
-
-            setWeatherLoading(false);
-          })
-          .catch((error) => {
-            console.error("Weather API Error:", error);
-            setWeatherError("Failed to fetch weather data");
-            setWeatherLoading(false);
-          });
-      },
-      (error) => {
-        console.error("Geolocation Error:", error);
-        setWeatherError("Location access denied");
-        setWeatherLoading(false);
-      }
-    );
-  }, []);
-  // const data = await response.json();
-  // setWeather({ ... });
-  // setHourly([ ... ]);
-  // setDailyForecast([ ... ]);
-
-
-
+  // Open crop modal
   const openCropModal = () => {
     setIsCropModalOpen(true);
   };
 
-  // Close the crop modal
+  // Get crop details and open modal with pre-filled data
+  const getDetailsAndOpenCropModal = async (cropName) => {
+    try {
+      setCropLoading(true);
+      setCropError('');
+
+      // Get crop details from Gemini AI
+      const cropDetails = await getCropDetailsFromGemini(cropName);
+      console.log("Got crop details from Gemini:", cropDetails);
+
+      // Store the preloaded crop details
+      setPreloadedCropDetails(cropDetails);
+
+      // Now open modal with prefilled data
+      setIsCropModalOpen(true);
+    } catch (error) {
+      console.error("Error getting crop details:", error);
+      setCropError(`Failed to get crop details: ${error.message}`);
+
+      // Clear any previous preloaded details
+      setPreloadedCropDetails(null);
+
+      // Open modal anyway so user can enter details manually
+      setIsCropModalOpen(true);
+    } finally {
+      setCropLoading(false);
+    }
+  };
+
+  // Close crop modal
   const closeCropModal = () => {
     setIsCropModalOpen(false);
     setCropError('');
+    setPreloadedCropDetails(null);
+    setCropNameInput('');
+  };
+
+  // Function to fetch crop details from Gemini AI
+  const getCropDetailsFromGemini = async (cropName) => {
+    console.log("Getting crop details from Gemini for:", cropName);
+    try {
+      // Create a detailed prompt for Gemini to get comprehensive crop information
+      const langCode = (localStorage.getItem('i18nextLng') || 'en');
+      const userLang = langCode === 'ta' ? 'Tamil' : langCode === 'en' ? 'English' : langCode === 'hi' ? 'Hindi' : 'English';
+
+      const prompt = `Generate detailed agricultural information for "${cropName}" crop for a farming application. 
+      Return a detailed JSON object with the following fields:
+      {
+        "name": "${cropName}",
+        "variety": "most common or recommended variety name for this crop",
+        "status": "Growing",
+        "growthDays": precise number of days from planting to harvest based on typical growing conditions,
+        "seedSource": "common reliable seed source or supplier",
+        "irrigationType": one of ["Drip", "Sprinkler", "Flood", "Manual", "Rainwater"] based on optimal watering method for this crop,
+        "soilType": one of ["Loamy", "Sandy", "Clayey", "Black Cotton", "Red", "Alluvial"] based on ideal soil conditions,
+        "previousCropRecommendation": "recommended previous crop for optimal crop rotation with scientific reasoning",
+        "fieldLocation": {
+          "latitude": null,
+          "longitude": null
+        },
+        "notes": "provide 2-3 sentences with essential growing tips, disease prevention, and best practices specific to this crop in ${userLang}",
+        "initialCost": {
+          "amount": realistic estimated initial cost per acre in dollars (number only) based on current agricultural data,
+          "category": most appropriate category from ["seeds", "fertilizer", "pesticide", "labor", "equipment"],
+          "description": "brief detailed description of what initial expenses typically cover for this crop in ${userLang}"
+        }
+      }
+      
+      Return ONLY valid JSON with no formatting issues, no extra text, markdown or code blocks.`;
+
+      console.log("Sending request to Gemini API");
+
+      const res = await fetch(GEMINI_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.2, // Lower temperature for more focused/precise responses
+            topP: 0.8,
+            topK: 40
+          }
+        })
+      });
+
+      if (!res.ok) {
+        console.error("Gemini API error response:", res.status);
+
+        if (res.status === 400) {
+          throw new Error(`Invalid request to Gemini API. Please check input parameters.`);
+        } else if (res.status === 401 || res.status === 403) {
+          throw new Error(`API key error: Please check your API key configuration.`);
+        } else if (res.status === 429) {
+          throw new Error(`Rate limit exceeded. Please try again later.`);
+        } else {
+          throw new Error(`Gemini API error: ${res.status}. Please try again later.`);
+        }
+      }
+
+      const data = await res.json();
+      console.log("Gemini API response:", data);
+
+      // Check for errors in the response
+      if (data.error) {
+        console.error("Gemini API returned error:", data.error);
+        throw new Error(`Gemini API error: ${data.error.message || "Unknown error"}`);
+      }
+
+      const geminiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+      if (!geminiText) {
+        throw new Error("Empty response from AI service. The AI model didn't generate any content.");
+      }
+
+      console.log("AI response received, extracting JSON");
+
+      console.log("Raw text from Gemini:", geminiText);
+
+      let cropData = {};
+      try {
+        // First try direct JSON parsing
+        cropData = JSON.parse(geminiText);
+        console.log("Successfully parsed JSON directly:", cropData);
+      } catch (err) {
+        console.log("Direct parsing failed:", err);
+        console.log("Attempting to extract JSON pattern from:", geminiText);
+
+        // Try to extract JSON from response if it contains additional text
+        const match = geminiText.match(/\{[\s\S]*\}/);
+        if (match) {
+          console.log("Found JSON pattern:", match[0]);
+          try {
+            cropData = JSON.parse(match[0]);
+            console.log("Successfully extracted and parsed JSON from response:", cropData);
+          } catch (innerErr) {
+            console.error("JSON extraction failed:", innerErr);
+            throw new Error("Failed to parse AI response. Please try again with a different crop name.");
+          }
+        } else {
+          console.error("No JSON pattern found in response");
+          throw new Error("Invalid response format from AI service. The AI didn't return proper JSON data.");
+        }
+      }
+
+      // Validate the parsed data
+      if (!cropData.name) {
+        console.error("Missing required field 'name' in AI response");
+        throw new Error("Invalid AI response: Missing crop name");
+      }
+
+      return cropData;
+    } catch (error) {
+      console.error("Error getting crop details from Gemini:", error);
+      throw error;
+    }
   };
 
   // Handle adding a new crop with detailed information
   const handleAddCrop = async (cropData) => {
+    console.log("handleAddCrop called with data:", cropData);
+    setCropError('');
+    setCropLoading(true);
+
+    try {
+      // Validate input data
+      if (!cropData || !cropData.name) {
+        throw new Error('Invalid crop data: Name is required');
+      }
+
+      console.log("Validating crop data:", JSON.stringify(cropData));
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log("No token found, redirecting to login");
+        navigate('/login');
+        return;
+      }
+
+      console.log("Sending API request to add crop");
+      const res = await fetch('http://localhost:5000/api/crops', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(cropData)
+      });
+
+      console.log("API response status:", res.status);
+
+      // Try to get response body regardless of success/failure for better debugging
+      const responseBody = await res.text();
+      console.log("API response body:", responseBody);
+
+      if (!res.ok) {
+        console.error("API error response:", res.status, responseBody);
+        throw new Error(`Failed to add crop: ${res.status} ${responseBody}`);
+      }
+
+      // Parse the JSON response
+      let crop;
+      try {
+        crop = JSON.parse(responseBody);
+      } catch (parseError) {
+        console.error("Error parsing JSON response:", parseError);
+        throw new Error(`Invalid response format: ${parseError.message}`);
+      }
+
+      console.log("Crop added successfully:", crop);
+
+      // Add next actions for the new crop
+      const cropWithNextActions = {
+        ...crop,
+        nextActions: generateNextActions(crop)
+      };
+
+      setCrops([...crops, cropWithNextActions]);
+      setFilteredCrops([...filteredCrops, cropWithNextActions]);
+      closeCropModal();
+    } catch (err) {
+      console.error('Error adding crop:', err);
+      setCropError(`Failed to add crop: ${err.message}`);
+      // Keep modal open when there's an error
+    } finally {
+      setCropLoading(false);
+    }
+  };
+
+  // Open expense modal for a specific crop
+  const openExpenseModal = (cropId, e) => {
+    e.stopPropagation(); // Prevent navigation to crop details
+    setCurrentCropId(cropId);
+    setExpense({ description: '', category: 'Fertilizer', amount: 0 });
+    setIsExpenseModalOpen(true);
+  };
+
+  // Close expense modal
+  const closeExpenseModal = () => {
+    setIsExpenseModalOpen(false);
+    setCurrentCropId(null);
+    setExpense({ description: '', category: 'Fertilizer', amount: 0 });
+  };
+
+  // Handle adding expense to a crop
+  const handleAddExpense = async () => {
+    if (!currentCropId) return;
+
     setCropError('');
     setCropLoading(true);
 
@@ -312,24 +440,33 @@ const LightThemeHome = () => {
         return;
       }
 
-      const res = await fetch('http://localhost:5000/api/crops', {
+      const res = await fetch(`http://localhost:5000/api/crops/${currentCropId}/costs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(cropData)
+        body: JSON.stringify(expense)
       });
 
-      if (!res.ok) throw new Error('Failed to add crop');
+      if (!res.ok) throw new Error('Failed to add expense');
 
-      const crop = await res.json();
-      setCrops([...crops, crop]);
-      setFilteredCrops([...filteredCrops, crop]);
-      closeCropModal();
+      const updatedCrop = await res.json();
+      const updatedCropWithActions = {
+        ...updatedCrop,
+        nextActions: generateNextActions(updatedCrop)
+      };
+
+      // Update crops state with the updated crop
+      setCrops(crops.map(crop => crop._id === currentCropId ? updatedCropWithActions : crop));
+      setFilteredCrops(filteredCrops.map(crop =>
+        crop._id === currentCropId ? updatedCropWithActions : crop
+      ));
+
+      closeExpenseModal();
     } catch (err) {
-      console.error('Error adding crop:', err);
-      setCropError('Failed to add crop');
+      console.error('Error adding expense:', err);
+      setCropError('Failed to add expense');
     } finally {
       setCropLoading(false);
     }
@@ -356,7 +493,9 @@ const LightThemeHome = () => {
 
       const res = await fetch(`http://localhost:5000/api/crops/${cropId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!res.ok) throw new Error('Failed to delete crop');
@@ -392,312 +531,399 @@ const LightThemeHome = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800">
-      {/* Crop Management Section */}
-      <section className="p-6 mb-6 bg-white rounded-xl shadow-sm">
-        <div className="flex items-center mb-4">
-          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-            <FontAwesomeIcon icon={faSeedling} className="text-green-600" />
-          </div>
-          <span className="ml-3 text-lg font-medium text-gray-800">track_and_manage</span>
-          <div className="ml-auto">
+      <div className="container mx-auto py-6 px-4 md:px-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">{t('dashboard') || 'Dashboard'}</h1>
+          <div className="flex space-x-2">
             <button
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition"
-              onClick={() => navigate('/crop-recommendation')}
+              onClick={() => navigate('/weather')}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center transition"
             >
-              Get Recommendation
+              <FontAwesomeIcon icon={faCloudSun} className="mr-2" />
+              {t('weather_forecast') || 'Weather Forecast'}
             </button>
           </div>
         </div>
 
-        {/* Add new crop - Button to open modal */}
-        <div className="mb-4">
-          <button
-            onClick={openCropModal}
-            className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center"
-          >
-            <FontAwesomeIcon icon={faPlus} className="mr-2" />
-            {t('add_new_crop')}
-          </button>
-
-          {/* Display crop error */}
-          {cropError && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg mt-3 text-sm">
-              {cropError}
+        {/* Quick Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
+            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+              <FontAwesomeIcon icon={faSeedling} className="text-green-600" />
             </div>
-          )}
-        </div>
-
-        {/* Search and filter */}
-        <div className="flex mb-4 gap-2">
-          <div className="relative flex-grow">
-            <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="search_crops"
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
-            />
-          </div>
-          <div className="relative">
-            <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="pl-10 pr-8 py-2 border border-gray-200 rounded-lg bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-green-400"
-            >
-              <option value="all_status">all_status</option>
-              <option value="Planning">Planning</option>
-              <option value="Growing">Growing</option>
-              <option value="Harvested">Harvested</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Crop cards */}
-        <div className="space-y-4">
-          {filteredCrops.map((crop) => (
-            <div
-              key={crop._id}
-              className="p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition cursor-pointer"
-              onClick={() => navigate(`/crops/${crop._id}`)}
-            >
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-xl font-medium text-gray-800">{crop.name}</h3>
-                <button
-                  onClick={(e) => handleRemoveCrop(crop._id, e)}
-                  className="text-gray-400 hover:text-red-500 transition p-1 rounded-full hover:bg-red-50"
-                  title={t('delete_crop')}
-                  aria-label={t('delete_crop')}
-                >
-                  <FontAwesomeIcon icon={faTrash} size="sm" />
-                </button>
-              </div>
-
-              <div className="mb-3">
-                <CropStatusBadge status={crop.status || 'Planning'} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center">
-                  <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400 mr-2" />
-                  <div>
-                    <div className="text-xs text-gray-500">planting_date</div>
-                    <div className="text-sm">{formatDate(crop.plantingDate)}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center">
-                  <FontAwesomeIcon icon={faChartLine} className="text-green-500 mr-2" />
-                  <div>
-                    <div className="text-xs text-gray-500">growth_stage</div>
-                    <div className="text-sm">{crop.growthStage || 'not recorded'}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center">
-                  <FontAwesomeIcon icon={faDroplet} className="text-blue-500 mr-2" />
-                  <div>
-                    <div className="text-xs text-gray-500">last_irrigation</div>
-                    <div className="text-sm">{crop.lastIrrigation ? format(new Date(crop.lastIrrigation), 'MMM d') : 'Never'}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center">
-                  <FontAwesomeIcon icon={faLeaf} className="text-amber-500 mr-2" />
-                  <div>
-                    <div className="text-xs text-gray-500">last_fertilization</div>
-                    <div className="text-sm">{crop.lastFertilization ? format(new Date(crop.lastFertilization), 'MMM d') : 'never'}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-right mt-3">
-                <span className="text-green-600 text-sm font-medium hover:underline">
-                  Details →
-                </span>
+            <div className="ml-4">
+              <div className="text-sm text-gray-500">{t('active_crops') || 'Active Crops'}</div>
+              <div className="text-xl font-bold">
+                {crops.filter(crop => crop.status !== 'Completed' && crop.status !== 'Failed').length}
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
 
-      {/* Weather Section */}
-      <section className="p-6 bg-white rounded-xl shadow-sm">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
+          <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <FontAwesomeIcon icon={faCloudSun} className="text-blue-600" />
+              <FontAwesomeIcon icon={faDroplet} className="text-blue-600" />
             </div>
-            <span className="ml-3 text-lg font-medium text-gray-800">Weather</span>
-            <span className="ml-2 text-sm text-gray-500">Your local forecast</span>
+            <div className="ml-4">
+              <div className="text-sm text-gray-500">{t('irrigation_needed') || 'Irrigation Needed'}</div>
+              <div className="text-xl font-bold">
+                {crops.filter(crop => {
+                  // If last irrigation was more than 3 days ago or never, it needs irrigation
+                  if (!crop.lastIrrigation) return true;
+                  const lastIrrigDate = new Date(crop.lastIrrigation);
+                  const threeDaysAgo = new Date();
+                  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+                  return lastIrrigDate < threeDaysAgo && crop.status === 'Growing';
+                }).length}
+              </div>
+            </div>
           </div>
 
-          {/* Toggle between hourly and daily forecast */}
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-            <button
-              className={`px-4 py-1 text-sm font-medium ${activeWeatherView === 'hourly'
-                ? 'bg-blue-500 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-              onClick={() => setActiveWeatherView('hourly')}
-            >
-              Hourly
-            </button>
-            <button
-              className={`px-4 py-1 text-sm font-medium ${activeWeatherView === 'daily'
-                ? 'bg-blue-500 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-              onClick={() => setActiveWeatherView('daily')}
-            >
-              7-Day
-            </button>
+          <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
+            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+              <FontAwesomeIcon icon={faDollarSign} className="text-amber-600" />
+            </div>
+            <div className="ml-4">
+              <div className="text-sm text-gray-500">{t('total_expenses') || 'Total Expenses'}</div>
+              <div className="text-xl font-bold">
+                ${crops.reduce((total, crop) => {
+                  return total + (crop.costs ? crop.costs.reduce((cropTotal, cost) => cropTotal + (cost.amount || 0), 0) : 0);
+                }, 0).toFixed(2)}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Weather loading/error states */}
-        {weatherLoading && (
-          <div className="flex justify-center items-center p-10">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
-          </div>
-        )}
-
-        {weatherError && (
-          <div className="p-4 mb-6 text-center">
-            <div className="bg-red-50 text-red-600 p-4 rounded-lg">
-              <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
-              {weatherError}
+        {/* Crop Management Section */}
+        <section className="p-6 mb-6 bg-white rounded-xl shadow-sm">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+              <FontAwesomeIcon icon={faSeedling} className="text-green-600" />
+            </div>
+            <span className="ml-3 text-lg font-medium text-gray-800">{t('track_and_manage') || 'Track and Manage'}</span>
+            <div className="ml-auto">
+              <button
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition"
+                onClick={() => navigate('/crop-recommendation')}
+              >
+                {t('get_recommendation') || 'Get Recommendation'}
+              </button>
             </div>
           </div>
-        )}
 
-        {/* Current weather */}
-        {!weatherLoading && !weatherError && weather && (
-          <div className="flex justify-between mb-6">
-            <div>
-              <div className="text-5xl font-light text-gray-800 mb-1">{weather.temp}</div>
-              <div className="text-gray-600">{weather.condition}</div>
-              <div className="flex flex-col mt-4 text-sm space-y-1">
-                <div className="flex items-center text-blue-600">
-                  <FontAwesomeIcon icon={faDroplet} className="mr-2 w-5" />
-                  <span>Humidity: {weather.humidity}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-2 w-5" />
-                  <span>Wind: {weather.wind}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <FontAwesomeIcon icon={faInfoCircle} className="mr-2 w-5" />
-                  <span>Pressure: {weather.pressure}</span>
-                </div>
-              </div>
-            </div>
+          {/* Add new crop - Button to open modal */}
+          <div className="mb-4 space-y-3">
+            <button
+              onClick={openCropModal}
+              className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center"
+            >
+              <FontAwesomeIcon icon={faPlus} className="mr-2" />
+              {t('add_new_crop') || 'Add New Crop'}
+            </button>
 
+            {/* AI Crop Details Button */}
             <div className="flex items-center">
-              <div className="text-6xl text-blue-200">
-                <FontAwesomeIcon icon={faCloudSun} />
-              </div>
+              <div className="h-px bg-gray-200 flex-grow"></div>
+              <span className="px-2 text-xs text-gray-500">OR</span>
+              <div className="h-px bg-gray-200 flex-grow"></div>
             </div>
-          </div>
-        )}
 
-        {!weatherLoading && !weatherError && (
-          activeWeatherView === 'hourly' ? (
-            /* Hourly forecast */
-            <div className="mt-6">
-              <h3 className="text-sm font-semibold text-gray-500 mb-3">Today's Forecast</h3>
-              <div className="flex justify-between">
-                {hourly.map((hour, index) => (
-                  <div key={index} className="text-center">
-                    <div className="text-sm font-medium text-gray-500">{hour.time}</div>
-                    <div className="text-blue-400 my-2">
-                      <FontAwesomeIcon icon={hour.icon} />
-                    </div>
-                    <div className="text-sm font-medium">{hour.temp}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            /* Daily forecast */
-            <div className="mt-6">
-              <h3 className="text-sm font-semibold text-gray-500 mb-3">7-Day Forecast</h3>
-              <div className="space-y-3">
-                {dailyForecast.map((day, index) => (
-                  <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                    <div className="font-medium w-16">{day.day}</div>
-                    <div className="flex items-center text-blue-500">
-                      <FontAwesomeIcon icon={day.icon} />
-                    </div>
-                    <div className="text-gray-600 text-sm">{day.condition}</div>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium">{day.high}</span>
-                      <span className="text-gray-400 text-sm">{day.low}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
-        )}
-
-        {/* Weather-based farming advisory */}
-        <div className="mt-6 pt-4 border-t border-gray-100">
-          <div className="flex items-center mb-3">
-            <FontAwesomeIcon icon={faSeedling} className="text-green-500 mr-2" />
-            <h3 className="text-sm font-semibold text-gray-800">Farming Advisory</h3>
-          </div>
-
-          {/* Static advisory */}
-          <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-sm text-gray-700 mb-4">
-            <p className="mb-2"><span className="font-medium">Irrigation:</span> Based on the forecast, consider light irrigation in the evening as the next two days show partly cloudy conditions.</p>
-            <p><span className="font-medium">Crop Protection:</span> Rain expected on Tuesday and Wednesday. Consider applying fungicide preventatively to protect crops from potential fungal diseases.</p>
-          </div>
-
-          {/* Weather Analysis AI Component */}
-          <div className="mt-4">
-            <div className="flex items-center mb-3">
-              <FontAwesomeIcon icon={faBrain} className="text-blue-500 mr-2" />
-              <h3 className="text-sm font-semibold text-gray-800">AI Weather Analysis</h3>
-            </div>
-            {weather && dailyForecast.length > 0 ? (
-              <WeatherAnalysis
-                weather={{
-                  temp: weather.temp,
-                  desc: weather.desc,
-                  humidity: weather.humidity,
-                  time: weather.time
-                }}
-                daily={dailyForecast.map((day, index) => ({
-                  time: new Date(Date.now() + (index * 86400000)).toISOString(),
-                  values: {
-                    temperatureMax: day.high,
-                    temperatureMin: day.low,
-                    weatherCodeMax: day.weatherCode || (day.condition === 'Rain' ? 2 : day.condition === 'Sunny' ? 0 : 1),
-                    precipitationSum: day.precipitation || (day.condition === 'Rain' ? 5 : 0)
+            <div className="flex">
+              <input
+                type="text"
+                placeholder={t('enter_crop_name') || 'Enter crop name (e.g., Tomato, Rice)'}
+                className="flex-grow py-2 px-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                value={cropNameInput}
+                onChange={(e) => setCropNameInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && cropNameInput.trim() && !cropLoading) {
+                    getDetailsAndOpenCropModal(cropNameInput);
                   }
-                }))}
-                formatDay={(date) => new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}
-                getWeatherDesc={(code) => {
-                  const conditions = ['Sunny', 'Partly Cloudy', 'Rain'];
-                  return conditions[code] || 'Unknown';
                 }}
               />
-            ) : (
-              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-gray-700">
-                <p>Weather data is loading. Please wait...</p>
+              <button
+                onClick={() => getDetailsAndOpenCropModal(cropNameInput)}
+                disabled={!cropNameInput.trim() || cropLoading}
+                className={`bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-r-lg transition flex items-center justify-center ${(!cropNameInput.trim() || cropLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {cropLoading ? (
+                  <FontAwesomeIcon icon={faSpinner} className="fa-spin mr-2" />
+                ) : (
+                  <FontAwesomeIcon icon={faMagic} className="mr-2" />
+                )}
+                {cropLoading ?
+                  (t('ai_generating') || 'Generating...') :
+                  (t('get_ai_details') || 'Get AI Details')
+                }
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1 italic">
+              {t('enter_crop_name_and_ai') || 'Enter a crop name and our AI will generate growing details'}
+            </p>
+
+            {/* Display crop error */}
+            {cropError && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                {cropError}
               </div>
             )}
           </div>
-        </div>
-      </section>
 
-      {/* Crop Modal */}
-      <CropModal
-        isOpen={isCropModalOpen}
-        onClose={closeCropModal}
-        onAddCrop={handleAddCrop}
-        loading={cropLoading}
-      />
+          {/* Expense Summary */}
+          {crops && crops.length > 0 && crops.some(crop => crop.costs && crop.costs.length > 0) && (
+            <div className="mb-6 p-4 border border-green-100 rounded-lg bg-green-50">
+              <div className="flex items-center mb-2">
+                <FontAwesomeIcon icon={faDollarSign} className="text-green-600 mr-2" />
+                <h3 className="font-medium text-gray-800">{t('expense_summary') || 'Expense Summary'}</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                <div className="bg-white p-3 rounded-md shadow-sm">
+                  <div className="text-xs text-gray-500">{t('total_expenses') || 'Total Expenses'}</div>
+                  <div className="text-xl font-semibold text-green-700">
+                    ${crops.reduce((total, crop) => {
+                      return total + (crop.costs ? crop.costs.reduce((cropTotal, cost) => cropTotal + (cost.amount || 0), 0) : 0);
+                    }, 0).toFixed(2)}
+                  </div>
+                </div>
+                <div className="bg-white p-3 rounded-md shadow-sm">
+                  <div className="text-xs text-gray-500">{t('active_crops') || 'Active Crops'}</div>
+                  <div className="text-xl font-semibold text-green-700">
+                    {crops.filter(crop => crop.status !== 'Completed' && crop.status !== 'Failed').length}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Search and filter */}
+          <div className="flex mb-4 gap-2">
+            <div className="relative flex-grow">
+              <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('search_crops') || "Search crops"}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+              />
+            </div>
+            <div className="relative">
+              <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="pl-10 pr-8 py-2 border border-gray-200 rounded-lg bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-green-400"
+              >
+                <option value="all_status">{t('all_status') || "All Status"}</option>
+                <option value="Planning">Planning</option>
+                <option value="Growing">Growing</option>
+                <option value="Harvested">Harvested</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Crop cards */}
+          <div className="space-y-4">
+            {filteredCrops.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                {searchQuery || filterStatus !== 'all_status'
+                  ? t('no_crops_match') || "No crops match your filters"
+                  : t('no_crops_yet') || "No crops yet. Add your first crop!"}
+              </div>
+            ) : (
+              filteredCrops.map((crop) => (
+                <div
+                  key={crop._id}
+                  className="p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition cursor-pointer"
+                  onClick={() => navigate(`/crops/${crop._id}`)}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-xl font-medium text-gray-800">{crop.name}</h3>
+                    <button
+                      onClick={(e) => handleRemoveCrop(crop._id, e)}
+                      className="text-gray-400 hover:text-red-500 transition p-1 rounded-full hover:bg-red-50"
+                      title={t('delete_crop') || "Delete crop"}
+                      aria-label={t('delete_crop') || "Delete crop"}
+                    >
+                      <FontAwesomeIcon icon={faTrash} size="sm" />
+                    </button>
+                  </div>
+
+                  <div className="mb-3">
+                    <CropStatusBadge status={crop.status || 'Planning'} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center">
+                      <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400 mr-2" />
+                      <div>
+                        <div className="text-xs text-gray-500">{t('planting_date') || "Planting Date"}</div>
+                        <div className="text-sm">{formatDate(crop.plantingDate)}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center">
+                      <FontAwesomeIcon icon={faChartLine} className="text-green-500 mr-2" />
+                      <div>
+                        <div className="text-xs text-gray-500">{t('growth_stage') || "Growth Stage"}</div>
+                        <div className="text-sm">{crop.growthStage || t('not_recorded') || 'Not recorded'}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center">
+                      <FontAwesomeIcon icon={faDroplet} className="text-blue-500 mr-2" />
+                      <div>
+                        <div className="text-xs text-gray-500">{t('last_irrigation') || "Last Irrigation"}</div>
+                        <div className="text-sm">{crop.lastIrrigation ? format(new Date(crop.lastIrrigation), 'MMM d') : t('never') || 'Never'}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center">
+                      <FontAwesomeIcon icon={faLeaf} className="text-amber-500 mr-2" />
+                      <div>
+                        <div className="text-xs text-gray-500">{t('last_fertilization') || "Last Fertilization"}</div>
+                        <div className="text-sm">{crop.lastFertilization ? format(new Date(crop.lastFertilization), 'MMM d') : t('never') || 'Never'}</div>
+                      </div>
+                    </div>
+
+                    {/* Expense Information */}
+                    {crop.costs && crop.costs.length > 0 && (
+                      <div className="col-span-2 mt-2 pt-2 border-t border-gray-100">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center">
+                            <FontAwesomeIcon icon={faDollarSign} className="text-green-600 mr-2" />
+                            <div className="text-xs text-gray-500">{t('expenses') || 'Expenses'}</div>
+                          </div>
+                          <div className="text-sm font-medium">
+                            ${crop.costs.reduce((total, cost) => total + (cost.amount || 0), 0).toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Next Actions Section */}
+                    {crop.nextActions && crop.nextActions.length > 0 && (
+                      <div className="col-span-2 mt-2 pt-2 border-t border-gray-100">
+                        <div className="flex items-center mb-1">
+                          <FontAwesomeIcon icon={faClipboardList} className="text-blue-600 mr-2" />
+                          <div className="text-xs font-medium text-gray-700">{t('next_actions') || 'Next Actions'}</div>
+                        </div>
+                        <ul className="text-xs text-gray-600 space-y-1 mt-1">
+                          {crop.nextActions.slice(0, 2).map((action, idx) => (
+                            <li key={idx} className="flex items-start">
+                              <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 mr-1 mt-0.5" size="xs" />
+                              <span>{action}</span>
+                            </li>
+                          ))}
+                          {crop.nextActions.length > 2 && (
+                            <li className="text-blue-500 text-xs">
+                              +{crop.nextActions.length - 2} {t('more_actions') || 'more actions'}
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between items-center mt-3">
+                    <button
+                      className="text-blue-600 text-sm font-medium hover:bg-blue-50 py-1 px-3 rounded-full transition"
+                      onClick={(e) => openExpenseModal(crop._id, e)}
+                    >
+                      <FontAwesomeIcon icon={faDollarSign} className="mr-1" />
+                      {t('add_expense') || 'Add Expense'}
+                    </button>
+                    <span className="text-green-600 text-sm font-medium hover:underline flex items-center">
+                      {t('details') || 'Details'}
+                      <FontAwesomeIcon icon={faArrowRight} className="ml-1" size="sm" />
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        {/* Crop Modal */}
+        <CropModal
+          isOpen={isCropModalOpen}
+          onClose={closeCropModal}
+          onAddCrop={handleAddCrop}
+          loading={cropLoading}
+          preloadedCropDetails={preloadedCropDetails}
+          error={cropError}
+        />
+
+        {/* Expense Modal */}
+        {isExpenseModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg w-full max-w-md p-6 shadow-xl">
+              <h2 className="text-xl font-semibold mb-4">{t('add_expense') || 'Add Expense'}</h2>
+
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-medium mb-1">
+                  {t('description') || 'Description'}
+                </label>
+                <input
+                  type="text"
+                  value={expense.description}
+                  onChange={(e) => setExpense({ ...expense, description: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder={t('expense_description') || 'Expense description'}
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-medium mb-1">
+                  {t('category') || 'Category'}
+                </label>
+                <select
+                  value={expense.category}
+                  onChange={(e) => setExpense({ ...expense, category: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="Seed">{t('seed') || 'Seed'}</option>
+                  <option value="Fertilizer">{t('fertilizer') || 'Fertilizer'}</option>
+                  <option value="Pesticide">{t('pesticide') || 'Pesticide'}</option>
+                  <option value="Irrigation">{t('irrigation') || 'Irrigation'}</option>
+                  <option value="Labor">{t('labor') || 'Labor'}</option>
+                  <option value="Equipment">{t('equipment') || 'Equipment'}</option>
+                  <option value="Other">{t('other') || 'Other'}</option>
+                </select>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-medium mb-1">
+                  {t('amount') || 'Amount'} ($)
+                </label>
+                <input
+                  type="number"
+                  value={expense.amount}
+                  onChange={(e) => setExpense({ ...expense, amount: parseFloat(e.target.value) })}
+                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={closeExpenseModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  {t('cancel') || 'Cancel'}
+                </button>
+                <button
+                  onClick={handleAddExpense}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+                  disabled={cropLoading}
+                >
+                  {cropLoading ? (t('saving') || 'Saving...') : (t('save_expense') || 'Save Expense')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

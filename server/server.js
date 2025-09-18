@@ -6,6 +6,7 @@ const dotenv = require('dotenv');
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const { createServer } = require('http');
 const { Server } = require('socket.io');
+const schedule = require('node-schedule');
 
 // Load environment variables from .env in server folder
 dotenv.config();
@@ -48,6 +49,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/crops', require('./routes/crops'));
 app.use('/api/disease', require('./routes/disease'));
 app.use('/api/activities', require('./routes/activities'));
+app.use('/api/tasks', require('./routes/tasks'));
 
 // Weather Analysis Endpoint using Gemini AI
 app.post('/api/weather-analysis', async (req, res) => {
@@ -148,6 +150,37 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
   // In production, you might want to restart the server or perform cleanup here
+});
+
+// Import task recommendation generator
+const { generateAllUserTaskRecommendations } = require('./utils/taskRecommendationGenerator');
+const User = require('./models/User');
+
+// Schedule daily task recommendation generation for all users at 5:00 AM
+schedule.scheduleJob('0 5 * * *', async function () {
+  console.log('Running scheduled task recommendation generation...');
+
+  try {
+    // Get all active users
+    const users = await User.find().select('_id');
+
+    let totalTasksGenerated = 0;
+
+    // Generate recommendations for each user
+    for (const user of users) {
+      try {
+        const result = await generateAllUserTaskRecommendations(user._id);
+        totalTasksGenerated += result.taskCount;
+        console.log(`Generated ${result.taskCount} tasks for user ${user._id}`);
+      } catch (error) {
+        console.error(`Error generating tasks for user ${user._id}:`, error);
+      }
+    }
+
+    console.log(`Daily task generation complete. Generated ${totalTasksGenerated} tasks across ${users.length} users.`);
+  } catch (error) {
+    console.error('Error in scheduled task generation:', error);
+  }
 });
 
 const PORT = process.env.PORT || 5000;

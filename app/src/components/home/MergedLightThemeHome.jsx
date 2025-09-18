@@ -3,180 +3,15 @@ import { useNavigate, Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faCloudSun,
-  faSeedling,
-  faPlus,
-  faChartLine,
-  faCalendarAlt,
-  faDroplet,
-  faLeaf,
-  faSearch,
-  faFilter,
-  faExclamationTriangle,
-  faInfoCircle,
-  faMapMarkerAlt,
-  faDollarSign,
-  faClipboardList,
-  faCheckCircle,
-  faArrowRight,
-  faTrash,
-  faList
-} from '@fortawesome/free-solid-svg-icons'
-import {
-  FaSeedling,
-  FaPlus,
-  FaTrash,
-  FaSearch,
-  FaLeaf,
-  FaRupeeSign,
-  FaHandHoldingUsd,
-  FaTint,
-  FaExclamationTriangle,
-  FaCloudRain,
-  FaTasks,
-  FaCloudSun
-} from 'react-icons/fa'
-import CropModal from './CropModal';
-import useDiseaseAlerts from './useDiseaseAlerts';
-import WeatherAnalysis from './WeatherAnalysis';
-import TaskDashboard from './tasks/TaskDashboard';
-
+import useDiseaseAlerts from '../useDiseaseAlerts';
+import WeatherAnalysis from '../WeatherAnalysis';
+import TaskDashboard from '../tasks/TaskDashboard';
+import { fetchWeatherData, getWeatherDesc, getWeatherIcon, formatDay, formatHour } from '../../utils/weatherUtils';
 
 // Format date helper
 const formatDate = (date) => {
   if (!date) return 'Not set';
   return format(date, 'MMM d, yyyy');
-};
-
-// Format hour helper
-const formatHour = (timestamp) => {
-  if (!timestamp) return '';
-  return format(new Date(timestamp), 'ha');
-};
-
-// Format day helper
-const formatDay = (timestamp) => {
-  if (!timestamp) return '';
-  return format(new Date(timestamp), 'EEE');
-};
-
-// Get weather icon helper
-const getWeatherIcon = (code) => {
-  // Default mapping of weather codes to OpenWeatherMap icon codes
-  const iconMap = {
-    0: '01d', // Clear sky
-    1: '02d', // Partly cloudy
-    2: '03d', // Cloudy
-    3: '04d', // Overcast
-    45: '50d', // Fog
-    48: '50d', // Depositing rime fog
-    51: '09d', // Light drizzle
-    53: '09d', // Moderate drizzle
-    55: '09d', // Dense drizzle
-    56: '09d', // Light freezing drizzle
-    57: '09d', // Dense freezing drizzle
-    61: '10d', // Slight rain
-    63: '10d', // Moderate rain
-    65: '10d', // Heavy rain
-    66: '13d', // Light freezing rain
-    67: '13d', // Heavy freezing rain
-    71: '13d', // Slight snow fall
-    73: '13d', // Moderate snow fall
-    75: '13d', // Heavy snow fall
-    77: '13d', // Snow grains
-    80: '09d', // Slight rain showers
-    81: '09d', // Moderate rain showers
-    82: '09d', // Violent rain showers
-    85: '13d', // Slight snow showers
-    86: '13d', // Heavy snow showers
-    95: '11d', // Thunderstorm
-    96: '11d', // Thunderstorm with slight hail
-    99: '11d', // Thunderstorm with heavy hail
-  };
-  return iconMap[code] || '01d';
-};
-
-// Get weather description helper
-const getWeatherDesc = (code) => {
-  const descMap = {
-    0: 'Clear sky',
-    1: 'Partly cloudy',
-    2: 'Cloudy',
-    3: 'Overcast',
-    45: 'Fog',
-    48: 'Depositing rime fog',
-    51: 'Light drizzle',
-    53: 'Moderate drizzle',
-    55: 'Dense drizzle',
-    56: 'Light freezing drizzle',
-    57: 'Dense freezing drizzle',
-    61: 'Slight rain',
-    63: 'Moderate rain',
-    65: 'Heavy rain',
-    66: 'Light freezing rain',
-    67: 'Heavy freezing rain',
-    71: 'Slight snow fall',
-    73: 'Moderate snow fall',
-    75: 'Heavy snow fall',
-    77: 'Snow grains',
-    80: 'Slight rain showers',
-    81: 'Moderate rain showers',
-    82: 'Violent rain showers',
-    85: 'Slight snow showers',
-    86: 'Heavy snow showers',
-    95: 'Thunderstorm',
-    96: 'Thunderstorm with slight hail',
-    99: 'Thunderstorm with heavy hail',
-  };
-  return descMap[code] || 'Unknown';
-};
-
-// Fetch weather data from API
-const fetchWeatherData = async (latitude, longitude, apiKey) => {
-  try {
-    // Using OpenMeteo free weather API as an example
-    const res = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,weathercode,precipitation&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&current_weather=true`
-    );
-
-    if (!res.ok) {
-      throw new Error('Weather API error');
-    }
-
-    const data = await res.json();
-
-    // Process hourly data (next 24 hours)
-    const hourly = data.hourly.time.slice(0, 24).map((time, index) => ({
-      time,
-      values: {
-        temperature: data.hourly.temperature_2m[index],
-        weatherCode: data.hourly.weathercode[index],
-        precipitation: data.hourly.precipitation[index]
-      }
-    }));
-
-    // Process daily data (next 7 days)
-    const daily = data.daily.time.map((time, index) => ({
-      time,
-      values: {
-        temperatureMax: data.daily.temperature_2m_max[index],
-        temperatureMin: data.daily.temperature_2m_min[index],
-        weatherCodeMax: data.daily.weathercode[index],
-        precipitation: data.daily.precipitation_sum[index]
-      }
-    }));
-
-    // Return processed data
-    return {
-      weather: data.current_weather,
-      hourly,
-      daily
-    };
-  } catch (error) {
-    console.error('Weather fetch error:', error);
-    throw error;
-  }
 };
 
 // Crop status badge with appropriate coloring  
@@ -214,6 +49,41 @@ const CropStatusBadge = ({ status }) => {
   );
 };
 
+import {
+  faCloudSun,
+  faSeedling,
+  faPlus,
+  faChartLine,
+  faCalendarAlt,
+  faDroplet,
+  faLeaf,
+  faSearch,
+  faFilter,
+  faExclamationTriangle,
+  faInfoCircle,
+  faMapMarkerAlt,
+  faDollarSign,
+  faClipboardList,
+  faCheckCircle,
+  faArrowRight,
+  faTrash,
+  faList
+} from '@fortawesome/free-solid-svg-icons';
+import {
+  FaCloudSun,
+  FaSeedling,
+  FaPlus,
+  FaTrash,
+  FaSearch,
+  FaLeaf,
+  FaRupeeSign,
+  FaHandHoldingUsd,
+  FaTint,
+  FaExclamationTriangle,
+  FaCloudRain,
+  FaTasks
+} from "react-icons/fa";
+import CropModal from '../CropModal';
 
 const MergedLightThemeHome = () => {
   const { t } = useTranslation(['translation', 'tasks']);

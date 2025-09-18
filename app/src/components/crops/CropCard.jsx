@@ -112,7 +112,13 @@ const CropCard = ({
   };
 
   const viewCropDetails = (cropId) => {
-    navigate(`/crops/${cropId}`);
+    console.log('Navigating to crop details with ID:', cropId);
+    // Ensure cropId is defined before navigating
+    if (cropId) {
+      navigate(`/crops/${cropId}`);
+    } else {
+      console.error('Cannot navigate: cropId is undefined or null');
+    }
   };
 
   return (

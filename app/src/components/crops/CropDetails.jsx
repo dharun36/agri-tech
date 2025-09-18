@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { fetchWeatherData, getWeatherDesc, getWeatherIcon, formatDay } from '../../utils/weatherUtils';
+import WeatherAnalysis from '../WeatherAnalysis';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowLeft,
@@ -22,23 +24,63 @@ import Button from '../ui/Button';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import CropStatusHistory from './CropStatusHistory';
 import { EventFormSelector } from './CropEventForms';
+import { FaTasks, FaCloudSun, FaTemperatureHigh, FaTemperatureLow, FaWater, FaCalendarDay } from 'react-icons/fa';
 
 // Define the API base URL to ensure all requests go to the backend server
-const API_BASE_URL = 'http://localhost:5000';
+// Use relative URLs to avoid hardcoding server address, 
+// or use environment variables for flexibility
+const API_BASE_URL = '';
 
 const CropDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const location = useLocation();
+  const { t } = useTranslation(['translation', 'tasks']);
 
-  const [crop, setCrop] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Get initial crop data if available from router
+  const initialCropData = location.state?.cropInitialData || null;
+
+  const [crop, setCrop] = useState(initialCropData);
+  const [loading, setLoading] = useState(!initialCropData);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [activeEventForm, setActiveEventForm] = useState(null);
 
+  // Weather state
+  const [weather, setWeather] = useState(null);
+  const [hourly, setHourly] = useState([]);
+  const [daily, setDaily] = useState([]);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+  const [weatherError, setWeatherError] = useState(null);
+
+  // Fetch weather data for the crop location
+  useEffect(() => {
+    if (crop && crop.fieldLocation && crop.fieldLocation.latitude && crop.fieldLocation.longitude) {
+      setWeatherLoading(true);
+      setWeatherError(null);
+
+      const { latitude, longitude } = crop.fieldLocation;
+
+      fetchWeatherData(latitude, longitude, import.meta.env.VITE_WEATHER_API_KEY)
+        .then(({ weather, hourly, daily }) => {
+          setWeather(weather);
+          setHourly(hourly);
+          setDaily(daily);
+          setWeatherLoading(false);
+        })
+        .catch(error => {
+          console.error("Weather fetch error:", error);
+          setWeatherError("Failed to load weather data");
+          setWeatherLoading(false);
+        });
+    }
+  }, [crop]);
+
   // Fetch crop details and activities
   useEffect(() => {
+    // Skip fetch if we already have data from the router
+    if (initialCropData && !loading) return;
+
     const fetchCropDetails = async () => {
       try {
         setLoading(true);
@@ -49,15 +91,25 @@ const CropDetails = () => {
         }
 
         // Fetch crop details
-        const cropResponse = await axios.get(`${API_BASE_URL}/api/crops/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        setCrop(cropResponse.data);
+        console.log('Fetching crop details for ID:', id);
 
-        // Fetch activities for this crop
-        const activitiesResponse = await axios.get(`${API_BASE_URL}/api/activities/crop/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        // Add error handling for the API request
+        try {
+          const cropResponse = await axios.get(`${API_BASE_URL}/api/crops/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          console.log('Crop data received:', cropResponse.data);
+          setCrop(cropResponse.data);
+
+          // Fetch activities for this crop
+          const activitiesResponse = await axios.get(`${API_BASE_URL}/api/activities/crop/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          console.log('Activities data received:', activitiesResponse.data);
+        } catch (apiError) {
+          console.error('API error details:', apiError.response || apiError);
+          throw apiError; // Re-throw for the outer catch to handle
+        }
 
         // Assign activities to the crop object to be used by CropStatusHistory
         const cropWithActivities = {
@@ -75,7 +127,7 @@ const CropDetails = () => {
     };
 
     fetchCropDetails();
-  }, [id, navigate]);
+  }, [id, navigate, initialCropData, loading]);
 
   const handleAddEvent = (eventType) => {
     setActiveEventForm(eventType);
@@ -203,6 +255,10 @@ const CropDetails = () => {
     return (
       <div className="text-center p-8">
         <div className="text-gray-500 mb-4">{t('crop_not_found')}</div>
+        <p className="text-sm text-gray-500 mb-4">
+          Crop ID: {id}<br />
+          This crop might not exist or there might be a connection issue to the API.
+        </p>
         <Button onClick={() => navigate('/home')} variant="primary">
           {t('back_to_dashboard')}
         </Button>
@@ -220,14 +276,24 @@ const CropDetails = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       {/* Back button */}
-      <Button
-        onClick={() => navigate('/home')}
-        variant="secondary"
-        className="mb-4"
-      >
-        <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-        {t('back_to_dashboard')}
-      </Button>
+      <div className="flex justify-between items-center mb-4">
+        <Button
+          onClick={() => navigate('/home')}
+          variant="secondary"
+        >
+          <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
+          {t('back_to_dashboard')}
+        </Button>
+
+        <Button
+          onClick={() => navigate(`/tasks/${id}`)}
+          variant="primary"
+          className="bg-green-600 hover:bg-green-700"
+        >
+          <FaTasks className="mr-2" />
+          {t('crop_tasks_and_recommendations', { ns: 'tasks' })}
+        </Button>
+      </div>
 
       {/* Success message */}
       {success && (
@@ -371,6 +437,81 @@ const CropDetails = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Weather information */}
+        <div className="mt-4">
+          <div className="flex items-center text-gray-500 mb-1">
+            <FaCloudSun className="mr-2" />
+            {t('weather_information')}
+          </div>
+
+          {weatherLoading ? (
+            <div className="flex justify-center p-4">
+              <LoadingSpinner size="medium" />
+            </div>
+          ) : weatherError ? (
+            <div className="text-center text-red-500 p-4">
+              {weatherError}
+            </div>
+          ) : weather ? (
+            <div>
+              {/* Current Weather */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4">
+                <div className="flex items-center">
+                  <img
+                    src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
+                    alt={weather.desc}
+                    className="w-16 h-16"
+                  />
+                  <div className="ml-4">
+                    <div className="text-2xl font-semibold">{Math.round(weather.temp)}°C</div>
+                    <div className="text-gray-600 dark:text-gray-300">{weather.desc}</div>
+                    <div className="text-gray-600 dark:text-gray-300">
+                      <FaWater className="inline mr-1" /> {weather.humidity}% humidity
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3-day forecast */}
+                <div className="mt-4 border-t pt-3">
+                  <div className="text-sm font-medium mb-2">{t('forecast')}</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {daily.slice(0, 3).map((day, idx) => (
+                      <div key={idx} className="text-center">
+                        <div className="text-xs">{formatDay(day.time)}</div>
+                        <img
+                          src={`https://openweathermap.org/img/wn/${getWeatherIcon(day.values.weatherCode)}@2x.png`}
+                          alt={getWeatherDesc(day.values.weatherCode)}
+                          className="w-10 h-10 mx-auto"
+                        />
+                        <div className="flex text-xs justify-center">
+                          <span className="text-red-500 dark:text-red-400 mr-1">
+                            {Math.round(day.values.temperatureMax)}°
+                          </span>
+                          <span className="text-blue-500 dark:text-blue-400">
+                            {Math.round(day.values.temperatureMin)}°
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Weather Analysis */}
+              <WeatherAnalysis
+                weather={weather}
+                daily={daily}
+                formatDay={formatDay}
+                getWeatherDesc={getWeatherDesc}
+              />
+            </div>
+          ) : (
+            <div className="text-center text-gray-500 p-4">
+              {t('no_weather_data')}
+            </div>
+          )}
         </div>
 
         <div className="mt-4">
