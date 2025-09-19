@@ -17,7 +17,8 @@ import {
   FaChevronRight,
   FaBell,
   FaUser,
-  FaCog
+  FaCog,
+  FaTasks
 } from 'react-icons/fa';
 
 const VerticalHeader = ({ collapsed: propCollapsed }) => {
@@ -166,6 +167,15 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
             >
               <FaLeaf className={`${collapsed ? 'text-xl' : 'text-lg mr-3'}`} />
               {!collapsed && <span>{t('crop_recommendation')}</span>}
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/tasks"
+              className={`flex items-center ${collapsed ? 'justify-center' : 'px-4'} py-3 ${isActive('/tasks') ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'}`}
+            >
+              <FaTasks className={`${collapsed ? 'text-xl' : 'text-lg mr-3'}`} />
+              {!collapsed && <span>{t('tasks')}</span>}
             </Link>
           </li>
         </ul>

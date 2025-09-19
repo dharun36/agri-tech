@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   FaSeedling,
   FaTasks,
@@ -15,9 +15,10 @@ import TaskList from './TaskList';
  * Multi-crop task dashboard component
  * Shows task management for multiple crops using tabs
  */
-const TaskDashboard = ({ cropId }) => {
+const TaskDashboard = () => {
   const { t } = useTranslation(['translation', 'tasks']);
   const navigate = useNavigate();
+  const { cropId } = useParams(); // Get cropId from URL parameters
   const [crops, setCrops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

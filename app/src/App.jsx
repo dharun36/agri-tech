@@ -1,4 +1,5 @@
 
+import React from 'react'
 import './App.css'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -7,6 +8,8 @@ import Home from './components/Home'
 import ModernHome from './components/ModernHome'
 import LightThemeHome from './components/home/LightThemeHome'
 import WeatherPage from './components/WeatherPage'
+import TomorrowWeatherPage from './components/TomorrowWeatherPage'
+import WeatherDemo from './components/weather/WeatherDemo'
 import CropRecommendation from './components/CropRecommendation'
 import MarketPrices from './components/MarketPrices'
 import DiseaseAlerts from './components/DiseaseAlerts'
@@ -19,16 +22,17 @@ import Signup from './components/auth/Signup'
 import Profile from './components/Profile'
 import CropDetails from './components/crops/CropDetails'
 import CropRouter from './components/crops/CropRouter'
+import CropTaskSelector from './components/tasks/CropTaskSelector'
+import TaskDashboard from './components/tasks/TaskDashboard'
 import AppLayout from './components/AppLayout'
 import ErrorBoundary from './components/ErrorBoundary'
-import { useEffect } from 'react'
 
 function App() {
   // Get user ID from localStorage for alerts
   const userId = localStorage.getItem('userId'); // Temporary hardcode for testing
 
   // Request notification permission on app load
-  useEffect(() => {
+  React.useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().then(permission => {
         console.log('Notification permission:', permission);
@@ -54,7 +58,9 @@ function App() {
               <Route path="/dark-home" element={<ModernHome />} />
               <Route path="/old-home" element={<Home />} />
               <Route path="/disease-detection" element={<DetectDisease />} />
-              <Route path="/weather" element={<WeatherPage />} />
+              <Route path="/weather" element={<TomorrowWeatherPage />} />
+              <Route path="/weather-old" element={<WeatherPage />} />
+              <Route path="/weather-demo" element={<WeatherDemo />} />
               <Route path="/merged-home" element={<MergedLightThemeHome />} />
               <Route path="/crop-recommendation" element={<CropRecommendation />} />
               <Route path="/market-prices" element={<MarketPrices />} />
@@ -71,7 +77,10 @@ function App() {
               {/* New two-step routing process for crop details */}
               <Route path="/crops/:id" element={<CropRouter />} />
               <Route path="/crop-details/:id" element={<CropDetails />} />
-              <Route path="/tasks/:cropId" element={<LightThemeHome />} />
+
+              {/* Task management routes */}
+              <Route path="/tasks" element={<div className="p-4"><CropTaskSelector /></div>} />
+              <Route path="/tasks/:cropId" element={<div className="p-4"><TaskDashboard /></div>} />
 
               {/* Fallback routes */}
               <Route path="/" element={<ModernLandingPage />} />

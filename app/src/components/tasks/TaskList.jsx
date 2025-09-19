@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import TaskItem from './TaskItem';
+import TaskRecommendationsModal from './TaskRecommendationsModal';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import {
   FaTasks,
   FaCalendarAlt,
   FaHistory,
   FaFilter,
   FaSync,
-  FaSpinner
+  FaSpinner,
+  FaRobot,
+  FaExclamationTriangle
 } from 'react-icons/fa';
+import { generateTaskRecommendations } from '../../utils/taskRecommendationGenerator';
 
 /**
  * Task list component that displays today's tasks, upcoming tasks, and task history
+ * Now with AI-powered task recommendations using the Gemini API
  */
 const TaskList = ({ cropId = null }) => {
   const { t } = useTranslation(['translation', 'tasks']);
@@ -20,6 +27,9 @@ const TaskList = ({ cropId = null }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [recommendedTasks, setRecommendedTasks] = useState([]);
+  const [showRecommendationsModal, setShowRecommendationsModal] = useState(false);
 
   // Fetch tasks based on active tab and filters
   useEffect(() => {
@@ -35,16 +45,16 @@ const TaskList = ({ cropId = null }) => {
         let url = '';
         switch (activeTab) {
           case 'today':
-            url = '/api/tasks/today';
+            url = 'http://localhost:5000/api/tasks/today';
             break;
           case 'upcoming':
-            url = '/api/tasks/upcoming';
+            url = 'http://localhost:5000/api/tasks/upcoming';
             break;
           case 'history':
-            url = '/api/tasks/history';
+            url = 'http://localhost:5000/api/tasks/history';
             break;
           default:
-            url = '/api/tasks';
+            url = 'http://localhost:5000/api/tasks';
         }
 
         // Add crop filter if provided
@@ -78,56 +88,106 @@ const TaskList = ({ cropId = null }) => {
     fetchTasks();
   }, [activeTab, cropId, filterCategory, t]);
 
-  // Generate new task recommendations
+  // Generate new task recommendations using Gemini API
   const handleGenerateRecommendations = async () => {
     setLoading(true);
     setError(null);
+    setIsGeneratingAI(true);
+    setRecommendedTasks([]);
 
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const payload = {
-        includeWeather: true,
-        includeGrowthStage: true,
-        includeDisease: true
-      };
-
-      // Add crop ID if filtering for a specific crop
-      if (cropId) {
-        payload.cropId = cropId;
+      // If no cropId is provided, show an error
+      if (!cropId) {
+        setError(t('select_crop_first', { ns: 'tasks' }));
+        return;
       }
 
-      const res = await fetch('/api/tasks/generate-recommendations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
+      // 1. Fetch crop data
+      const cropRes = await fetch(`http://localhost:5000/api/crops/${cropId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      if (!res.ok) {
-        throw new Error(`Failed to generate recommendations: ${res.status}`);
+      if (!cropRes.ok) {
+        throw new Error(`Failed to fetch crop data: ${cropRes.status}`);
       }
 
-      const result = await res.json();
+      const cropData = await cropRes.json();
 
-      // Refresh task list after generating recommendations
-      if (result.success) {
-        // Wait briefly to ensure tasks are saved in the database
-        setTimeout(() => {
-          // Reload tasks with current tab
-          const currentTab = activeTab;
-          setActiveTab('loading');
-          setTimeout(() => setActiveTab(currentTab), 10);
-        }, 500);
+      // 2. Fetch previous activities for this crop
+      const activitiesRes = await fetch(`http://localhost:5000/api/activities/crop/${cropId}?limit=10`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!activitiesRes.ok) {
+        throw new Error(`Failed to fetch activities: ${activitiesRes.status}`);
       }
+
+      const activitiesData = await activitiesRes.json();
+      const previousActivities = activitiesData.activities || [];
+
+      // 3. Mock weather data (in a real app, fetch from a weather API)
+      const weatherData = {
+        temp: 25, // Example temperature in °C
+        daily: [
+          {
+            time: new Date().toISOString(),
+            values: {
+              temperatureMax: 28,
+              temperatureMin: 18,
+              precipitation: 0,
+              precipitationProbability: 10
+            }
+          },
+          {
+            time: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
+            values: {
+              temperatureMax: 27,
+              temperatureMin: 17,
+              precipitation: 5,
+              precipitationProbability: 80
+            }
+          }
+        ]
+      };
+
+      // Get user ID from localStorage
+      const userId = localStorage.getItem('userId');
+
+      if (!userId) {
+        throw new Error('User ID not found. Please log in again.');
+      }
+
+      // 4. Generate task recommendations using Gemini API
+      toast.info(t('generating_ai_recommendations', { ns: 'tasks' }));
+      const recommendations = await generateTaskRecommendations(
+        cropData,
+        previousActivities,
+        weatherData,
+        { includeDiseasePrevention: true }
+      );
+
+      // Add user ID to each recommendation
+      const recommendationsWithUser = recommendations.map(task => ({
+        ...task,
+        user: userId
+      }));
+
+      // 5. Store recommendations and show modal
+      setRecommendedTasks(recommendationsWithUser);
+      console.log('Generated recommendations with user:', recommendationsWithUser);
+      toast.success(t('recommendations_generated', { count: recommendationsWithUser.length, ns: 'tasks' }));
+      setShowRecommendationsModal(true);
+
     } catch (err) {
       console.error('Error generating recommendations:', err);
       setError(t('failed_to_generate_recommendations', { ns: 'tasks' }));
+      toast.error(t('ai_recommendation_error', { ns: 'tasks' }));
     } finally {
       setLoading(false);
+      setIsGeneratingAI(false);
     }
   };
 
@@ -137,7 +197,7 @@ const TaskList = ({ cropId = null }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch(`/api/tasks/${taskId}/status`, {
+      const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -168,7 +228,7 @@ const TaskList = ({ cropId = null }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch(`/api/tasks/${taskId}/status`, {
+      const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -193,6 +253,20 @@ const TaskList = ({ cropId = null }) => {
     }
   };
 
+  // Handle task saved from recommendations modal
+  const handleTaskSaved = (newTask) => {
+    // If we're on the tab that should show this task, add it to the list
+    const shouldAddToCurrentList =
+      (activeTab === 'today' && new Date(newTask.dueDate).toDateString() === new Date().toDateString()) ||
+      (activeTab === 'upcoming' && new Date(newTask.dueDate) > new Date());
+
+    if (shouldAddToCurrentList) {
+      setTasks(prevTasks => [newTask, ...prevTasks]);
+    }
+
+    toast.success(t('task_saved_success', { ns: 'tasks' }));
+  };
+
   // Get filtered tasks based on category
   const getFilteredTasks = () => {
     if (filterCategory === 'all') {
@@ -205,6 +279,18 @@ const TaskList = ({ cropId = null }) => {
 
   return (
     <div className="bg-white rounded-lg shadow p-4">
+      {/* Toast notifications */}
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
+
+      {/* Task Recommendations Modal */}
+      <TaskRecommendationsModal
+        isOpen={showRecommendationsModal}
+        onClose={() => setShowRecommendationsModal(false)}
+        recommendations={recommendedTasks}
+        cropId={cropId}
+        onTaskSaved={handleTaskSaved}
+      />
+
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold flex items-center">
@@ -217,8 +303,8 @@ const TaskList = ({ cropId = null }) => {
           disabled={loading}
           className="flex items-center bg-green-600 text-white px-3 py-1 rounded-md text-sm hover:bg-green-700 transition"
         >
-          {loading ? <FaSpinner className="animate-spin mr-1" /> : <FaSync className="mr-1" />}
-          {t('generate_recommendations', { ns: 'tasks' })}
+          {loading ? <FaSpinner className="animate-spin mr-1" /> : <FaRobot className="mr-1" />}
+          {t('generate_ai_recommendations', { ns: 'tasks' })}
         </button>
       </div>
 
@@ -283,15 +369,33 @@ const TaskList = ({ cropId = null }) => {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-100 border border-red-300 text-red-800 p-3 rounded-md mb-4">
-          {error}
+        <div className="bg-red-100 border border-red-300 text-red-800 p-3 rounded-md mb-4 flex items-start">
+          <FaExclamationTriangle className="text-red-600 mr-2 mt-1 flex-shrink-0" />
+          <div>
+            <p className="font-semibold">{t('error_occurred', { ns: 'tasks' })}</p>
+            <p>{error}</p>
+          </div>
         </div>
       )}
 
       {/* Loading State */}
       {loading && (
-        <div className="flex justify-center items-center p-6">
-          <FaSpinner className="animate-spin text-green-600 text-3xl" />
+        <div className={`flex flex-col justify-center items-center p-6 ${isGeneratingAI ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'} rounded-lg`}>
+          <FaSpinner className={`animate-spin ${isGeneratingAI ? 'text-blue-600' : 'text-green-600'} text-3xl mb-3`} />
+          {isGeneratingAI ? (
+            <>
+              <p className="text-blue-700 font-medium flex items-center">
+                <FaRobot className="mr-2" />
+                {t('ai_generating_recommendations', { ns: 'tasks' })}
+              </p>
+              <p className="text-blue-500 text-sm mt-1">{t('ai_processing_message', { ns: 'tasks' })}</p>
+              <div className="mt-4 w-48 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 animate-pulse rounded-full"></div>
+              </div>
+            </>
+          ) : (
+            <p className="text-gray-700 font-medium">{t('loading_tasks', { ns: 'tasks' })}</p>
+          )}
         </div>
       )}
 

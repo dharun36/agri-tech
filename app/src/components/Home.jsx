@@ -704,20 +704,20 @@ const MergedLightThemeHome = () => {
 
             {/* Add New Crop with Details Button */}
             <div className="flex justify-between items-center mb-4">
-              <button
+              {/* <button
                 onClick={openCropModal}
                 className="text-green-600 font-medium text-sm hover:text-green-700 flex items-center gap-1"
               >
                 <FontAwesomeIcon icon={faPlus} className="text-xs" />
                 {t('add_crop_with_details') || 'Add crop with details'}
-              </button>
-              <button
+              </button> */}
+              {/* <button
                 onClick={() => navigate('/weather')}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center transition"
               >
                 <FontAwesomeIcon icon={faCloudSun} className="mr-2" />
                 {t('weather_forecast') || 'Weather Forecast'}
-              </button>
+              </button> */}
             </div>
 
             {/* Quick Overview Cards */}
@@ -734,7 +734,7 @@ const MergedLightThemeHome = () => {
                 </div>
               </div>
 
-              <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
+              {/* <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
                   <FontAwesomeIcon icon={faDroplet} className="text-blue-600" />
                 </div>
@@ -751,7 +751,7 @@ const MergedLightThemeHome = () => {
                     }).length}
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
                 <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
@@ -912,7 +912,7 @@ const MergedLightThemeHome = () => {
         </div>
 
         {/* Quick Links Section */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8 w-full">
+        {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8 w-full">
           <Link to="/disease-detection" className="hover:no-underline">
             <div className="rounded-xl shadow-md bg-white border border-gray-200 p-5 text-center h-full flex flex-col items-center hover:shadow-lg transition">
               <div className="w-12 h-12 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 mb-3">
@@ -957,7 +957,7 @@ const MergedLightThemeHome = () => {
               </p>
             </div>
           </Link>
-        </div>
+        </div> */}
       </div>
 
       {/* Crop Modal */}

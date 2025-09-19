@@ -534,7 +534,7 @@ const LightThemeHome = () => {
       <div className="container mx-auto py-6 px-4 md:px-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">{t('dashboard') || 'Dashboard'}</h1>
-          <div className="flex space-x-2">
+          {/* <div className="flex space-x-2">
             <button
               onClick={() => navigate('/weather')}
               className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center transition"
@@ -542,7 +542,7 @@ const LightThemeHome = () => {
               <FontAwesomeIcon icon={faCloudSun} className="mr-2" />
               {t('weather_forecast') || 'Weather Forecast'}
             </button>
-          </div>
+          </div> */}
         </div>
 
         {/* Quick Overview Cards */}
@@ -559,7 +559,7 @@ const LightThemeHome = () => {
             </div>
           </div>
 
-          <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
+          {/* <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
               <FontAwesomeIcon icon={faDroplet} className="text-blue-600" />
             </div>
@@ -576,7 +576,7 @@ const LightThemeHome = () => {
                 }).length}
               </div>
             </div>
-          </div>
+          </div> */}
 
           <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
             <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
@@ -601,17 +601,6 @@ const LightThemeHome = () => {
             </div>
             <span className="ml-3 text-lg font-medium text-gray-800">{t('track_and_manage') || 'Track and Manage'}</span>
             <div className="ml-auto">
-              <button
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition"
-                onClick={() => navigate('/crop-recommendation')}
-              >
-                {t('get_recommendation') || 'Get Recommendation'}
-              </button>
-            </div>
-          </div>
-
-          {/* Add new crop - Button to open modal */}
-          <div className="mb-4 space-y-3">
             <button
               onClick={openCropModal}
               className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center"
@@ -619,15 +608,21 @@ const LightThemeHome = () => {
               <FontAwesomeIcon icon={faPlus} className="mr-2" />
               {t('add_new_crop') || 'Add New Crop'}
             </button>
+            </div>
+          </div>
+
+          {/* Add new crop - Button to open modal */}
+          <div className="mb-4 space-y-3">
+            
 
             {/* AI Crop Details Button */}
-            <div className="flex items-center">
+            {/* <div className="flex items-center">
               <div className="h-px bg-gray-200 flex-grow"></div>
               <span className="px-2 text-xs text-gray-500">OR</span>
               <div className="h-px bg-gray-200 flex-grow"></div>
-            </div>
+            </div> */}
 
-            <div className="flex">
+            {/* <div className="flex">
               <input
                 type="text"
                 placeholder={t('enter_crop_name') || 'Enter crop name (e.g., Tomato, Rice)'}
@@ -655,10 +650,11 @@ const LightThemeHome = () => {
                   (t('get_ai_details') || 'Get AI Details')
                 }
               </button>
-            </div>
-            <p className="text-xs text-gray-500 mt-1 italic">
+            </div> */}
+
+            {/* <p className="text-xs text-gray-500 mt-1 italic">
               {t('enter_crop_name_and_ai') || 'Enter a crop name and our AI will generate growing details'}
-            </p>
+            </p> */}
 
             {/* Display crop error */}
             {cropError && (

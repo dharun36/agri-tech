@@ -28,7 +28,7 @@ const CropRouter = () => {
         }
 
         // Try to fetch the crop to validate it exists
-        const response = await fetch(`/api/crops/${id}`, {
+        const response = await fetch(`http://localhost:5000/api/crops/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           }

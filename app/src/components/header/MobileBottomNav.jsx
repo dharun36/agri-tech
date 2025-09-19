@@ -7,7 +7,8 @@ import {
   FaRupeeSign,
   FaHandHoldingUsd,
   FaLeaf,
-  FaBell
+  FaBell,
+  FaTasks
 } from 'react-icons/fa';
 
 const MobileBottomNav = ({ userId }) => {
@@ -67,16 +68,15 @@ const MobileBottomNav = ({ userId }) => {
           <span className="text-xs font-medium">{t('schemes')}</span>
         </Link>
 
-        {/* Crop Recommendation */}
-
+        {/* Tasks Link */}
         <Link
-          to="/crop-recommendation"
-          className={`flex flex-col items-center justify-center ${isActive('/crop-recommendation')
+          to="/tasks"
+          className={`flex flex-col items-center justify-center ${isActive('/tasks')
             ? 'text-green-600 border-t-2 border-green-600 -mt-[2px]'
             : 'text-gray-600'}`}
         >
-          <FaLeaf className={`${isActive('/crop-recommendation') ? 'text-xl scale-110' : 'text-lg'} mb-1 transition-transform`} />
-          <span className="text-xs font-medium">{t('crops')}</span>
+          <FaTasks className={`${isActive('/tasks') ? 'text-xl scale-110' : 'text-lg'} mb-1 transition-transform`} />
+          <span className="text-xs font-medium">{t('tasks')}</span>
         </Link>
       </div>
     </div>
