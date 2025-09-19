@@ -74,10 +74,6 @@ function App() {
               <Route path="/signup" element={<Signup />} />
               <Route path="/profile" element={<Profile />} />
 
-              {/* New two-step routing process for crop details */}
-              <Route path="/crops/:id" element={<CropRouter />} />
-              <Route path="/crop-details/:id" element={<CropDetails />} />
-
               {/* Task management routes */}
               <Route path="/tasks" element={<div className="p-4"><CropTaskSelector /></div>} />
               <Route path="/tasks/:cropId" element={<div className="p-4"><TaskDashboard /></div>} />

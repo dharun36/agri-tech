@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FaSpinner, FaSeedling, FaTasks } from 'react-icons/fa';
+import { FaSpinner, FaSeedling, FaTasks, FaHome } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
 /**
@@ -60,6 +60,10 @@ const CropTaskSelector = () => {
         return <FaTasks className="text-orange-500" />;
       case 'Planning':
         return <FaSeedling className="text-blue-500" />;
+      case 'Failed':
+        return <FaSeedling className="text-red-500" />;
+      case 'Completed':
+        return <FaTasks className="text-purple-500" />;
       default:
         return <FaSeedling className="text-gray-500" />;
     }
@@ -105,29 +109,60 @@ const CropTaskSelector = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-bold mb-4">{t('select_crop_for_tasks', { ns: 'tasks' })}</h2>
-      <p className="text-gray-600 mb-4">{t('select_crop_to_view_tasks', { ns: 'tasks' })}</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-xl font-bold">{t('select_crop_for_tasks', { ns: 'tasks' })}</h2>
+          <p className="text-gray-600 mt-1">{t('select_crop_to_view_tasks', { ns: 'tasks' })}</p>
+        </div>
+        <button
+          onClick={() => navigate('/home')}
+          className="text-green-600 hover:text-green-800 flex items-center font-medium"
+        >
+          <FaHome className="mr-1" /> {t('back_to_dashboard', { ns: 'tasks' })}
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
         {crops.map(crop => (
           <div
             key={crop._id}
-            className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+            className="border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-green-300 transition-all cursor-pointer bg-white"
             onClick={() => handleCropSelect(crop._id)}
           >
             <div className="flex items-center">
-              {getCropStatusIcon(crop.status)}
-              <h3 className="text-lg font-semibold ml-2">{crop.name}</h3>
-              {crop.variety && (
-                <span className="ml-2 text-sm text-gray-500">({crop.variety})</span>
-              )}
+              <div className="p-2 rounded-full bg-gray-50 mr-3">
+                {getCropStatusIcon(crop.status)}
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">{crop.name}</h3>
+                {crop.variety && (
+                  <span className="text-sm text-gray-500">({crop.variety})</span>
+                )}
+              </div>
+              <div className="ml-auto">
+                <span className={`text-xs px-2 py-1 rounded-full ${crop.status === 'Growing' ? 'bg-green-100 text-green-800' :
+                    crop.status === 'Harvested' ? 'bg-orange-100 text-orange-800' :
+                      crop.status === 'Planning' ? 'bg-blue-100 text-blue-800' :
+                        crop.status === 'Failed' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                  }`}>
+                  {crop.status}
+                </span>
+              </div>
             </div>
-            <div className="text-sm text-gray-600 mt-2">
+
+            <div className="text-sm text-gray-600 mt-3 pt-3 border-t">
               {crop.plantingDate && (
-                <div>{t('planted', { ns: 'tasks' })}: {new Date(crop.plantingDate).toLocaleDateString()}</div>
+                <div className="flex items-center mb-1">
+                  <FaSeedling className="text-green-500 mr-2 text-xs" />
+                  {t('planted', { ns: 'tasks' })}: {new Date(crop.plantingDate).toLocaleDateString()}
+                </div>
               )}
               {crop.status === 'Growing' && crop.harvestDate && (
-                <div>{t('expected_harvest', { ns: 'tasks' })}: {new Date(crop.harvestDate).toLocaleDateString()}</div>
+                <div className="flex items-center">
+                  <FaTasks className="text-orange-500 mr-2 text-xs" />
+                  {t('expected_harvest', { ns: 'tasks' })}: {new Date(crop.harvestDate).toLocaleDateString()}
+                </div>
               )}
             </div>
           </div>

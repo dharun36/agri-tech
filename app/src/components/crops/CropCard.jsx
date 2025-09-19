@@ -111,13 +111,12 @@ const CropCard = ({
     });
   };
 
-  const viewCropDetails = (cropId) => {
-    console.log('Navigating to crop details with ID:', cropId);
-    // Ensure cropId is defined before navigating
+  const handleViewDetails = () => {
     if (cropId) {
-      navigate(`/crops/${cropId}`);
+      // Navigate to home page with selected crop ID (will be handled by the crop widget)
+      navigate(`/home`, { state: { selectedCropId: cropId } });
     } else {
-      console.error('Cannot navigate: cropId is undefined or null');
+      console.error("No crop ID available");
     }
   };
 

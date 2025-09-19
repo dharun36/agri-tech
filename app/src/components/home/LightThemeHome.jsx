@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import CropSelector from '../crops/CropSelector';
+import CropWidget from '../crops/CropWidget';
 
 // Get API key from environment variables
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + import.meta.env.VITE_GEMINI_API_KEY;
@@ -86,7 +88,17 @@ const LightThemeHome = () => {
   const [crops, setCrops] = useState([]);
   const [filteredCrops, setFilteredCrops] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCropId, setSelectedCropId] = useState(location.state?.selectedCropId || null);
   const [filterStatus, setFilterStatus] = useState('all_status');
+
+  // If we receive a selected crop ID in navigation state, use it
+  useEffect(() => {
+    if (location.state?.selectedCropId) {
+      setSelectedCropId(location.state.selectedCropId);
+      // Clear the state from location to avoid persisting selection on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [currentCropId, setCurrentCropId] = useState(null);
@@ -601,19 +613,19 @@ const LightThemeHome = () => {
             </div>
             <span className="ml-3 text-lg font-medium text-gray-800">{t('track_and_manage') || 'Track and Manage'}</span>
             <div className="ml-auto">
-            <button
-              onClick={openCropModal}
-              className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center"
-            >
-              <FontAwesomeIcon icon={faPlus} className="mr-2" />
-              {t('add_new_crop') || 'Add New Crop'}
-            </button>
+              <button
+                onClick={openCropModal}
+                className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center"
+              >
+                <FontAwesomeIcon icon={faPlus} className="mr-2" />
+                {t('add_new_crop') || 'Add New Crop'}
+              </button>
             </div>
           </div>
 
           {/* Add new crop - Button to open modal */}
           <div className="mb-4 space-y-3">
-            
+
 
             {/* AI Crop Details Button */}
             {/* <div className="flex items-center">
@@ -662,6 +674,30 @@ const LightThemeHome = () => {
                 {cropError}
               </div>
             )}
+          </div>
+
+          {/* Crop Details Widget Section */}
+          <div className="mb-6">
+            <div className="flex items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">{t('your_crops') || 'Your Crops'}</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-1">
+                <CropSelector onSelectCrop={(cropId) => setSelectedCropId(cropId)} />
+              </div>
+              <div className="md:col-span-2">
+                {selectedCropId ? (
+                  <CropWidget
+                    cropId={selectedCropId}
+                    onClose={() => setSelectedCropId(null)}
+                  />
+                ) : (
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 text-center">
+                    <p className="text-gray-500">{t('select_crop_to_view') || 'Select a crop to view details'}</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Expense Summary */}

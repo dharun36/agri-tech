@@ -31,20 +31,61 @@ import { FaTasks, FaCloudSun, FaTemperatureHigh, FaTemperatureLow, FaWater, FaCa
 // or use environment variables for flexibility
 const API_BASE_URL = '';
 
-const CropDetails = () => {
-  const { id } = useParams();
+const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId }) => {
+  const { id: paramId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation(['translation', 'tasks']);
 
-  // Get initial crop data if available from router
-  const initialCropData = location.state?.cropInitialData || null;
+  // Use the ID either from props or from URL params
+  const id = propCropId || paramId;
+
+  // Get initial crop data if available from props or router state
+  const initialCropData = propInitialCropData || location.state?.cropInitialData || null;
 
   const [crop, setCrop] = useState(initialCropData);
   const [loading, setLoading] = useState(!initialCropData);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [activeEventForm, setActiveEventForm] = useState(null);
+
+  // Fetch crop data if not provided in location state
+  useEffect(() => {
+    const fetchCropData = async () => {
+      if (!initialCropData && id) {
+        setLoading(true);
+        setError(null);
+
+        try {
+          const token = localStorage.getItem('token');
+          if (!token) {
+            navigate('/login');
+            return;
+          }
+
+          const response = await fetch(`http://localhost:5000/api/crops/${id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch crop: ${response.status}`);
+          }
+
+          const cropData = await response.json();
+          setCrop(cropData);
+        } catch (err) {
+          console.error('Error fetching crop:', err);
+          setError(`Failed to load crop details: ${err.message}`);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchCropData();
+  }, [id, initialCropData, navigate]);
 
   // Weather state
   const [weather, setWeather] = useState(null);

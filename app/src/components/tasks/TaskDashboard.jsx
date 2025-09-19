@@ -141,21 +141,39 @@ const TaskDashboard = () => {
     <div className="bg-white rounded-lg shadow-md">
       {/* Crop Navigation Header */}
       <div className="flex justify-between items-center border-b p-4">
-        <button
-          onClick={handlePrevCrop}
-          className="text-green-600 p-2 rounded-full hover:bg-green-50 disabled:text-gray-300"
-          disabled={crops.length <= 1}
-        >
-          <FaChevronLeft />
-        </button>
+        <div className="flex items-center">
+          <button
+            onClick={handlePrevCrop}
+            className="text-green-600 p-2 rounded-full hover:bg-green-50 disabled:text-gray-300 mr-2"
+            disabled={crops.length <= 1}
+          >
+            <FaChevronLeft />
+          </button>
+
+          <button
+            onClick={() => navigate('/tasks')}
+            className="text-green-600 hover:text-green-800 text-sm flex items-center font-medium mr-4"
+          >
+            <FaTasks className="mr-1" /> {t('all_crops', { ns: 'tasks' })}
+          </button>
+        </div>
 
         <div className="text-center">
           <h2 className="text-xl font-bold flex items-center justify-center">
-            {getCropStatusIcon(activeCrop.status)}
+            <div className="p-2 rounded-full bg-gray-50 mr-3">
+              {getCropStatusIcon(activeCrop.status)}
+            </div>
             <span className="mx-2">{activeCrop.name}</span>
             {activeCrop.variety && (
               <span className="text-sm text-gray-500">({activeCrop.variety})</span>
             )}
+            <span className={`ml-2 text-xs px-2 py-1 rounded-full ${activeCrop.status === 'Growing' ? 'bg-green-100 text-green-800' :
+                activeCrop.status === 'Harvested' ? 'bg-orange-100 text-orange-800' :
+                  activeCrop.status === 'Planning' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
+              }`}>
+              {activeCrop.status}
+            </span>
           </h2>
           <div className="text-xs text-gray-500 mt-1">
             {activeCrop.plantingDate && (

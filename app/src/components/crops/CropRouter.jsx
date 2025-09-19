@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import Button from '../ui/Button';
 import { FaArrowLeft, FaTasks } from 'react-icons/fa';
+import CropDetails from './CropDetails';
 
 /**
  * Component that handles redirection to the appropriate component based on an ID
@@ -13,6 +14,10 @@ const CropRouter = () => {
   const navigate = useNavigate();
   const [isChecking, setIsChecking] = useState(true);
   const [error, setError] = useState(null);
+  const [cropData, setCropData] = useState(null);
+
+  // Get the current path to help determine behavior
+  const currentPath = window.location.pathname;
 
   useEffect(() => {
     // Function to validate the crop ID
@@ -42,11 +47,20 @@ const CropRouter = () => {
         const cropData = await response.json();
         console.log('Crop found:', cropData);
 
-        // Redirect to the actual component with state
-        navigate(`/crop-details/${id}`, {
-          replace: true,
-          state: { cropInitialData: cropData }
-        });
+        // Store the crop data
+        setCropData(cropData);
+
+        // If we're coming from tasks, stay in the tasks section
+        if (currentPath.includes('/tasks/')) {
+          navigate(`/tasks/${id}`, {
+            replace: true,
+            state: { cropInitialData: cropData }
+          });
+        }
+        // Otherwise we'll handle the crop details in the render method
+        else {
+          setIsChecking(false);
+        }
 
       } catch (err) {
         console.error('Error validating crop ID:', err);
@@ -104,7 +118,18 @@ const CropRouter = () => {
     );
   }
 
-  return null; // Should not reach here as we redirect in useEffect
+  // If we have crop data and we're on a crop-details route, render the CropDetails component
+  if (!isChecking && !error && cropData && currentPath.includes('/crop-details/')) {
+    return (
+      <CropDetails
+        cropId={id}
+        initialCropData={cropData}
+      />
+    );
+  }
+
+  // For other routes that didn't redirect
+  return null;
 };
 
 export default CropRouter;
