@@ -10,16 +10,45 @@ import {
   FaPlus,
   FaEllipsisH,
   FaSeedling,
-  FaClipboardList
+  FaClipboardList,
+  FaTrashAlt,
+  FaEdit,
+  FaExchangeAlt,
+  FaCheck,
+  FaTasks
 } from 'react-icons/fa';
 
 /**
  * A clean, modern crop card component with essential crop information and quick action buttons
  */
-const ModernCropCard = ({ crop, onAddEvent, onViewDetails }) => {
+const ModernCropCard = ({ crop, onAddEvent, onViewDetails, onDeleteCrop, onUpdateStatus }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [showActions, setShowActions] = useState(false);
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const actionMenuRef = React.useRef(null);
+
+  // Create a separate ref for the dropdown menu
+  const dropdownMenuRef = React.useRef(null);
+
+  // Handle clicks outside the menu to close it
+  React.useEffect(() => {
+    function handleClickOutside(event) {
+      // Only close if the click is outside both the action menu and dropdown
+      if ((actionMenuRef.current && !actionMenuRef.current.contains(event.target)) &&
+        (dropdownMenuRef.current && !dropdownMenuRef.current.contains(event.target))) {
+        setShowActions(false);
+        setShowStatusMenu(false);
+      }
+    }
+
+    // Add event listener
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      // Remove event listener on cleanup
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Format date helper
   const formatDate = (date) => {
@@ -76,34 +105,55 @@ const ModernCropCard = ({ crop, onAddEvent, onViewDetails }) => {
   const renderQuickActions = () => {
     const commonButtonClasses = "flex items-center justify-center p-2 rounded-full text-white";
     return (
-      <div className="absolute bottom-0 right-0 p-2 bg-white rounded-tl-xl shadow-md flex space-x-2">
+      <div className="absolute bottom-0 right-0 p-2 bg-white rounded-tl-xl shadow-md flex space-x-2 z-10" ref={actionMenuRef}>
         <button
           onClick={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             onAddEvent(crop._id, 'irrigation');
           }}
           className={`${commonButtonClasses} bg-blue-500 hover:bg-blue-600`}
-          title={t('add_irrigation')}
+          title={t('add_irrigation') || 'Add Irrigation'}
         >
           <FaTint size={14} />
         </button>
         <button
           onClick={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             onAddEvent(crop._id, 'cost');
           }}
           className={`${commonButtonClasses} bg-amber-500 hover:bg-amber-600`}
-          title={t('add_expense')}
+          title={t('add_expense') || 'Add Expense'}
         >
           <FaRupeeSign size={14} />
         </button>
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setShowActions(!showActions);
+            e.preventDefault();
+            if (window.confirm(t('are_you_sure_delete_crop') || 'Are you sure you want to delete this crop?')) {
+              onDeleteCrop(crop._id);
+            }
           }}
-          className={`${commonButtonClasses} bg-gray-500 hover:bg-gray-600`}
-          title={t('more_actions')}
+          className={`${commonButtonClasses} bg-red-500 hover:bg-red-600`}
+          title={t('delete_crop') || 'Delete Crop'}
+        >
+          <FaTrashAlt size={14} />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            // Toggle action menu and ensure status menu is closed
+            setShowActions(!showActions);
+            setShowStatusMenu(false);
+
+            // Log to help debug
+            console.log("Three dots clicked, showActions:", !showActions);
+          }}
+          className={`${commonButtonClasses} ${showActions ? 'bg-gray-700' : 'bg-gray-500 hover:bg-gray-600'}`}
+          title={t('more_actions') || 'More Actions'}
         >
           <FaEllipsisH size={14} />
         </button>
@@ -113,46 +163,128 @@ const ModernCropCard = ({ crop, onAddEvent, onViewDetails }) => {
 
   // Action menu
   const renderActionMenu = () => {
-    if (!showActions) return null;
+    if (!showActions && !showStatusMenu) return null;
+
+    if (showStatusMenu) {
+      return (
+        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg z-20">
+          <div className="py-1">
+            <div className="px-4 py-2 text-xs font-medium text-gray-500 border-b border-gray-100">
+              {t('change_status_to')}:
+            </div>
+            {['Planning', 'Planting', 'Growing', 'Harvesting', 'Completed'].map((status) => (
+              <button
+                key={status}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowStatusMenu(false);
+                  if (crop.status !== status) {
+                    onUpdateStatus(crop._id, status);
+                  }
+                }}
+                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2 ${crop.status === status ? 'text-primary font-medium bg-gray-50' : 'text-gray-700'
+                  }`}
+                disabled={crop.status === status}
+              >
+                {crop.status === status ? <FaCheck className="text-green-600" /> : <span className="w-4" />}
+                {status}
+              </button>
+            ))}
+            <div className="border-t border-gray-100 pt-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowStatusMenu(false);
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-100"
+              >
+                {t('cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
-      <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-        <div className="py-1">
+      <div ref={dropdownMenuRef} className="fixed right-4 mt-2 w-56 bg-white rounded-md shadow-xl z-50 border border-gray-200">
+        <div className="py-2">
+          <div className="px-4 py-1 text-xs font-semibold text-gray-500 border-b border-gray-100 mb-1">
+            {t('actions') || 'Actions'}
+          </div>
           <button
             onClick={(e) => {
               e.stopPropagation();
+              e.preventDefault();
               onViewDetails(crop._id);
             }}
-            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
           >
-            {t('view_details')}
+            <FaClipboardList className="text-primary" />
+            {t('view_details') || 'View Details'}
           </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
+              e.preventDefault();
+              setShowActions(false);
               onAddEvent(crop._id, 'note');
             }}
-            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
           >
-            {t('add_note')}
+            <FaEdit className="text-gray-600" />
+            {t('add_note') || 'Add Note'}
           </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
+              e.preventDefault();
+              setShowActions(false);
               onAddEvent(crop._id, 'activity');
             }}
-            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
           >
-            {t('add_activity')}
+            <FaPlus className="text-gray-600" />
+            {t('add_activity') || 'Add Activity'}
           </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
+              e.preventDefault();
+              setShowActions(false);
               navigate(`/crops/${crop._id}`);
             }}
-            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
           >
-            {t('go_to_crop_page')}
+            <FaTasks className="text-primary" />
+            {t('go_to_crop_page') || 'Go to Crop Page'}
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setShowActions(false);
+              setShowStatusMenu(true);
+            }}
+            className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+          >
+            <FaExchangeAlt className="text-blue-600" />
+            {t('change_status') || 'Change Status'}
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowActions(false);
+              // Explicitly prevent any other event handlers from running
+              e.preventDefault();
+              if (window.confirm(t('are_you_sure_delete_crop') || 'Are you sure you want to delete this crop?')) {
+                onDeleteCrop(crop._id);
+              }
+            }}
+            className="w-full text-left px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-gray-100 mt-1 pt-1"
+          >
+            <FaTrashAlt className="text-red-600" />
+            {t('delete_crop')}
           </button>
         </div>
       </div>
@@ -178,8 +310,17 @@ const ModernCropCard = ({ crop, onAddEvent, onViewDetails }) => {
 
   return (
     <div
-      className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition border border-gray-100 relative cursor-pointer"
-      onClick={() => onViewDetails(crop._id)}
+      className="bg-white rounded-xl shadow-sm hover:shadow-md transition border border-gray-100 relative cursor-pointer"
+      style={{ overflow: showActions || showStatusMenu ? 'visible' : 'hidden' }}
+      onClick={(e) => {
+        // Only navigate to details if the click wasn't on a button or dropdown
+        if (e.target.tagName.toLowerCase() !== 'button' &&
+          !e.target.closest('button') &&
+          !actionMenuRef.current?.contains(e.target) &&
+          !dropdownMenuRef.current?.contains(e.target)) {
+          onViewDetails(crop._id);
+        }
+      }}
     >
       {/* Crop header */}
       <div className="flex justify-between items-center p-4 border-b border-gray-100">

@@ -25,6 +25,7 @@ import Button from './ui/Button';
 import Input from './ui/Input';
 import WeatherAnalysis from './WeatherAnalysis';
 import useDiseaseAlerts from './useDiseaseAlerts';
+import ModernCropCard from './crops/ModernCropCard';
 
 const ModernHome = () => {
   const { t } = useTranslation();
@@ -192,6 +193,55 @@ const ModernHome = () => {
     } finally {
       setCropLoading(false);
     }
+  };
+
+  // Update crop status
+  const handleUpdateCropStatus = async (cropId, newStatus) => {
+    setCropError('');
+    setCropLoading(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const res = await fetch(`http://localhost:5000/api/crops/${cropId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!res.ok) throw new Error('Failed to update crop status');
+
+      const updatedCrop = await res.json();
+
+      // Update the crops and filtered crops state
+      const updateCropsState = (cropsArray) => {
+        return cropsArray.map(crop => {
+          if (crop._id === cropId) {
+            return { ...crop, status: newStatus };
+          }
+          return crop;
+        });
+      };
+
+      setCrops(updateCropsState(crops));
+      setFilteredCrops(updateCropsState(filteredCrops));
+    } catch (err) {
+      setCropError('Failed to update crop status: ' + err.message);
+    } finally {
+      setCropLoading(false);
+    }
+  };
+
+  // Handle add event for a crop
+  const handleAddEvent = (cropId, eventType) => {
+    navigate(`/crops/${cropId}`, { state: { initialTab: eventType } });
   };
 
   // Fetch weather on mount
@@ -511,98 +561,14 @@ const ModernHome = () => {
               {filteredCrops.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
                   {filteredCrops.map((crop) => (
-                    <div
+                    <ModernCropCard
                       key={crop._id}
-                      className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition cursor-pointer"
-                      onClick={() => handleCropClick(crop._id)}
-                    >
-                      <div className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                              {crop.name}
-                              {crop.variety && <span className="text-sm text-gray-500 ml-1">({crop.variety})</span>}
-                            </h3>
-                            <div>
-                              <CropStatusBadge status={crop.status || 'Growing'} />
-                            </div>
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveCrop(crop._id);
-                            }}
-                            className="text-gray-400 hover:text-red-500 p-1 transition"
-                            title={t('remove')}
-                          >
-                            &times;
-                          </button>
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-2 gap-3">
-                          <div className="flex items-start">
-                            <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400 mt-1 mr-2" />
-                            <div>
-                              <div className="text-xs text-gray-500">{t('planting_date')}</div>
-                              <div className="text-sm font-medium">
-                                {crop.plantingDate ? formatDate(new Date(crop.plantingDate)) : t('not_set')}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start">
-                            <FontAwesomeIcon icon={faChartLine} className="text-green-500 mt-1 mr-2" />
-                            <div>
-                              <div className="text-xs text-gray-500">{t('growth_stage')}</div>
-                              <div className="text-sm font-medium">
-                                {getCurrentGrowthStage(crop)
-                                  ? t(getCurrentGrowthStage(crop))
-                                  : t('not_recorded')}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start">
-                            <FontAwesomeIcon icon={faDroplet} className="text-blue-500 mt-1 mr-2" />
-                            <div>
-                              <div className="text-xs text-gray-500">{t('last_irrigation')}</div>
-                              <div className="text-sm font-medium">
-                                {getLastIrrigationDate(crop)
-                                  ? formatDate(getLastIrrigationDate(crop))
-                                  : t('never')}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start">
-                            <FontAwesomeIcon icon={faLeaf} className="text-amber-500 mt-1 mr-2" />
-                            <div>
-                              <div className="text-xs text-gray-500">{t('last_fertilization')}</div>
-                              <div className="text-sm font-medium">
-                                {getLastFertilizationDate(crop)
-                                  ? formatDate(getLastFertilizationDate(crop))
-                                  : t('never')}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Field location if available */}
-                        {(crop.location?.name || crop.fieldId) && (
-                          <div className="mt-3 flex items-center text-sm text-gray-500">
-                            <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-1 text-gray-400" />
-                            <span>{crop.location?.name || crop.fieldId}</span>
-                          </div>
-                        )}
-
-                        {/* View details button */}
-                        <div className="mt-4 pt-3 border-t border-gray-100 text-right">
-                          <span className="text-sm text-green-600 font-medium hover:text-green-700">
-                            {t('view_details')} &rarr;
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                      crop={crop}
+                      onAddEvent={handleAddEvent}
+                      onViewDetails={(cropId) => handleCropClick(cropId)}
+                      onDeleteCrop={handleRemoveCrop}
+                      onUpdateStatus={handleUpdateCropStatus}
+                    />
                   ))}
                 </div>
               )}

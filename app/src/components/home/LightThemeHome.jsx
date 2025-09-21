@@ -98,6 +98,13 @@ const LightThemeHome = () => {
   const [filterStatus, setFilterStatus] = useState('all_status');
   const [sortBy, setSortBy] = useState('name');
 
+  // Weather state
+  const [weather, setWeather] = useState(null);
+  const [hourly, setHourly] = useState([]);
+  const [daily, setDaily] = useState([]);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+  const [weatherError, setWeatherError] = useState(null);
+
   // Quick Event Form state
   const [showQuickEventForm, setShowQuickEventForm] = useState(false);
   const [quickEventType, setQuickEventType] = useState(null);
@@ -157,6 +164,117 @@ const LightThemeHome = () => {
 
     fetchCrops();
   }, []);
+
+  // Fetch weather on mount
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setWeatherError("Geolocation not supported");
+      setWeatherLoading(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        fetch(
+          `https://api.tomorrow.io/v4/weather/forecast?location=${latitude},${longitude}&apikey=${import.meta.env.VITE_WEATHER_API_KEY}&timesteps=1h,1d&units=metric`
+        )
+          .then((res) => res.json())
+          .then((data) => {
+            const current = data.timelines.hourly[0];
+            setWeather({
+              temp: current.values.temperature,
+              desc: getWeatherDesc(current.values.weatherCode),
+              icon: getWeatherIcon(current.values.weatherCode),
+              time: current.time,
+              humidity: current.values.humidity || null,
+            });
+            setHourly(data.timelines.hourly.slice(0, 6));
+            setDaily(data.timelines.daily.slice(0, 7));
+            setWeatherLoading(false);
+          })
+          .catch(() => {
+            setWeatherError("Failed to fetch weather");
+            setWeatherLoading(false);
+          });
+      },
+      () => {
+        setWeatherError("Location access denied");
+        setWeatherLoading(false);
+      }
+    );
+  }, []);
+
+  // Weather code to description (simplified)
+  const getWeatherDesc = (code) => {
+    const map = {
+      1000: "Clear",
+      1100: "Mostly Clear",
+      1101: "Partly Cloudy",
+      1102: "Mostly Cloudy",
+      1001: "Cloudy",
+      2000: "Fog",
+      2100: "Light Fog",
+      4000: "Drizzle",
+      4001: "Rain",
+      4200: "Light Rain",
+      4201: "Heavy Rain",
+      5000: "Snow",
+      5001: "Flurries",
+      5100: "Light Snow",
+      5101: "Heavy Snow",
+      6000: "Freezing Drizzle",
+      6001: "Freezing Rain",
+      6200: "Light Freezing Rain",
+      6201: "Heavy Freezing Rain",
+      7000: "Ice Pellets",
+      7101: "Heavy Ice Pellets",
+      7102: "Light Ice Pellets",
+      8000: "Thunderstorm",
+    };
+    return map[code] || "Unknown";
+  };
+
+  // Weather code to icon
+  const getWeatherIcon = (code) => {
+    const map = {
+      1000: "01d",
+      1100: "02d",
+      1101: "03d",
+      1102: "04d",
+      1001: "04d",
+      2000: "50d",
+      2100: "50d",
+      4000: "09d",
+      4001: "10d",
+      4200: "09d",
+      4201: "10d",
+      5000: "13d",
+      5001: "13d",
+      5100: "13d",
+      5101: "13d",
+      6000: "13d",
+      6001: "13d",
+      6200: "13d",
+      6201: "13d",
+      7000: "13d",
+      7101: "13d",
+      7102: "13d",
+      8000: "11d",
+    };
+    return map[code] || "01d";
+  };
+
+  // Format hour
+  const formatHour = (iso) => {
+    const date = new Date(iso);
+    return date.getHours() + ":00";
+  };
+
+  // Format day
+  const formatDay = (iso) => {
+    const date = new Date(iso);
+    return date.toLocaleDateString(undefined, { weekday: 'short' });
+  };
 
   // Filter and sort crops based on search and filter settings
   useEffect(() => {
@@ -511,10 +629,7 @@ const LightThemeHome = () => {
   };
 
   // Remove crop from backend
-  const handleRemoveCrop = async (cropId, event) => {
-    // Prevent navigation to crop details when clicking delete
-    event.stopPropagation();
-
+  const handleRemoveCrop = async (cropId) => {
     if (!confirm(t('confirm_delete_crop'))) {
       return;
     }
@@ -549,6 +664,48 @@ const LightThemeHome = () => {
     }
   };
 
+  // Update crop status
+  const handleUpdateCropStatus = async (cropId, newStatus) => {
+    setCropError('');
+    setCropLoading(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const res = await fetch(`http://localhost:5000/api/crops/${cropId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!res.ok) throw new Error('Failed to update crop status');
+
+      const updatedCrop = await res.json();
+      const updatedCropWithActions = {
+        ...updatedCrop,
+        nextActions: generateNextActions(updatedCrop)
+      };
+
+      // Update local state
+      setCrops(crops.map(crop => crop._id === cropId ? updatedCropWithActions : crop));
+      setFilteredCrops(filteredCrops.map(crop =>
+        crop._id === cropId ? updatedCropWithActions : crop
+      ));
+    } catch (err) {
+      console.error('Error updating crop status:', err);
+      setCropError('Failed to update crop status');
+    } finally {
+      setCropLoading(false);
+    }
+  };
+
   // Handle search query change
   const handleSearch = (query) => {
     setSearchQuery(query);
@@ -574,7 +731,96 @@ const LightThemeHome = () => {
         <h1 className="text-2xl font-bold text-gray-800 mb-6">{t('welcome_to_agritech') || 'Welcome to AgriTech'}</h1>
 
         {/* Weather widget */}
+        <div className="mb-6 bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition cursor-pointer" onClick={() => navigate('/weather')}>
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faCloudSun} className="text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-medium text-gray-800">{t('weather') || 'Weather'}</h2>
+                  <p className="text-gray-500 text-sm">{t('local_forecast') || 'Local Forecast'}</p>
+                </div>
+              </div>
+              <div className="text-blue-600 font-medium text-sm flex items-center">
+                <span>{t('view_details') || 'View Details'}</span>
+                <FontAwesomeIcon icon={faArrowRight} className="ml-1" />
+              </div>
+            </div>
 
+            {weatherLoading && (
+              <div className="flex justify-center items-center py-8">
+                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                <span className="text-gray-600">{t('loading_weather') || 'Loading weather...'}</span>
+              </div>
+            )}
+
+            {weatherError && (
+              <div className="bg-red-50 text-red-600 p-4 rounded-lg">
+                <div className="flex items-start">
+                  <FontAwesomeIcon icon={faExclamationTriangle} className="mt-1 mr-2" />
+                  <div>
+                    <p className="font-medium">{weatherError}</p>
+                    <p className="text-sm mt-1">{t('check_location_settings') || 'Check your location settings'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Current Weather */}
+            {!weatherLoading && !weatherError && weather && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <div className="text-3xl font-bold">{Math.round(weather.temp)}°C</div>
+                    <div className="text-gray-600">{weather.desc}</div>
+                  </div>
+                  <div>
+                    <img src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`} alt={weather.desc} className="w-16 h-16" />
+                  </div>
+                </div>
+                {weather.humidity !== null && (
+                  <div className="text-gray-500 text-sm">
+                    {t('humidity') || 'Humidity'}: {weather.humidity}%
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Hourly Forecast */}
+            {!weatherLoading && !weatherError && hourly && hourly.length > 0 && (
+              <div className="mb-4">
+                <div className="text-gray-700 text-sm font-medium mb-2">{t('next_hours') || 'Next Hours'}</div>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {hourly.map((h, idx) => (
+                    <div key={idx} className="flex flex-col items-center bg-gray-50 rounded-lg p-2 shadow-sm min-w-[64px]">
+                      <span className="font-semibold text-gray-700">{formatHour(h.time)}</span>
+                      <img src={`https://openweathermap.org/img/wn/${getWeatherIcon(h.values.weatherCode)}.png`} alt="" className="w-8 h-8" />
+                      <span className="text-base font-bold text-gray-800">{Math.round(h.values.temperature)}°C</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Daily Forecast */}
+            {!weatherLoading && !weatherError && daily && daily.length > 0 && (
+              <div>
+                <div className="text-gray-700 text-sm font-medium mb-2">{t('next_7_days') || 'Next 7 Days'}</div>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {daily.map((d, idx) => (
+                    <div key={idx} className="flex flex-col items-center bg-gray-50 rounded-lg p-2 shadow-sm min-w-[64px]">
+                      <span className="font-semibold text-gray-700">{formatDay(d.time)}</span>
+                      <img src={`https://openweathermap.org/img/wn/${getWeatherIcon(d.values.weatherCodeMax)}.png`} alt="" className="w-8 h-8" />
+                      <span className="text-base font-bold text-gray-800">{Math.round(d.values.temperatureMax)}°C</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Stats section */}
         {crops.length > 0 && (
@@ -657,6 +903,8 @@ const LightThemeHome = () => {
                     // Open crop details in modal instead of navigation
                     openCropDetailsModal(cropId);
                   }}
+                  onDeleteCrop={handleRemoveCrop}
+                  onUpdateStatus={handleUpdateCropStatus}
                 />
               ))
             )}
