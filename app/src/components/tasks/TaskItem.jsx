@@ -93,19 +93,19 @@ const TaskItem = ({ task, onMarkDone, onMarkSkipped, disabled = false }) => {
   };
 
   return (
-    <div className={`border rounded-lg p-4 mb-3 shadow-sm ${getPriorityClass()}`}>
+    <div className={`border rounded-lg p-4 mb-3 shadow-sm ${getPriorityClass()} min-h-[120px] flex flex-col`}>
       <div className="flex justify-between items-start mb-2">
-        <div className="flex items-center">
-          <span className="mr-2">{getCategoryIcon()}</span>
-          <h3 className="font-medium">{task.title}</h3>
+        <div className="flex items-center flex-grow">
+          <span className="mr-2 w-5 h-5 flex items-center justify-center flex-shrink-0">{getCategoryIcon()}</span>
+          <h3 className="font-medium truncate">{task.title}</h3>
         </div>
-        <span>{getStatusIcon()}</span>
+        <span className="flex-shrink-0">{getStatusIcon()}</span>
       </div>
 
-      <p className="text-sm mb-3">{task.description}</p>
+      <p className="text-sm mb-3 line-clamp-2 overflow-hidden flex-grow">{task.description}</p>
 
       <div className="flex items-center justify-between text-xs">
-        <div>
+        <div className="flex-shrink-0">
           <span className="font-semibold">{t('due', { ns: 'tasks' })}: </span>
           <span className={isToday(task.dueDate) ? 'font-bold text-orange-600' : ''}>
             {isToday(task.dueDate) ? t('today', { ns: 'tasks' }) : formatDueDate(task.dueDate)}
@@ -113,7 +113,7 @@ const TaskItem = ({ task, onMarkDone, onMarkSkipped, disabled = false }) => {
         </div>
 
         {task.crop && (
-          <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+          <span className="bg-green-100 text-green-800 px-2 py-1 rounded ml-2 truncate max-w-[120px] flex-shrink-0">
             {task.crop.name}
           </span>
         )}
@@ -126,7 +126,7 @@ const TaskItem = ({ task, onMarkDone, onMarkSkipped, disabled = false }) => {
             disabled={disabled}
             className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded flex items-center text-sm"
           >
-            <FaTimesCircle className="mr-1" />
+            <FaTimesCircle className="mr-1 w-3 h-3" />
             {t('skip', { ns: 'tasks' })}
           </button>
 
@@ -135,21 +135,24 @@ const TaskItem = ({ task, onMarkDone, onMarkSkipped, disabled = false }) => {
             disabled={disabled}
             className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded flex items-center text-sm"
           >
-            <FaCheckCircle className="mr-1" />
+            <FaCheckCircle className="mr-1 w-3 h-3" />
             {t('mark_done', { ns: 'tasks' })}
           </button>
         </div>
       )}
 
-      {(task.status === 'done' || task.status === 'skipped') && task.completedDate && (
-        <div className="mt-2 text-xs text-right">
-          <span className="font-semibold">
-            {task.status === 'done' ? t('completed', { ns: 'tasks' }) : t('skipped', { ns: 'tasks' })}:
-          </span>
-          {' '}
-          {new Date(task.completedDate).toLocaleDateString()}
-        </div>
-      )}
+      {/* Always reserve space for completion info to prevent layout shifts */}
+      <div className="mt-2 text-xs text-right h-4">
+        {(task.status === 'done' || task.status === 'skipped') && task.completedDate && (
+          <>
+            <span className="font-semibold">
+              {task.status === 'done' ? t('completed', { ns: 'tasks' }) : t('skipped', { ns: 'tasks' })}:
+            </span>
+            {' '}
+            {new Date(task.completedDate).toLocaleDateString()}
+          </>
+        )}
+      </div>
     </div>
   );
 };

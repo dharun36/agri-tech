@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import TaskItem from './TaskItem';
+import TaskSkeleton from './TaskSkeleton';
 import TaskRecommendationsModal from './TaskRecommendationsModal';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -31,10 +32,21 @@ const TaskList = ({ cropId = null }) => {
   const [recommendedTasks, setRecommendedTasks] = useState([]);
   const [showRecommendationsModal, setShowRecommendationsModal] = useState(false);
 
+  // Keep track of previous tasks for smooth transitions
+  const [prevTasks, setPrevTasks] = useState([]);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
   // Fetch tasks based on active tab and filters
   useEffect(() => {
     const fetchTasks = async () => {
-      setLoading(true);
+      // Only show loading state on initial load, not on tab changes
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        // For subsequent loads, store current tasks as previous to maintain layout
+        setPrevTasks(tasks);
+      }
+
       setError(null);
 
       try {
@@ -76,12 +88,20 @@ const TaskList = ({ cropId = null }) => {
         }
 
         const data = await res.json();
-        setTasks(activeTab === 'history' || activeTab === 'all' ? data.tasks : data);
+        const newTasks = activeTab === 'history' || activeTab === 'all' ? data.tasks : data;
+
+        // Use a slight delay when updating tasks to ensure smooth transition
+        // This prevents layout shifts as the new content loads
+        setTimeout(() => {
+          setTasks(newTasks);
+          setIsInitialLoad(false);
+          setLoading(false);
+        }, 100);
       } catch (err) {
         console.error('Error fetching tasks:', err);
         setError(t('failed_to_fetch_tasks', { ns: 'tasks' }));
-      } finally {
         setLoading(false);
+        setIsInitialLoad(false);
       }
     };
 
@@ -278,7 +298,7 @@ const TaskList = ({ cropId = null }) => {
   const filteredTasks = getFilteredTasks();
 
   return (
-    <div className="bg-white rounded-lg shadow p-4">
+    <div className="bg-white rounded-lg shadow p-4 min-h-[400px]">
       {/* Toast notifications */}
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
 
@@ -294,7 +314,7 @@ const TaskList = ({ cropId = null }) => {
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold flex items-center">
-          <FaTasks className="mr-2 text-green-600" />
+          <FaTasks className="mr-2 text-green-600 w-5 h-5" />
           {t('crop_tasks', { ns: 'tasks' })}
         </h2>
 
@@ -308,14 +328,14 @@ const TaskList = ({ cropId = null }) => {
         </button>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex border-b mb-4">
+      {/* Tab Navigation - Fixed height to prevent layout shifts */}
+      <div className="flex border-b mb-4 h-[41px]">
         <button
           className={`px-4 py-2 border-b-2 ${activeTab === 'today' ? 'border-green-500 text-green-600' : 'border-transparent'}`}
           onClick={() => setActiveTab('today')}
         >
           <span className="flex items-center">
-            <FaTasks className="mr-1" />
+            <FaTasks className="mr-1 w-4 h-4" />
             {t('today', { ns: 'tasks' })}
           </span>
         </button>
@@ -325,7 +345,7 @@ const TaskList = ({ cropId = null }) => {
           onClick={() => setActiveTab('upcoming')}
         >
           <span className="flex items-center">
-            <FaCalendarAlt className="mr-1" />
+            <FaCalendarAlt className="mr-1 w-4 h-4" />
             {t('upcoming', { ns: 'tasks' })}
           </span>
         </button>
@@ -335,7 +355,7 @@ const TaskList = ({ cropId = null }) => {
           onClick={() => setActiveTab('history')}
         >
           <span className="flex items-center">
-            <FaHistory className="mr-1" />
+            <FaHistory className="mr-1 w-4 h-4" />
             {t('history', { ns: 'tasks' })}
           </span>
         </button>
@@ -378,61 +398,68 @@ const TaskList = ({ cropId = null }) => {
         </div>
       )}
 
-      {/* Loading State */}
-      {loading && (
-        <div className={`flex flex-col justify-center items-center p-6 ${isGeneratingAI ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'} rounded-lg`}>
-          <FaSpinner className={`animate-spin ${isGeneratingAI ? 'text-blue-600' : 'text-green-600'} text-3xl mb-3`} />
-          {isGeneratingAI ? (
-            <>
-              <p className="text-blue-700 font-medium flex items-center">
-                <FaRobot className="mr-2" />
-                {t('ai_generating_recommendations', { ns: 'tasks' })}
-              </p>
-              <p className="text-blue-500 text-sm mt-1">{t('ai_processing_message', { ns: 'tasks' })}</p>
-              <div className="mt-4 w-48 h-1.5 bg-blue-100 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 animate-pulse rounded-full"></div>
-              </div>
-            </>
-          ) : (
-            <p className="text-gray-700 font-medium">{t('loading_tasks', { ns: 'tasks' })}</p>
-          )}
-        </div>
-      )}
+      {/* Content Area - Fixed Height Container */}
+      <div className="min-h-[300px]">
+        {/* AI Generation State */}
+        {loading && isGeneratingAI && (
+          <div className="flex flex-col justify-center items-center p-6 bg-blue-50 border border-blue-200 rounded-lg">
+            <FaSpinner className="animate-spin text-blue-600 text-3xl mb-3 w-8 h-8" />
+            <p className="text-blue-700 font-medium flex items-center">
+              <FaRobot className="mr-2 w-5 h-5" />
+              {t('ai_generating_recommendations', { ns: 'tasks' })}
+            </p>
+            <p className="text-blue-500 text-sm mt-1">{t('ai_processing_message', { ns: 'tasks' })}</p>
+            <div className="mt-4 w-48 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-500 animate-pulse rounded-full"></div>
+            </div>
+          </div>
+        )}
 
-      {/* Tasks List */}
-      {!loading && filteredTasks.length === 0 && (
-        <div className="text-center py-6 text-gray-500">
-          {activeTab === 'today' && (
-            <p>{t('no_tasks_today', { ns: 'tasks' })}</p>
-          )}
-          {activeTab === 'upcoming' && (
-            <p>{t('no_upcoming_tasks', { ns: 'tasks' })}</p>
-          )}
-          {activeTab === 'history' && (
-            <p>{t('no_task_history', { ns: 'tasks' })}</p>
-          )}
-          <button
-            onClick={handleGenerateRecommendations}
-            className="mt-2 text-green-600 underline"
-          >
-            {t('generate_new_recommendations', { ns: 'tasks' })}
-          </button>
-        </div>
-      )}
+        {/* Loading State with Skeleton UI */}
+        {loading && !isGeneratingAI && (
+          <div className="space-y-4">
+            <TaskSkeleton />
+            <TaskSkeleton />
+            <TaskSkeleton />
+          </div>
+        )}
 
-      {!loading && filteredTasks.length > 0 && (
-        <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
-          {filteredTasks.map(task => (
-            <TaskItem
-              key={task._id}
-              task={task}
-              onMarkDone={handleMarkDone}
-              onMarkSkipped={handleMarkSkipped}
-              disabled={loading}
-            />
-          ))}
-        </div>
-      )}
+        {/* Empty State */}
+        {!loading && filteredTasks.length === 0 && (
+          <div className="text-center py-6 text-gray-500 min-h-[200px] flex flex-col items-center justify-center">
+            {activeTab === 'today' && (
+              <p>{t('no_tasks_today', { ns: 'tasks' })}</p>
+            )}
+            {activeTab === 'upcoming' && (
+              <p>{t('no_upcoming_tasks', { ns: 'tasks' })}</p>
+            )}
+            {activeTab === 'history' && (
+              <p>{t('no_task_history', { ns: 'tasks' })}</p>
+            )}
+            <button
+              onClick={handleGenerateRecommendations}
+              className="mt-2 text-green-600 underline"
+            >
+              {t('generate_new_recommendations', { ns: 'tasks' })}
+            </button>
+          </div>
+        )}
+
+        {/* Tasks List */}
+        {!loading && filteredTasks.length > 0 && (
+          <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
+            {filteredTasks.map(task => (
+              <TaskItem
+                key={task._id}
+                task={task}
+                onMarkDone={handleMarkDone}
+                onMarkSkipped={handleMarkSkipped}
+                disabled={loading}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

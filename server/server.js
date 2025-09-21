@@ -49,7 +49,13 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/crops', require('./routes/crops'));
 app.use('/api/disease', require('./routes/disease'));
 app.use('/api/activities', require('./routes/activities'));
-app.use('/api/tasks', require('./routes/tasks'));
+// Use optimized task routes when specified in environment, otherwise use regular routes
+if (process.env.USE_OPTIMIZED_ROUTES === 'true') {
+  console.log('Using optimized task routes');
+  app.use('/api/tasks', require('./routes/optimizedTasks'));
+} else {
+  app.use('/api/tasks', require('./routes/tasks'));
+}
 
 // Weather Analysis Endpoint using Gemini AI
 app.post('/api/weather-analysis', async (req, res) => {

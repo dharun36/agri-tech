@@ -87,11 +87,14 @@ const TaskDashboard = () => {
     }
   };
 
+  // Define a consistent container style for all states
+  const containerClass = "bg-white rounded-lg shadow-md min-h-[500px]";
+
   // Show loading state
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 flex justify-center items-center">
-        <FaSpinner className="animate-spin text-green-600 text-3xl" />
+      <div className={`${containerClass} p-6 flex justify-center items-center`}>
+        <FaSpinner className="animate-spin text-green-600 text-3xl w-8 h-8" />
       </div>
     );
   }
@@ -99,7 +102,7 @@ const TaskDashboard = () => {
   // Show error message
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className={`${containerClass} p-6`}>
         <div className="bg-red-100 border border-red-300 text-red-800 p-4 rounded-md">
           {error}
         </div>
@@ -110,8 +113,8 @@ const TaskDashboard = () => {
   // Show message if no crops are available
   if (crops.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 text-center">
-        <FaSeedling className="text-green-600 text-4xl mx-auto mb-4" />
+      <div className={`${containerClass} p-6 text-center`}>
+        <FaSeedling className="text-green-600 text-4xl mx-auto mb-4 w-16 h-16" />
         <h3 className="text-xl font-semibold mb-2">{t('no_crops_available', { ns: 'tasks' })}</h3>
         <p className="text-gray-600 mb-4">
           {t('add_crops_to_manage_tasks', { ns: 'tasks' })}
@@ -138,44 +141,44 @@ const TaskDashboard = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md">
+    <div className={containerClass}>
       {/* Crop Navigation Header */}
-      <div className="flex justify-between items-center border-b p-4">
-        <div className="flex items-center">
+      <div className="flex justify-between items-center border-b p-4 h-[80px]">
+        <div className="flex items-center w-1/4">
           <button
             onClick={handlePrevCrop}
             className="text-green-600 p-2 rounded-full hover:bg-green-50 disabled:text-gray-300 mr-2"
             disabled={crops.length <= 1}
           >
-            <FaChevronLeft />
+            <FaChevronLeft className="w-4 h-4" />
           </button>
 
           <button
             onClick={() => navigate('/tasks')}
             className="text-green-600 hover:text-green-800 text-sm flex items-center font-medium mr-4"
           >
-            <FaTasks className="mr-1" /> {t('all_crops', { ns: 'tasks' })}
+            <FaTasks className="mr-1 w-4 h-4" /> {t('all_crops', { ns: 'tasks' })}
           </button>
         </div>
 
-        <div className="text-center">
+        <div className="text-center w-2/4 px-2">
           <h2 className="text-xl font-bold flex items-center justify-center">
-            <div className="p-2 rounded-full bg-gray-50 mr-3">
+            <div className="p-2 rounded-full bg-gray-50 mr-3 w-9 h-9 flex items-center justify-center flex-shrink-0">
               {getCropStatusIcon(activeCrop.status)}
             </div>
-            <span className="mx-2">{activeCrop.name}</span>
+            <span className="mx-2 truncate">{activeCrop.name}</span>
             {activeCrop.variety && (
-              <span className="text-sm text-gray-500">({activeCrop.variety})</span>
+              <span className="text-sm text-gray-500 truncate">({activeCrop.variety})</span>
             )}
-            <span className={`ml-2 text-xs px-2 py-1 rounded-full ${activeCrop.status === 'Growing' ? 'bg-green-100 text-green-800' :
-                activeCrop.status === 'Harvested' ? 'bg-orange-100 text-orange-800' :
-                  activeCrop.status === 'Planning' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
+            <span className={`ml-2 text-xs px-2 py-1 rounded-full flex-shrink-0 ${activeCrop.status === 'Growing' ? 'bg-green-100 text-green-800' :
+              activeCrop.status === 'Harvested' ? 'bg-orange-100 text-orange-800' :
+                activeCrop.status === 'Planning' ? 'bg-blue-100 text-blue-800' :
+                  'bg-gray-100 text-gray-800'
               }`}>
               {activeCrop.status}
             </span>
           </h2>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs text-gray-500 mt-1 truncate">
             {activeCrop.plantingDate && (
               <span>{t('planted', { ns: 'tasks' })}: {new Date(activeCrop.plantingDate).toLocaleDateString()}</span>
             )}
@@ -185,13 +188,15 @@ const TaskDashboard = () => {
           </div>
         </div>
 
-        <button
-          onClick={handleNextCrop}
-          className="text-green-600 p-2 rounded-full hover:bg-green-50 disabled:text-gray-300"
-          disabled={crops.length <= 1}
-        >
-          <FaChevronRight />
-        </button>
+        <div className="w-1/4 flex justify-end">
+          <button
+            onClick={handleNextCrop}
+            className="text-green-600 p-2 rounded-full hover:bg-green-50 disabled:text-gray-300"
+            disabled={crops.length <= 1}
+          >
+            <FaChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Crop Index Indicators (for multiple crops) */}
