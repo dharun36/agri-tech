@@ -87,7 +87,7 @@ const CropSelector = ({ onSelectCrop }) => {
 
   return (
     <Card className="shadow-sm border border-gray-200">
-      <h3 className="p-4 border-b border-gray-200 font-medium">{t('your_crops')}</h3>
+      <h3 className="p-1 border-b border-gray-200 font-medium">{t('your_crops')}</h3>
       <div className="max-h-60 overflow-y-auto">
         {crops.map(crop => (
           <div

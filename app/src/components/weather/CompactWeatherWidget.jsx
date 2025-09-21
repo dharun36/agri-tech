@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaCloudSun, FaWind} from 'react-icons/fa';
+import { FaCloudSun, FaWind, FaTint } from 'react-icons/fa';
 
 // Format hour helper
 const formatHour = (timestamp) => {
   if (!timestamp) return '';
-  return new Date(timestamp).toLocaleTimeString('en-US', { 
-    hour: 'numeric', 
-    hour12: true 
+  return new Date(timestamp).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    hour12: true
   });
 };
 
@@ -127,11 +127,11 @@ const fetchWeatherData = async (latitude, longitude, apiKey) => {
   }
 };
 
-const CompactWeatherWidget = ({ 
-  className = "", 
+const CompactWeatherWidget = ({
+  className = "",
   showCurrent = true,
   showHourly = true,
-  showDaily = true 
+  showDaily = true
 }) => {
   const { t } = useTranslation(['translation', 'tasks']);
 
@@ -196,8 +196,8 @@ const CompactWeatherWidget = ({
       {showCurrent && weather && (
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <img 
-              src={`https://openweathermap.org/img/wn/${getWeatherIcon(weather.weathercode)}.png`} 
+            <img
+              src={`https://openweathermap.org/img/wn/${getWeatherIcon(weather.weathercode)}.png`}
               alt={getWeatherDesc(weather.weathercode)}
               className="w-10 h-10"
             />
@@ -209,7 +209,7 @@ const CompactWeatherWidget = ({
           <div className="text-right text-sm text-gray-500">
             <div className="flex items-center space-x-4">
               <div className="flex items-center">
-                <FaDroplet className="text-blue-500 mr-1" />
+                <FaTint className="text-blue-500 mr-1" />
                 <span>Humidity</span>
               </div>
               <div className="flex items-center">
@@ -229,10 +229,10 @@ const CompactWeatherWidget = ({
             {hourly.map((h, idx) => (
               <div key={idx} className="flex flex-col items-center bg-gray-50 rounded-lg p-2 min-w-[60px] text-center">
                 <span className="text-xs text-gray-600">{formatHour(h.time)}</span>
-                <img 
-                  src={`https://openweathermap.org/img/wn/${getWeatherIcon(h.values.weatherCode)}.png`} 
-                  alt="" 
-                  className="w-6 h-6 my-1" 
+                <img
+                  src={`https://openweathermap.org/img/wn/${getWeatherIcon(h.values.weatherCode)}.png`}
+                  alt=""
+                  className="w-6 h-6 my-1"
                 />
                 <span className="text-sm font-medium">{Math.round(h.values.temperature)}°</span>
               </div>
@@ -249,10 +249,10 @@ const CompactWeatherWidget = ({
             {daily.map((d, idx) => (
               <div key={idx} className="flex items-center justify-between py-1">
                 <div className="flex items-center space-x-2">
-                  <img 
-                    src={`https://openweathermap.org/img/wn/${getWeatherIcon(d.values.weatherCodeMax)}.png`} 
-                    alt="" 
-                    className="w-6 h-6" 
+                  <img
+                    src={`https://openweathermap.org/img/wn/${getWeatherIcon(d.values.weatherCodeMax)}.png`}
+                    alt=""
+                    className="w-6 h-6"
                   />
                   <span className="text-sm font-medium">
                     {new Date(d.time).toLocaleDateString('en-US', { weekday: 'short' })}

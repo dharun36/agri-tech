@@ -78,9 +78,12 @@ function App() {
               <Route path="/tasks" element={<div className="p-4"><CropTaskSelector /></div>} />
               <Route path="/tasks/:cropId" element={<div className="p-4"><TaskDashboard /></div>} />
 
+              {/* Crop routes */}
+              <Route path="/crops/:id" element={<CropDetails />} />
+
               {/* Fallback routes */}
               <Route path="/" element={<ModernLandingPage />} />
-              <Route path="*" element={<Navigate to="/home" replace />} />
+              {/* <Route path="*" element={<Navigate to="/home" replace />} /> */}
             </Routes>
           </main>
           <ToastContainer position="bottom-right" autoClose={10000} />

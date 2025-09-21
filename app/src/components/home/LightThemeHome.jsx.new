@@ -9,7 +9,6 @@ import ModernCropCard from '../crops/ModernCropCard';
 import QuickActionButton from '../ui/QuickActionButton';
 import CropFilter from '../ui/CropFilter';
 import QuickEventForm from '../ui/QuickEventForm';
-import CropDetails from '../crops/CropDetails';
 
 // Get API key from environment variables
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + import.meta.env.VITE_GEMINI_API_KEY;
@@ -97,7 +96,7 @@ const LightThemeHome = () => {
   const [selectedCropId, setSelectedCropId] = useState(location.state?.selectedCropId || null);
   const [filterStatus, setFilterStatus] = useState('all_status');
   const [sortBy, setSortBy] = useState('name');
-
+  
   // Quick Event Form state
   const [showQuickEventForm, setShowQuickEventForm] = useState(false);
   const [quickEventType, setQuickEventType] = useState(null);
@@ -115,9 +114,7 @@ const LightThemeHome = () => {
   // Crop modal state
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
-  const [isCropDetailsModalOpen, setIsCropDetailsModalOpen] = useState(false);
   const [currentCropId, setCurrentCropId] = useState(null);
-  const [selectedCropData, setSelectedCropData] = useState(null);
   const [expense, setExpense] = useState({ description: '', category: 'Fertilizer', amount: 0 });
   const [cropLoading, setCropLoading] = useState(false);
   const [cropError, setCropError] = useState('');
@@ -141,7 +138,7 @@ const LightThemeHome = () => {
         });
 
         const data = await res.json();
-
+        
         // Add next actions to crops
         const dataWithNextActions = data.map(crop => {
           const nextActions = generateNextActions(crop);
@@ -157,27 +154,27 @@ const LightThemeHome = () => {
 
     fetchCrops();
   }, []);
-
+  
   // Filter and sort crops based on search and filter settings
   useEffect(() => {
     const applyFilters = () => {
       let filtered = [...crops];
-
+      
       // Apply status filter
       if (filterStatus !== 'all_status') {
         filtered = filtered.filter(crop => crop.status === filterStatus);
       }
-
+      
       // Apply search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        filtered = filtered.filter(crop =>
-          crop.name.toLowerCase().includes(query) ||
+        filtered = filtered.filter(crop => 
+          crop.name.toLowerCase().includes(query) || 
           (crop.description && crop.description.toLowerCase().includes(query)) ||
           (crop.variety && crop.variety.toLowerCase().includes(query))
         );
       }
-
+      
       // Apply sort
       if (sortBy) {
         filtered.sort((a, b) => {
@@ -256,10 +253,10 @@ const LightThemeHome = () => {
     try {
       setCropLoading(true);
       setCropError('');
-
+      
       // Clear any previous crop details
       setPreloadedCropDetails(null);
-
+      
       // Use Gemini API to get crop details
       const response = await fetch(GEMINI_API_URL, {
         method: "POST",
@@ -285,26 +282,26 @@ const LightThemeHome = () => {
           }]
         })
       });
-
+      
       if (!response.ok) {
         throw new Error("Failed to fetch crop information");
       }
-
+      
       const data = await response.json();
       const cropInfo = JSON.parse(data.candidates[0].content.parts[0].text);
-
+      
       // Set the preloaded crop details
       setPreloadedCropDetails({
         name: cropName,
         ...cropInfo,
         status: 'Planning'
       });
-
+      
       setIsCropModalOpen(true);
     } catch (err) {
       console.error("Error getting crop details:", err);
       setCropError("Couldn't get crop details automatically. You can still add the crop manually.");
-
+      
       // Still open the modal even if the API call fails
       setIsCropModalOpen(true);
     } finally {
@@ -359,7 +356,7 @@ const LightThemeHome = () => {
       setCropLoading(false);
     }
   };
-
+  
   // Open quick event form
   const openQuickEventForm = (cropId, eventType) => {
     const crop = crops.find(c => c._id === cropId);
@@ -369,14 +366,14 @@ const LightThemeHome = () => {
       setShowQuickEventForm(true);
     }
   };
-
+  
   // Close quick event form
   const closeQuickEventForm = () => {
     setShowQuickEventForm(false);
     setQuickEventCrop(null);
     setQuickEventType(null);
   };
-
+  
   // Handle quick event success
   const handleQuickEventSuccess = async (eventType, eventData) => {
     // Refresh crops data to show updated info
@@ -470,46 +467,6 @@ const LightThemeHome = () => {
     }
   };
 
-  // Open crop details modal
-  const openCropDetailsModal = async (cropId) => {
-    setCurrentCropId(cropId);
-    setCropLoading(true);
-    setIsCropDetailsModalOpen(true);
-
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      // Fetch the crop details
-      const res = await fetch(`http://localhost:5000/api/crops/${cropId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!res.ok) throw new Error('Failed to fetch crop details');
-
-      const cropData = await res.json();
-      setSelectedCropData(cropData);
-    } catch (err) {
-      console.error('Error fetching crop details:', err);
-      setCropError('Failed to fetch crop details');
-    } finally {
-      setCropLoading(false);
-    }
-  };
-
-  // Close crop details modal
-  const closeCropDetailsModal = () => {
-    setIsCropDetailsModalOpen(false);
-    setCurrentCropId(null);
-    setSelectedCropData(null);
-    setCropError('');
-  };
-
   // Remove crop from backend
   const handleRemoveCrop = async (cropId, event) => {
     // Prevent navigation to crop details when clicking delete
@@ -537,7 +494,7 @@ const LightThemeHome = () => {
       });
 
       if (!res.ok) throw new Error('Failed to remove crop');
-
+      
       // Update local state
       setCrops(crops.filter(crop => crop._id !== cropId));
       setFilteredCrops(filteredCrops.filter(crop => crop._id !== cropId));
@@ -552,14 +509,14 @@ const LightThemeHome = () => {
   // Handle search query change
   const handleSearch = (query) => {
     setSearchQuery(query);
-
+    
     // Filter crops based on search query
-    const filtered = crops.filter(crop =>
-      crop.name.toLowerCase().includes(query.toLowerCase()) ||
+    const filtered = crops.filter(crop => 
+      crop.name.toLowerCase().includes(query.toLowerCase()) || 
       (crop.description && crop.description.toLowerCase().includes(query.toLowerCase())) ||
       (crop.variety && crop.variety.toLowerCase().includes(query.toLowerCase()))
     );
-
+    
     setFilteredCrops(filtered);
   };
 
@@ -574,7 +531,17 @@ const LightThemeHome = () => {
         <h1 className="text-2xl font-bold text-gray-800 mb-6">{t('welcome_to_agritech') || 'Welcome to AgriTech'}</h1>
 
         {/* Weather widget */}
-
+        <section className="mb-6">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="flex items-center">
+              <FontAwesomeIcon icon={faCloudSun} className="text-4xl mr-4 text-yellow-300" />
+              <div>
+                <h2 className="text-2xl font-semibold">{t('weather_summary') || 'Weather Summary'}</h2>
+                <p className="text-blue-100">{t('checking_weather') || 'Checking local weather...'}</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* Stats section */}
         {crops.length > 0 && (
@@ -647,15 +614,15 @@ const LightThemeHome = () => {
               </div>
             ) : (
               filteredCrops.map((crop) => (
-                <ModernCropCard
+                <ModernCropCard 
                   key={crop._id}
                   crop={crop}
                   onAddEvent={(cropId, eventType) => {
                     openQuickEventForm(cropId, eventType);
                   }}
                   onViewDetails={(cropId) => {
-                    // Open crop details in modal instead of navigation
-                    openCropDetailsModal(cropId);
+                    // Navigate to crop details
+                    navigate(`/crops/${cropId}`);
                   }}
                 />
               ))
@@ -743,7 +710,7 @@ const LightThemeHome = () => {
             </div>
           </div>
         )}
-
+        
         {/* Quick Event Form Modal */}
         {showQuickEventForm && quickEventCrop && quickEventType && (
           <QuickEventForm
@@ -752,31 +719,6 @@ const LightThemeHome = () => {
             onClose={closeQuickEventForm}
             onSuccess={handleQuickEventSuccess}
           />
-        )}
-
-        {/* Crop Details Modal */}
-        {isCropDetailsModalOpen && selectedCropData && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-            <div className="bg-white rounded-lg w-full max-w-4xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-semibold">{selectedCropData.name}</h2>
-                <button
-                  onClick={closeCropDetailsModal}
-                  className="text-gray-500 hover:text-gray-700 focus:outline-none"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </button>
-              </div>
-
-              {/* Render the CropDetails component inline */}
-              <CropDetails
-                initialCropData={selectedCropData}
-                cropId={currentCropId}
-              />
-            </div>
-          </div>
         )}
       </div>
     </div>

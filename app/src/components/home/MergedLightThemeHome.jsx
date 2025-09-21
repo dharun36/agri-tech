@@ -62,7 +62,7 @@ import {
   faExclamationTriangle,
   faInfoCircle,
   faMapMarkerAlt,
-  faDollarSign,
+  faRupeeSign,
   faClipboardList,
   faCheckCircle,
   faArrowRight,
@@ -625,12 +625,12 @@ const MergedLightThemeHome = () => {
 
               <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
                 <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                  <FontAwesomeIcon icon={faDollarSign} className="text-amber-600" />
+                  <FontAwesomeIcon icon={faRupeeSign} className="text-amber-600" />
                 </div>
                 <div className="ml-4">
                   <div className="text-sm text-gray-500">{t('total_expenses') || 'Total Expenses'}</div>
                   <div className="text-xl font-bold">
-                    ${crops.reduce((total, crop) => {
+                    ₹{crops.reduce((total, crop) => {
                       return total + (crop.costs ? crop.costs.reduce((cropTotal, cost) => cropTotal + (cost.amount || 0), 0) : 0);
                     }, 0).toFixed(2)}
                   </div>

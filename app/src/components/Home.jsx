@@ -16,7 +16,7 @@ import {
   faExclamationTriangle,
   faInfoCircle,
   faMapMarkerAlt,
-  faDollarSign,
+  faRupeeSign,
   faClipboardList,
   faCheckCircle,
   faArrowRight,
@@ -35,12 +35,17 @@ import {
   FaExclamationTriangle,
   FaCloudRain,
   FaTasks,
-  FaCloudSun
+  FaCloudSun,
+  FaFilter
 } from 'react-icons/fa'
 import CropModal from './CropModal';
 import useDiseaseAlerts from './useDiseaseAlerts';
 import WeatherAnalysis from './WeatherAnalysis';
 import TaskDashboard from './tasks/TaskDashboard';
+import ModernCropCard from './crops/ModernCropCard';
+import QuickActionButton from './ui/QuickActionButton';
+import CropFilter from './ui/CropFilter';
+import QuickEventForm from './ui/QuickEventForm';
 
 
 // Format date helper
@@ -255,6 +260,11 @@ const MergedLightThemeHome = () => {
   const [cropError, setCropError] = useState('');
   const [newCrop, setNewCrop] = useState("");
 
+  // Quick Event Form state
+  const [showQuickEventForm, setShowQuickEventForm] = useState(false);
+  const [quickEventType, setQuickEventType] = useState(null);
+  const [quickEventCrop, setQuickEventCrop] = useState(null);
+
   // Fetch weather on mount
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -321,7 +331,10 @@ const MergedLightThemeHome = () => {
     fetchCrops();
   }, [navigate]);
 
-  // Effect for filtering crops based on search and filter
+  // State for sorting
+  const [sortBy, setSortBy] = useState('name');
+
+  // Effect for filtering and sorting crops based on search and filter
   useEffect(() => {
     const applyFilters = () => {
       let filtered = [...crops];
@@ -340,11 +353,35 @@ const MergedLightThemeHome = () => {
         filtered = filtered.filter(crop => crop.status === filterStatus);
       }
 
+      // Apply sorting
+      switch (sortBy) {
+        case 'name':
+          filtered.sort((a, b) => a.name.localeCompare(b.name));
+          break;
+        case 'date_new':
+          filtered.sort((a, b) => {
+            const dateA = a.plantingDate ? new Date(a.plantingDate) : new Date(0);
+            const dateB = b.plantingDate ? new Date(b.plantingDate) : new Date(0);
+            return dateB - dateA;
+          });
+          break;
+        case 'date_old':
+          filtered.sort((a, b) => {
+            const dateA = a.plantingDate ? new Date(a.plantingDate) : new Date(0);
+            const dateB = b.plantingDate ? new Date(b.plantingDate) : new Date(0);
+            return dateA - dateB;
+          });
+          break;
+        default:
+          // Default to sorting by name
+          filtered.sort((a, b) => a.name.localeCompare(b.name));
+      }
+
       setFilteredCrops(filtered);
     };
 
     applyFilters();
-  }, [searchQuery, filterStatus, crops]);
+  }, [searchQuery, filterStatus, crops, sortBy]);
 
   // Generate next actions based on crop data
   const generateNextActions = (crop) => {
@@ -418,6 +455,54 @@ const MergedLightThemeHome = () => {
     setIsExpenseModalOpen(false);
     setCurrentCropId(null);
     setCropError('');
+  };
+
+  // Open quick event form
+  const openQuickEventForm = (cropId, eventType) => {
+    const crop = crops.find(c => c._id === cropId);
+    if (crop) {
+      setQuickEventCrop(crop);
+      setQuickEventType(eventType);
+      setShowQuickEventForm(true);
+    }
+  };
+
+  // Close quick event form
+  const closeQuickEventForm = () => {
+    setShowQuickEventForm(false);
+    setQuickEventCrop(null);
+    setQuickEventType(null);
+  };
+
+  // Handle quick event success
+  const handleQuickEventSuccess = async (eventType, eventData) => {
+    // Refresh crops data to show updated info
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const res = await fetch('http://localhost:5000/api/crops', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) throw new Error('Failed to refresh crop data');
+
+      const data = await res.json();
+      const dataWithNextActions = data.map(crop => {
+        const nextActions = generateNextActions(crop);
+        return { ...crop, nextActions };
+      });
+
+      setCrops(dataWithNextActions);
+      setFilteredCrops(dataWithNextActions);
+    } catch (err) {
+      console.error('Refresh error:', err);
+    }
   };
 
   // Handle adding a new crop with detailed information
@@ -755,12 +840,12 @@ const MergedLightThemeHome = () => {
 
               <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
                 <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                  <FontAwesomeIcon icon={faDollarSign} className="text-amber-600" />
+                  <FontAwesomeIcon icon={faRupeeSign} className="text-amber-600" />
                 </div>
                 <div className="ml-4">
                   <div className="text-sm text-gray-500">{t('total_expenses') || 'Total Expenses'}</div>
                   <div className="text-xl font-bold">
-                    ${crops.reduce((total, crop) => {
+                    ₹{crops.reduce((total, crop) => {
                       return total + (crop.costs ? crop.costs.reduce((cropTotal, cost) => cropTotal + (cost.amount || 0), 0) : 0);
                     }, 0).toFixed(2)}
                   </div>
@@ -786,41 +871,49 @@ const MergedLightThemeHome = () => {
               )}
             </div>
 
-            <ul className="space-y-2 mt-4">
-              {crops.length === 0 ? (
-                <li className="text-center py-4 text-gray-500">{t('no_crops_added')}</li>
+            {/* Enhanced Crop Filtering */}
+            <CropFilter
+              searchQuery={searchQuery}
+              onSearchChange={(query) => setSearchQuery(query)}
+              filterStatus={filterStatus}
+              onFilterStatusChange={(status) => setFilterStatus(status)}
+              sortBy={sortBy}
+              onSortChange={(sort) => setSortBy(sort)}
+            />
+
+            {/* Modern Crop Card Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              {filteredCrops.length === 0 ? (
+                <div className="col-span-full text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-100">
+                  {searchQuery || filterStatus !== 'all_status'
+                    ? t('no_crops_match_filters')
+                    : t('no_crops_added')}
+                </div>
               ) : (
-                crops.slice(0, 3).map((crop, idx) => (
-                  <li key={idx} className={`flex items-center justify-between bg-white px-4 py-3 rounded-lg border border-gray-200 hover:shadow-md transition`}>
-                    <span className="flex items-center gap-3">
-                      <FaSeedling className="text-green-600" />
-                      <div>
-                        <span className="font-medium text-gray-800">{crop.name}</span>
-                        {crop.status && (
-                          <span className="text-xs text-gray-500 ml-2 px-2 py-1 bg-gray-100 rounded-full">({crop.status})</span>
-                        )}
-                      </div>
-                    </span>
-                    <button
-                      onClick={(e) => handleRemoveCrop(crop._id, e)}
-                      className="text-red-500 p-2 hover:bg-red-50 rounded-full transition"
-                      title="Remove"
-                    >
-                      <FaTrash className="text-xs" />
-                    </button>
-                  </li>
+                filteredCrops.map((crop, idx) => (
+                  <ModernCropCard
+                    key={idx}
+                    crop={crop}
+                    onAddEvent={(cropId, eventType) => {
+                      openQuickEventForm(cropId, eventType);
+                    }}
+                    onViewDetails={(cropId) => {
+                      // Navigate to crop details
+                      navigate(`/crops/${cropId}`);
+                    }}
+                  />
                 ))
               )}
-            </ul>
+            </div>
 
-            {crops.length > 3 && (
-              <div className="text-center mt-4">
-                <button
+            {filteredCrops.length > 6 && (
+              <div className="text-center mt-6">
+                <QuickActionButton
+                  icon={<FaArrowRight />}
+                  label={`${t('view_all_crops')} (${filteredCrops.length})`}
+                  variant="outline-primary"
                   onClick={() => navigate('/crops')}
-                  className="text-green-600 hover:text-green-700 font-medium text-sm"
-                >
-                  {t('view_all_crops')} ({crops.length})
-                </button>
+                />
               </div>
             )}
           </div>
@@ -1033,6 +1126,20 @@ const MergedLightThemeHome = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Event Modal */}
+      {showQuickEventForm && quickEventCrop && quickEventType && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-md">
+            <QuickEventForm
+              crop={quickEventCrop}
+              eventType={quickEventType}
+              onClose={closeQuickEventForm}
+              onSuccess={handleQuickEventSuccess}
+            />
           </div>
         </div>
       )}

@@ -625,7 +625,7 @@ const MergedLightThemeHome = () => {
                 <div className="ml-4">
                   <div className="text-sm text-gray-500">{t('total_expenses') || 'Total Expenses'}</div>
                   <div className="text-xl font-bold">
-                    ${crops.reduce((total, crop) => {
+                    ₹{crops.reduce((total, crop) => {
                       return total + (crop.costs ? crop.costs.reduce((cropTotal, cost) => cropTotal + (cost.amount || 0), 0) : 0);
                     }, 0).toFixed(2)}
                   </div>

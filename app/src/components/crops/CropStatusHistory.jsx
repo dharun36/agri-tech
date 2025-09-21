@@ -66,9 +66,15 @@ const CropStatusHistory = ({ crop, onAddEvent }) => {
       case 'labor':
         return crop.laborHours || [];
       case 'note':
-        return crop.notes || [];
+        // Handle both cases: if notes is an array, return it; if it's an object or string, wrap it in an array
+        if (!crop.notes) return [];
+        if (Array.isArray(crop.notes)) return crop.notes;
+        return [crop.notes]; // Wrap in array if it's a single object or string
       case 'activity':
-        return crop.activities || [];
+        // Handle both cases: if activities is an array, return it; if it's an object, wrap it in an array
+        if (!crop.activities) return [];
+        if (Array.isArray(crop.activities)) return crop.activities;
+        return [crop.activities]; // Wrap in array if it's a single object
       default:
         return [];
     }
@@ -158,7 +164,7 @@ const CropStatusHistory = ({ crop, onAddEvent }) => {
         return (
           <>
             <div className="font-semibold">{event.category}</div>
-            <div className="text-lg">${event.amount.toFixed(2)}</div>
+            <div className="text-lg">₹{event.amount.toFixed(2)}</div>
             {event.description && <div>{event.description}</div>}
           </>
         );
@@ -176,19 +182,27 @@ const CropStatusHistory = ({ crop, onAddEvent }) => {
       case 'note':
         return (
           <>
-            <div>{event.text}</div>
+            <div>{typeof event === 'object' ? (event.text || JSON.stringify(event)) : event}</div>
           </>
         );
 
       case 'activity':
         return (
           <>
-            <div className="font-semibold">{event.title || 'Activity'}</div>
-            <div>{event.activityType && `Type: ${event.activityType}`}</div>
-            {event.description && <div>{event.description}</div>}
-            {event.duration && <div>Duration: {event.duration} minutes</div>}
-            {event.personnel && event.personnel.length > 0 && <div>Personnel: {event.personnel.join(', ')}</div>}
-            {event.tags && event.tags.length > 0 && <div>Tags: {event.tags.join(', ')}</div>}
+            {!event || typeof event !== 'object' ? (
+              <div>{String(event)}</div>
+            ) : (
+              <>
+                <div className="font-semibold">{event.title || 'Activity'}</div>
+                <div>{event.activityType && `Type: ${event.activityType}`}</div>
+                {event.description && <div>{event.description}</div>}
+                {event.duration && <div>Duration: {event.duration} minutes</div>}
+                {event.personnel && Array.isArray(event.personnel) && event.personnel.length > 0 &&
+                  <div>Personnel: {event.personnel.join(', ')}</div>}
+                {event.tags && Array.isArray(event.tags) && event.tags.length > 0 &&
+                  <div>Tags: {event.tags.join(', ')}</div>}
+              </>
+            )}
           </>
         );
 
@@ -295,7 +309,7 @@ const CropStatusHistory = ({ crop, onAddEvent }) => {
                 <div className="absolute -left-6 w-4 h-4 rounded-full bg-green-500"></div>
                 <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                   <div className="text-sm text-gray-500 mb-1">
-                    {format(new Date(event.date), 'MMM d, yyyy')}
+                    {event && event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}
                   </div>
                   {renderEventContent(event)}
                 </div>

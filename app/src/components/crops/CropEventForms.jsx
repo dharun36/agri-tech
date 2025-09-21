@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import ActivityForm from './ActivityForm';
 
 // Base form component for all event types
 const EventFormBase = ({ title, children, onSubmit, onCancel }) => {
@@ -582,145 +583,419 @@ export const GrowthForm = ({ onSubmit, onCancel }) => {
 
 // Forms for other event types can be implemented similarly
 
-// ActivityForm component
-const ActivityForm = ({ onSubmit, onCancel }) => {
+// Cost Form
+export const CostForm = ({ onSubmit, onCancel }) => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
-    title: '',
+    date: new Date().toISOString().split('T')[0],
+    category: 'other', // Set a default valid category value
+    amount: '',
     description: '',
-    activityType: 'general',
-    date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD
-    duration: '',
-    personnel: [],
-    tags: []
+    notes: ''
   });
 
-  const activityTypes = [
-    { value: 'general', label: t('activity_type_general') },
-    { value: 'inspection', label: t('activity_type_inspection') },
-    { value: 'maintenance', label: t('activity_type_maintenance') },
-    { value: 'training', label: t('activity_type_training') },
-    { value: 'pruning', label: t('activity_type_pruning') },
-    { value: 'thinning', label: t('activity_type_thinning') },
-    { value: 'mulching', label: t('activity_type_mulching') },
-    { value: 'other', label: t('activity_type_other') }
-  ];
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  const handleChange = (field, value) => {
+    setFormData({ ...formData, [field]: value });
   };
 
-  const handlePersonnelChange = (e) => {
-    // Split by comma and trim each entry
-    const personnel = e.target.value
-      .split(',')
-      .map(p => p.trim())
-      .filter(p => p !== '');
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
 
-    setFormData(prev => ({
-      ...prev,
-      personnel
-    }));
+    // Validate required fields
+    if (!formData.date) {
+      alert(t('date_required'));
+      return;
+    }
+    if (!formData.category) {
+      alert(t('category_required'));
+      return;
+    }
+    if (!formData.amount) {
+      alert(t('amount_required'));
+      return;
+    }
+
+    // Convert amount to number and ensure all fields are present
+    const submissionData = {
+      date: formData.date,
+      category: formData.category,
+      amount: parseFloat(formData.amount) || 0,
+      description: formData.description || 'No description provided'
+    };
+
+    console.log('CostForm submitting data:', submissionData);
+
+    // Just pass the form data without the event type - handleSubmitEvent already knows the type
+    onSubmit(submissionData);
   };
 
-  const handleTagsChange = (e) => {
-    // Split by comma and trim each entry
-    const tags = e.target.value
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag !== '');
+  return (
+    <EventFormBase title={t('add_cost_or_expense')} onSubmit={handleFormSubmit} onCancel={onCancel}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className="block mb-1 text-sm font-medium">{t('date')}</label>
+          <Input
+            type="date"
+            value={formData.date}
+            onChange={(e) => handleChange('date', e.target.value)}
+            required
+          />
+        </div>
 
-    setFormData(prev => ({
-      ...prev,
-      tags
-    }));
+        <div>
+          <label className="block mb-1 text-sm font-medium">{t('category')}</label>
+          <select
+            value={formData.category}
+            onChange={(e) => handleChange('category', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 bg-white rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+            required
+          >
+            <option value="">{t('select_category')}</option>
+            <option value="seeds">{t('seeds')}</option>
+            <option value="fertilizer">{t('fertilizer')}</option>
+            <option value="pesticide">{t('pesticides')}</option>
+            <option value="labor">{t('labor')}</option>
+            <option value="equipment">{t('equipment')}</option>
+            <option value="other">{t('other')}</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <label className="block mb-1 text-sm font-medium">{t('amount')} (₹)</label>
+        <Input
+          type="number"
+          value={formData.amount}
+          onChange={(e) => handleChange('amount', e.target.value)}
+          placeholder="0.00"
+          min="0"
+          step="0.01"
+          required
+        />
+      </div>
+
+      <div className="mb-3">
+        <label className="block mb-1 text-sm font-medium">{t('description')}</label>
+        <Input
+          type="text"
+          value={formData.description}
+          onChange={(e) => handleChange('description', e.target.value)}
+          placeholder={t('cost_description_placeholder')}
+          required
+        />
+      </div>
+
+      <NotesField
+        value={formData.notes}
+        onChange={(value) => handleChange('notes', value)}
+      />
+    </EventFormBase>
+  );
+};
+
+// Labor Form
+export const LaborForm = ({ onSubmit, onCancel }) => {
+  const { t } = useTranslation();
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    task: '',
+    hours: '',
+    personnel: '',
+    notes: ''
+  });
+
+  const handleChange = (field, value) => {
+    setFormData({ ...formData, [field]: value });
   };
 
-  const handleSubmit = (e) => {
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    // Convert hours to number
+    const submissionData = {
+      ...formData,
+      hours: parseFloat(formData.hours) || 0
+    };
+    onSubmit(submissionData);
+  };
+
+  return (
+    <EventFormBase title={t('add_labor_entry')} onSubmit={handleFormSubmit} onCancel={onCancel}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className="block mb-1 text-sm font-medium">{t('date')}</label>
+          <Input
+            type="date"
+            value={formData.date}
+            onChange={(e) => handleChange('date', e.target.value)}
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block mb-1 text-sm font-medium">{t('task')}</label>
+          <Input
+            type="text"
+            value={formData.task}
+            onChange={(e) => handleChange('task', e.target.value)}
+            placeholder={t('labor_task_placeholder')}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className="block mb-1 text-sm font-medium">{t('hours')}</label>
+          <Input
+            type="number"
+            value={formData.hours}
+            onChange={(e) => handleChange('hours', e.target.value)}
+            placeholder="0.0"
+            min="0.5"
+            step="0.5"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block mb-1 text-sm font-medium">{t('personnel')}</label>
+          <Input
+            type="text"
+            value={formData.personnel}
+            onChange={(e) => handleChange('personnel', e.target.value)}
+            placeholder={t('personnel_name')}
+          />
+        </div>
+      </div>
+
+      <NotesField
+        value={formData.notes}
+        onChange={(value) => handleChange('notes', value)}
+      />
+    </EventFormBase>
+  );
+};
+
+// Harvest Form
+export const HarvestForm = ({ onSubmit, onCancel }) => {
+  const { t } = useTranslation();
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    quantity: '',
+    unit: 'kg',
+    quality: 'good',
+    notes: ''
+  });
+
+  const handleChange = (field, value) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    // Convert quantity to number
+    const submissionData = {
+      ...formData,
+      quantity: parseFloat(formData.quantity) || 0
+    };
+    onSubmit(submissionData);
+  };
+
+  return (
+    <EventFormBase title={t('record_harvest')} onSubmit={handleFormSubmit} onCancel={onCancel}>
+      <div className="mb-3">
+        <label className="block mb-1 text-sm font-medium">{t('harvest_date')}</label>
+        <Input
+          type="date"
+          value={formData.date}
+          onChange={(e) => handleChange('date', e.target.value)}
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className="block mb-1 text-sm font-medium">{t('quantity')}</label>
+          <Input
+            type="number"
+            value={formData.quantity}
+            onChange={(e) => handleChange('quantity', e.target.value)}
+            placeholder="0.0"
+            min="0"
+            step="0.1"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block mb-1 text-sm font-medium">{t('unit')}</label>
+          <select
+            value={formData.unit}
+            onChange={(e) => handleChange('unit', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 bg-white rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+          >
+            <option value="kg">{t('kilograms')}</option>
+            <option value="g">{t('grams')}</option>
+            <option value="lb">{t('pounds')}</option>
+            <option value="count">{t('count')}</option>
+            <option value="bunch">{t('bunches')}</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <label className="block mb-1 text-sm font-medium">{t('quality')}</label>
+        <select
+          value={formData.quality}
+          onChange={(e) => handleChange('quality', e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 bg-white rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+        >
+          <option value="excellent">{t('excellent')}</option>
+          <option value="good">{t('good')}</option>
+          <option value="average">{t('average')}</option>
+          <option value="poor">{t('poor')}</option>
+        </select>
+      </div>
+
+      <NotesField
+        value={formData.notes}
+        onChange={(value) => handleChange('notes', value)}
+      />
+    </EventFormBase>
+  );
+};
+
+// Weather Form
+export const WeatherForm = ({ onSubmit, onCancel }) => {
+  const { t } = useTranslation();
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    eventType: 'rain',
+    severity: '3',
+    impact: '',
+    notes: ''
+  });
+
+  const handleChange = (field, value) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    // Convert severity to number
+    const submissionData = {
+      ...formData,
+      severity: parseInt(formData.severity) || 1
+    };
+    onSubmit(submissionData);
+  };
+
+  return (
+    <EventFormBase title={t('record_weather_event')} onSubmit={handleFormSubmit} onCancel={onCancel}>
+      <div className="mb-3">
+        <label className="block mb-1 text-sm font-medium">{t('date')}</label>
+        <Input
+          type="date"
+          value={formData.date}
+          onChange={(e) => handleChange('date', e.target.value)}
+          required
+        />
+      </div>
+
+      <div className="mb-3">
+        <label className="block mb-1 text-sm font-medium">{t('event_type')}</label>
+        <select
+          value={formData.eventType}
+          onChange={(e) => handleChange('eventType', e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 bg-white rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+          required
+        >
+          <option value="rain">{t('rain')}</option>
+          <option value="drought">{t('drought')}</option>
+          <option value="frost">{t('frost')}</option>
+          <option value="hail">{t('hail')}</option>
+          <option value="wind">{t('strong_winds')}</option>
+          <option value="flood">{t('flood')}</option>
+          <option value="extreme_heat">{t('extreme_heat')}</option>
+          <option value="extreme_cold">{t('extreme_cold')}</option>
+          <option value="other">{t('other')}</option>
+        </select>
+      </div>
+
+      <div className="mb-3">
+        <label className="block mb-1 text-sm font-medium">{t('severity')} (1-10)</label>
+        <input
+          type="range"
+          min="1"
+          max="10"
+          value={formData.severity}
+          onChange={(e) => handleChange('severity', e.target.value)}
+          className="w-full"
+        />
+        <div className="flex justify-between text-xs text-gray-500">
+          <span>1</span>
+          <span>5</span>
+          <span>10</span>
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <label className="block mb-1 text-sm font-medium">{t('impact')}</label>
+        <Input
+          type="text"
+          value={formData.impact}
+          onChange={(e) => handleChange('impact', e.target.value)}
+          placeholder={t('weather_impact_placeholder')}
+        />
+      </div>
+
+      <NotesField
+        value={formData.notes}
+        onChange={(value) => handleChange('notes', value)}
+      />
+    </EventFormBase>
+  );
+};
+
+// Note Form
+export const NoteForm = ({ onSubmit, onCancel }) => {
+  const { t } = useTranslation();
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    text: ''
+  });
+
+  const handleChange = (field, value) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
+  const handleFormSubmit = (e) => {
     e.preventDefault();
     onSubmit(formData);
   };
 
   return (
-    <EventFormBase title={t('add_activity')} onSubmit={handleSubmit} onCancel={onCancel}>
+    <EventFormBase title={t('add_note')} onSubmit={handleFormSubmit} onCancel={onCancel}>
       <div className="mb-3">
-        <label className="block mb-1 text-sm font-medium">{t('title')}</label>
+        <label className="block mb-1 text-sm font-medium">{t('date')}</label>
         <Input
-          type="text"
-          name="title"
-          value={formData.title}
-          onChange={handleChange}
-          placeholder={t('activity_title_placeholder')}
+          type="date"
+          value={formData.date}
+          onChange={(e) => handleChange('date', e.target.value)}
           required
         />
       </div>
 
-      <DateField value={formData.date} onChange={(date) => setFormData(prev => ({ ...prev, date }))} />
-
       <div className="mb-3">
-        <label className="block mb-1 text-sm font-medium">{t('activity_type')}</label>
-        <select
-          name="activityType"
-          value={formData.activityType}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-          required
-        >
-          {activityTypes.map(type => (
-            <option key={type.value} value={type.value}>
-              {type.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="mb-3">
-        <label className="block mb-1 text-sm font-medium">{t('description')}</label>
+        <label className="block mb-1 text-sm font-medium">{t('note')}</label>
         <textarea
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          placeholder={t('activity_description_placeholder')}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 min-h-[100px]"
-        />
-      </div>
-
-      <div className="mb-3">
-        <label className="block mb-1 text-sm font-medium">{t('duration')} ({t('minutes')})</label>
-        <Input
-          type="number"
-          name="duration"
-          value={formData.duration}
-          onChange={handleChange}
-          placeholder="60"
-          min="0"
-        />
-      </div>
-
-      <div className="mb-3">
-        <label className="block mb-1 text-sm font-medium">{t('personnel')}</label>
-        <Input
-          type="text"
-          value={formData.personnel.join(', ')}
-          onChange={handlePersonnelChange}
-          placeholder={t('personnel_placeholder')}
-        />
-        <p className="text-xs text-gray-500 mt-1">{t('comma_separated')}</p>
-      </div>
-
-      <div className="mb-3">
-        <label className="block mb-1 text-sm font-medium">{t('tags')}</label>
-        <Input
-          type="text"
-          value={formData.tags.join(', ')}
-          onChange={handleTagsChange}
-          placeholder={t('tags_placeholder')}
-        />
-        <p className="text-xs text-gray-500 mt-1">{t('comma_separated')}</p>
+          value={formData.text}
+          onChange={(e) => handleChange('text', e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 bg-white rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+          rows="4"
+          placeholder={t('note_placeholder')}
+          required
+        ></textarea>
       </div>
     </EventFormBase>
   );

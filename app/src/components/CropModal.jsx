@@ -9,6 +9,7 @@ import {
   faSeedling,
   faWater,
   faLeaf,
+  faRupeeSign,
   faDollarSign,
   faChartLine,
   faArrowRight,
@@ -555,7 +556,7 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
             <>
               <div className="col-span-2 mt-2">
                 <span className="text-sm font-medium text-gray-500">{t('initial_cost')}:</span>
-                <p className="text-base">${formData.initialCost.amount} ({formData.initialCost.category})</p>
+                <p className="text-base">₹{formData.initialCost.amount} ({formData.initialCost.category})</p>
                 <p className="text-sm text-gray-500">{formData.initialCost.description}</p>
               </div>
             </>
@@ -910,7 +911,7 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
         {/* Initial Cost Amount */}
         <div className="col-span-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            {t('expense_amount') || 'Expense Amount'} ($)
+            {t('expense_amount') || 'Expense Amount'} (₹)
           </label>
           <Input
             type="number"
