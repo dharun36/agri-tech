@@ -12,8 +12,6 @@ export const saveEventAsTask = async (cropId, userId, eventType, eventData) => {
 
     // Validate and sanitize event data
     const sanitizedEventData = sanitizeEventData(eventType, eventData);
-    console.log(`Sanitized ${eventType} event data:`, sanitizedEventData);
-
     // Create a standardized task object from the event data
     const task = {
       // userId is not needed as it's extracted from the auth token on the server
@@ -119,10 +117,6 @@ const saveEventToCrop = async (cropId, eventType, eventData, token) => {
         date: eventData.date || new Date().toISOString().split('T')[0]
       };
     }
-
-    console.log(`Sending ${eventType} event to endpoint: http://localhost:5000/api/crops/${cropId}/${endpoint}`);
-    console.log('Event data:', event);
-
     try {
       await axios.post(`http://localhost:5000/api/crops/${cropId}/${endpoint}`, event, {
         headers: {
@@ -130,7 +124,6 @@ const saveEventToCrop = async (cropId, eventType, eventData, token) => {
           'Content-Type': 'application/json',
         },
       });
-      console.log(`Successfully saved ${eventType} event to crop ${cropId}`);
     } catch (axiosError) {
       console.error(`Error saving ${eventType} event to crop:`, axiosError);
       if (axiosError.response) {

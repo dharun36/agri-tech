@@ -29,7 +29,7 @@ export default function useDiseaseAlerts(userId) {
       try {
         // Only attempt fetch if online
         if (!isOnline) {
-          console.log('Network offline, skipping alert fetch');
+
           return;
         }
 
@@ -116,7 +116,7 @@ export default function useDiseaseAlerts(userId) {
 
     // Also fetch when coming back online
     const handleOnlineCallback = () => {
-      console.log('Back online, fetching alerts...');
+
       fetchAlerts();
     };
 

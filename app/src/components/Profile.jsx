@@ -92,7 +92,6 @@ const Profile = () => {
 
           const userData = data.user; // Extract user data from the response
 
-
           setFormData({
             name: userData.name || localStorage.getItem('userName') || '',
             email: userData.email || localStorage.getItem('userEmail') || '',
@@ -344,8 +343,6 @@ const Profile = () => {
         }
 
         const data = await response.json();
-        console.log('Profile updated successfully:', data);
-
         setMessage('Profile updated successfully!');
       } catch (serverError) {
         // Handle offline mode or server error
@@ -384,8 +381,6 @@ const Profile = () => {
                       if (e.target.hasAttribute('data-error-handled')) {
                         return;
                       }
-
-                      console.log('Profile image failed to load in edit mode');
                       e.target.setAttribute('data-error-handled', 'true');
                       e.target.style.display = 'none';
 
@@ -588,8 +583,6 @@ const Profile = () => {
                     if (e.target.hasAttribute('data-error-handled')) {
                       return;
                     }
-
-                    console.log('Profile image failed to load');
                     e.target.setAttribute('data-error-handled', 'true');
                     e.target.style.display = 'none';
 

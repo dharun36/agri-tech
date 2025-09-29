@@ -247,7 +247,6 @@ export const fixCommonTranslationIssues = (options = {}) => {
 export const reinitializeI18n = () => {
   // Force refresh the i18n instance
   i18n.reloadResources().then(() => {
-    console.log('i18n resources reloaded');
   }).catch(err => {
     console.error('Failed to reload i18n resources:', err);
   });

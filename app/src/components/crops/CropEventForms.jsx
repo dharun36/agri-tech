@@ -131,8 +131,6 @@ export const IrrigationForm = ({ onSubmit, onCancel }) => {
       soilMoistureBefore: formData.soilMoistureBefore === '' ? undefined : Number(formData.soilMoistureBefore),
       soilMoistureAfter: formData.soilMoistureAfter === '' ? undefined : Number(formData.soilMoistureAfter)
     };
-
-    console.log('Submitting irrigation data:', processedData);
     onSubmit(processedData);
   };
 
@@ -569,7 +567,6 @@ export const GrowthForm = ({ onSubmit, onCancel }) => {
           accept="image/*"
           onChange={(e) => {
             // In a real app, this would upload the file to a server and store the URL
-            console.log('Image would be uploaded here');
           }}
           className="w-full"
         />
@@ -622,9 +619,6 @@ export const CostForm = ({ onSubmit, onCancel }) => {
       amount: parseFloat(formData.amount) || 0,
       description: formData.description || 'No description provided'
     };
-
-    console.log('CostForm submitting data:', submissionData);
-
     // Just pass the form data without the event type - handleSubmitEvent already knows the type
     onSubmit(submissionData);
   };

@@ -190,9 +190,7 @@ const OptimizedTaskDashboard = () => {
           <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar flex-grow">
             {crops.map((crop, index) => {
               // Log crop information for debugging
-              console.log(`Crop name from DB: "${crop.name}", Language: ${i18n.language}`);
               const translatedName = translateCropName(crop.name, 'translation');
-              console.log(`Translated name: "${translatedName}"`);
 
               return (
                 <button

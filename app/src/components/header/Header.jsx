@@ -15,11 +15,8 @@ function Header() {
   const userId = localStorage.getItem('userId');
 
   // console.log(' Header - userId from localStorage:', localStorage.getItem('userId'));
-  // console.log(' Header - final userId used:', userId);
-  // console.log(' Header - token from localStorage:', localStorage.getItem('token'));
-  // console.log(' Header - loggedIn state:', loggedIn);
-
-  useEffect(() => {
+  // // console.log(' Header - token from localStorage:', localStorage.getItem('token'));
+  // useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : 'auto';
     // Listen for login/logout changes from other tabs
     const syncAuth = () => setLoggedIn(!!localStorage.getItem('token'));
@@ -82,7 +79,6 @@ function Header() {
             {menuOpen ? <FaTimes className="text-lg" /> : <FaBars className="text-lg" />}
           </button>
         </div>
-
 
         {/* Desktop Navigation */}
         <div className="hidden lg:block ml-6 flex-grow">

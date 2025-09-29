@@ -45,7 +45,6 @@ const CropRouter = () => {
 
         // If we get here, the crop exists
         const cropData = await response.json();
-        console.log('Crop found:', cropData);
 
         // Store the crop data
         setCropData(cropData);

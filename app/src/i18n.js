@@ -11,14 +11,6 @@ import taskTa from './locales/ta/task-translations.json'
 import taskHi from './locales/hi/tasks.json';
 
 // Log translation status for debugging
-console.log('Loading translation resources:', {
-  'en:translation': Boolean(en),
-  'en:tasks': Boolean(taskEn),
-  'ta:translation': Boolean(ta),
-  'ta:tasks': Boolean(taskTa),
-  'hi:translation': Boolean(hi),
-  'hi:tasks': Boolean(taskHi)
-});
 
 // Check for any empty translation files
 if (!en || Object.keys(en).length === 0) {
@@ -76,7 +68,6 @@ Object.keys(resources).forEach(lang => {
 
 // Get user's preferred language or default to English
 const storedLang = localStorage.getItem('i18nextLng') || 'en';
-console.log(`Using stored language: ${storedLang}`);
 
 // Initialize i18next
 i18n
@@ -92,14 +83,9 @@ i18n
     returnEmptyString: false
   })
   .then(() => {
-    console.log(`i18n initialized successfully with language: ${i18n.language}`);
+    // i18n initialized successfully
     // Check for critical paths
     const path = 'database_content.crops.crop_rice';
-    console.log(`Sample translation check (${path}):`, {
-      en: i18n.exists(path, { lng: 'en' }) ? i18n.t(path, { lng: 'en' }) : 'MISSING',
-      ta: i18n.exists(path, { lng: 'ta' }) ? i18n.t(path, { lng: 'ta' }) : 'MISSING',
-      hi: i18n.exists(path, { lng: 'hi' }) ? i18n.t(path, { lng: 'hi' }) : 'MISSING',
-    });
   })
   .catch(error => {
     console.error('i18n initialization error:', error);

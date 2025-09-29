@@ -128,18 +128,12 @@ const MarketPrices = () => {
       const pricePromises = cropNames.map(async (cropName) => {
         const apiUrl = `https://api.data.gov.in/resource/${DATA_ID}?api-key=${GOV_API_KEY}&format=json&filters[commodity]=${encodeURIComponent(cropName)}${districtParam ? `&filters[district]=${encodeURIComponent(districtParam)}` : ''}&limit=1`;
 
-        console.log(`Fetching data for ${cropName} in district: ${districtParam || 'All'}`, apiUrl); // Debug log
-
         try {
           const apiRes = await fetch(apiUrl);
           const apiData = await apiRes.json();
 
-          console.log(`API response for ${cropName}:`, apiData); // Debug log
-
           let price = "N/A";
-          let marketLocation = "Unknown";
-
-          if (apiData.records && apiData.records.length > 0) {
+          let marketLocation = "Unknown"; if (apiData.records && apiData.records.length > 0) {
             const rec = apiData.records[0];
             price = `₹${parseInt(rec.modal_price, 10) / 100} per kg`;
             marketLocation = `${rec.market}, ${rec.district}, ${rec.state}`;
@@ -257,7 +251,6 @@ const MarketPrices = () => {
   // Function to handle district selection change
   const handleDistrictChange = (e) => {
     const newDistrict = e.target.value;
-    console.log('District changed to:', newDistrict); // Debug log
     setSelectedDistrict(newDistrict);
 
     // Show loading feedback
@@ -278,9 +271,7 @@ const MarketPrices = () => {
 
     // Show user feedback
     toast.info(`Filtering prices for ${newDistrict === 'All' ? 'all districts' : newDistrict}`);
-  };
-
-  // Function to handle crop type selection
+  };  // Function to handle crop type selection
   const handleCropTypeChange = (e) => {
     setSelectedCropType(e.target.value);
   };
@@ -489,23 +480,19 @@ const MarketPrices = () => {
                       alt={item.alt || item.name}
                       className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                       onError={(e) => {
-                        console.log(`Image failed to load for ${item.name}:`, item.img);
                         // First fallback - try the default image
                         if (e.target.src !== cropImages.Default) {
-                          console.log(`Trying default image for ${item.name}`);
                           e.target.src = cropImages.Default;
                         } else if (e.target.src !== alternativeImages.Default) {
                           // Second fallback - use alternative default
-                          console.log(`Trying alternative image for ${item.name}`);
                           e.target.src = alternativeImages.Default;
                         } else {
                           // Final fallback - use a placeholder with crop name
-                          console.log(`Using final placeholder for ${item.name}`);
                           e.target.src = `https://via.placeholder.com/400x300/22c55e/ffffff?text=${encodeURIComponent(item.name)}`;
                         }
                       }}
                       onLoad={() => {
-                        console.log(`Image loaded successfully for ${item.name}`);
+                        // Image loaded successfully
                       }}
                       loading="lazy"
                       style={{

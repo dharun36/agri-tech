@@ -4,7 +4,6 @@ import { io } from 'socket.io-client';
 // Helper function to request notification permissions
 const requestNotificationPermission = async () => {
   if (!('Notification' in window)) {
-    console.log('This browser does not support notifications');
     return false;
   }
 
@@ -69,26 +68,23 @@ const useSocket = (userId, baseUrl = 'http://localhost:5000') => {
       socket.on('connect', () => {
         setIsConnected(true);
         socket.emit('join-user-room', userId);
-        console.log('Connected to socket server');
 
         // Request notification permission when socket connects
         requestNotificationPermission()
           .then(granted => {
             if (granted) {
-              console.log('Notification permission granted');
+              // Notification permission granted
             } else {
-              console.log('Notification permission not granted');
+              // Notification permission not granted
             }
           });
       });
 
       socket.on('disconnect', () => {
         setIsConnected(false);
-        console.log('Disconnected from socket server');
       });
 
       socket.on('new-disease-alert', (data) => {
-        console.log('New disease alert received:', data);
         setNewAlerts(prev => [...prev, data.alert]);
 
         // Show browser notification if permission granted
@@ -127,7 +123,7 @@ const useSocket = (userId, baseUrl = 'http://localhost:5000') => {
       });
 
       socket.on('reconnect_attempt', (attemptNumber) => {
-        console.log(`Socket reconnection attempt ${attemptNumber}`);
+        // Reconnection attempt
       });
     };
 

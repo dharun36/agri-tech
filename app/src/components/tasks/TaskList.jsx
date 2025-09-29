@@ -197,7 +197,7 @@ const TaskList = ({ cropId = null }) => {
 
       // 5. Store recommendations and show modal
       setRecommendedTasks(recommendationsWithUser);
-      console.log('Generated recommendations with user:', recommendationsWithUser);
+
       toast.success(t('recommendations_generated', { count: recommendationsWithUser.length, ns: 'tasks' }));
       setShowRecommendationsModal(true);
 

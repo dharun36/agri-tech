@@ -167,7 +167,6 @@ function parseTaskRecommendations(geminiText) {
     try {
       return JSON.parse(geminiText);
     } catch (e) {
-      console.log("Direct parsing failed, trying to extract JSON");
     }
 
     // Second attempt: extract JSON from text

@@ -128,8 +128,6 @@ const CropWidget = ({ cropId, onClose }) => {
         } else {
           processedData.amount = 0;
         }
-
-        console.log('Processed cost data:', processedData);
       }
 
       await saveEventAsTask(cropId, userId, eventType, processedData);

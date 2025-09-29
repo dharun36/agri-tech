@@ -12,7 +12,6 @@ import i18n from '../i18n';
  * @param {string} language - Language code to switch to (en, ta, hi)
  */
 export const forceLanguageChange = (language) => {
-  console.log(`Forcing language change to: ${language}`);
   // Change language in i18n
   i18n.changeLanguage(language);
 
@@ -23,7 +22,6 @@ export const forceLanguageChange = (language) => {
   if (typeof document !== 'undefined') document.documentElement.lang = language;
 
   // Log the result
-  console.log(`Language after change: ${i18n.language}`);
 };
 
 /**
@@ -92,8 +90,6 @@ export const testCropTranslations = () => {
 
   // Restore original language
   i18n.changeLanguage(currentLang);
-
-  console.log("Crop translation test results:", result);
   return result;
 };
 

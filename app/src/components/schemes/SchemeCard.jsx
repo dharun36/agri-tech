@@ -14,7 +14,7 @@ const SchemeCard = ({ scheme }) => {
         className="w-fit"
         onClick={() => {
           // Handle apply now action
-          console.log('Apply for scheme:', scheme.title);
+
         }}
       >
         Apply Now

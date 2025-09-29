@@ -45,13 +45,13 @@ function App() {
   React.useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().then(permission => {
-        console.log('Notification permission:', permission);
+        // Permission requested
       });
     }
 
     // Log route changes for debugging
     const handleRouteChange = () => {
-      console.log('Current route:', window.location.pathname);
+      // Route changed
     };
 
     window.addEventListener('popstate', handleRouteChange);

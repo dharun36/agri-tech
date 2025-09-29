@@ -34,7 +34,6 @@ const TranslationDebugger = () => {
 
   const runCropTest = () => {
     const result = testCropTranslations();
-    console.log("Crop translation test results:", result);
   };
 
   // Check i18n initialization status
@@ -54,8 +53,6 @@ const TranslationDebugger = () => {
       const langs = Object.keys(i18n.store.data);
       langs.forEach(lang => {
         const namespaces = Object.keys(i18n.store.data[lang] || {});
-        console.log(`Resources for ${lang}:`, namespaces);
-
         namespaces.forEach(ns => {
           console.log(`${lang}/${ns} sample keys:`,
             Object.keys(i18n.store.data[lang][ns] || {}).slice(0, 5));
@@ -173,7 +170,6 @@ const TranslationDebugger = () => {
         <div style={{ display: 'flex', gap: '5px' }}>
           <button onClick={() => {
             const analysis = inspectTranslations();
-            console.log('Translation Analysis:', analysis);
             alert('Translation analysis logged to console');
           }}>
             Inspect Translations
@@ -181,7 +177,6 @@ const TranslationDebugger = () => {
 
           <button onClick={() => {
             const results = fixCommonTranslationIssues();
-            console.log('Fix results:', results);
             alert(`Fixed ${results.fixed.length} issues. ${results.failed.length} issues couldn't be fixed.`);
           }}>
             Auto-Fix Issues

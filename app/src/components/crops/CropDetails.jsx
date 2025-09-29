@@ -74,7 +74,6 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
 
           const cropData = await response.json();
           // Debug the notes format
-          console.log('Crop Data Notes:', cropData.notes);
           // Make sure notes is properly formatted before setting state
           if (cropData.notes && typeof cropData.notes === 'object' && !Array.isArray(cropData.notes)) {
             // If it's a single object, convert it to an array for consistency
@@ -138,14 +137,10 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
         }
 
         // Fetch crop details
-        console.log('Fetching crop details for ID:', id);
-
         // Fetch crop details and activities
         const cropResponse = await axios.get(`${API_BASE_URL}/api/crops/${id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        console.log('Crop data received:', cropResponse.data);
-
         // Initially set the crop data for immediate display
         setCrop(cropResponse.data);
 
@@ -154,8 +149,6 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
           const activitiesResponse = await axios.get(`${API_BASE_URL}/api/activities/crop/${id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          console.log('Activities data received:', activitiesResponse.data);
-
           // Assign activities to the crop object to be used by CropStatusHistory
           const cropWithActivities = {
             ...cropResponse.data,
@@ -163,8 +156,6 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
           };
 
           // Debug the notes format
-          console.log('CropWithActivities Notes:', cropWithActivities.notes);
-
           // Make sure notes is properly formatted 
           if (cropWithActivities.notes && typeof cropWithActivities.notes === 'object' && !Array.isArray(cropWithActivities.notes)) {
             // If it's a single object, convert it to an array for consistency
@@ -198,9 +189,6 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
       setError(null);
       setSuccess(null);
       const token = localStorage.getItem('token');
-
-      console.log('Submitting event:', eventType, 'with form data:', formData);
-
       // Prepare the request URL and data
       const cropId = id;
       let endpoint;
@@ -225,17 +213,10 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
           // For other types, use the eventType directly (singular)
           endpoint = `/api/crops/${cropId}/${eventType.toLowerCase()}`;
       }
-
-      console.log(`Preparing to submit ${eventType} event to endpoint: ${endpoint}`);
-
       // Build the full URL with base API URL
       const fullEndpoint = `${API_BASE_URL}${endpoint}`;
-      console.log('Full API URL:', fullEndpoint);
-
       // For costs event, make sure data is formatted correctly
       if (eventType === 'cost') {
-        console.log('Cost event data before submission:', updatedFormData);
-
         // Ensure required fields are present and correctly formatted for the server
         if (!updatedFormData.date || !updatedFormData.category || updatedFormData.amount === undefined) {
           throw new Error('Missing required fields for cost event: date, category, and amount are required');
@@ -255,29 +236,18 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
           amount: parseFloat(updatedFormData.amount) || 0,
           description: updatedFormData.description || 'No description provided'
         };
-
-        console.log('Reformatted cost event data:', updatedFormData);
       }
 
       // Make the API request with enhanced error handling
       try {
-        console.log(`Sending POST request to ${fullEndpoint} with token: ${token ? 'Valid token' : 'No token'}`);
-        console.log('Request payload:', JSON.stringify(updatedFormData));
 
         // For cost events, add extra debugging
         if (eventType === 'cost') {
-          console.log('Cost event payload details:');
-          console.log('- date:', updatedFormData.date, typeof updatedFormData.date);
-          console.log('- category:', updatedFormData.category, typeof updatedFormData.category);
-          console.log('- amount:', updatedFormData.amount, typeof updatedFormData.amount);
-          console.log('- description:', updatedFormData.description, typeof updatedFormData.description);
         }
 
         const response = await axios.post(fullEndpoint, updatedFormData, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }); console.log('API response received:', response.status, response.data);
-
-        // Update local state
+        }); // Update local state
         setCrop(response.data);
         setActiveEventForm(null);
 

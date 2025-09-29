@@ -79,23 +79,18 @@ function DetectDisease() {
         // Get user's field location from localStorage
         try {
           const userLocationStr = localStorage.getItem('userLocation');
-          console.log('UserLocation from localStorage:', userLocationStr);
 
           if (userLocationStr) {
             const storedLocation = JSON.parse(userLocationStr);
-            console.log('Parsed location:', storedLocation);
 
             if (storedLocation && storedLocation.type === 'Point' && Array.isArray(storedLocation.coordinates)) {
               userLocation = storedLocation;
-              console.log('Field location found:', userLocation);
             } else {
-              console.log('Invalid location format:', storedLocation);
               toast.error(t('field_location_not_set') || 'Field location not set in your profile. Please update your profile first.');
               setReportLoading(false);
               return;
             }
           } else {
-            console.log('No field location found in localStorage');
             toast.error(t('field_location_not_set') || 'Field location not set in your profile. Please update your profile first.');
             setReportLoading(false);
             return;
@@ -188,12 +183,10 @@ function DetectDisease() {
 
           const pred = await res.json();
           // The prediction result from your FastAPI model
-          console.log("Disease prediction results:", pred);
 
           // Extract the prediction results from your model
           const predictedClass = pred.class_name || "Unknown";
           const confidence = pred.confidence || 0;
-          console.log("Predicted disease:", predictedClass, "with confidence:", confidence);
 
           // show immediate minimal prediction
           setAnalysis({
@@ -504,10 +497,10 @@ Ensure all Tamil text is properly written in Tamil script. No extra text, just v
                   onClick={handleReportIssue}
                   disabled={reportLoading || reportSubmitted}
                   className={`w-full mt-4 font-medium py-2 px-4 rounded-lg shadow transition-colors ${reportSubmitted
-                      ? 'bg-green-600 text-white cursor-not-allowed'
-                      : reportLoading
-                        ? 'bg-orange-400 text-white cursor-not-allowed'
-                        : 'bg-orange-600 hover:bg-orange-700 text-white'
+                    ? 'bg-green-600 text-white cursor-not-allowed'
+                    : reportLoading
+                      ? 'bg-orange-400 text-white cursor-not-allowed'
+                      : 'bg-orange-600 hover:bg-orange-700 text-white'
                     }`}
                 >
                   {reportSubmitted ? (
