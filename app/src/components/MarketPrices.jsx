@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from 'react-i18next';
 import { FaSearch, FaFilter, FaSyncAlt, FaLeaf, FaMapMarkerAlt, FaRupeeSign } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import { API_BASE_URL, buildApiUrl } from '../config/api';
 
 // Get API key from environment variables
 const GOV_API_KEY = import.meta.env.VITE_GOV_API_KEY;
@@ -78,7 +79,7 @@ const MarketPrices = () => {
           return;
         }
 
-        const res = await fetch('http://localhost:5000/api/crops', {
+        const res = await fetch(buildApiUrl('/crops'), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 

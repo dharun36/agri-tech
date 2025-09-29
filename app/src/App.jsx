@@ -29,10 +29,8 @@ import OptimizedTaskDashboard from './components/tasks/OptimizedTaskDashboard'
 import OptimizedTaskDetail from './components/tasks/OptimizedTaskDetail'
 import AppLayout from './components/AppLayout'
 import ErrorBoundary from './components/ErrorBoundary'
-import TranslationDebugger from './components/TranslationDebugger'
 // Import hooks and utilities
 import useDocumentTitle from './hooks/useDocumentTitle'
-import { pageTranslations } from './utils/translationHelper'
 
 function App() {
   // We'll use document title in AppLayout instead of here

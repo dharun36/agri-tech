@@ -85,7 +85,7 @@ export default function useDiseaseAlerts(userId) {
             // Mark alerts as read
             if (isOnline) {
               try {
-                await fetch('http://localhost:5000/api/disease/alerts/read', {
+                await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/disease/alerts/read`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ userId }),

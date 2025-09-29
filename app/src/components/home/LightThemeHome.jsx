@@ -141,7 +141,7 @@ const LightThemeHome = () => {
           return;
         }
 
-        const res = await fetch('http://localhost:5000/api/crops', {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -450,7 +450,7 @@ const LightThemeHome = () => {
         return;
       }
 
-      const res = await fetch('http://localhost:5000/api/crops', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -505,7 +505,7 @@ const LightThemeHome = () => {
         return;
       }
 
-      const res = await fetch('http://localhost:5000/api/crops', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

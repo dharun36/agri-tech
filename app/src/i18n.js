@@ -12,18 +12,18 @@ import taskHi from './locales/hi/tasks.json';
 
 // Log translation status for debugging
 
-// Check for any empty translation files
-if (!en || Object.keys(en).length === 0) {
-  console.error('English translation file is empty or not loaded correctly');
-}
+// // Check for any empty translation files
+// if (!en || Object.keys(en).length === 0) {
+//   console.error('English translation file is empty or not loaded correctly');
+// }
 
-if (!ta || Object.keys(ta).length === 0) {
-  console.error('Tamil translation file is empty or not loaded correctly');
-}
+// if (!ta || Object.keys(ta).length === 0) {
+//   console.error('Tamil translation file is empty or not loaded correctly');
+// }
 
-if (!hi || Object.keys(hi).length === 0) {
-  console.error('Hindi translation file is empty or not loaded correctly');
-}
+// if (!hi || Object.keys(hi).length === 0) {
+//   console.error('Hindi translation file is empty or not loaded correctly');
+// }
 
 // Prepare resources object
 const resources = {
@@ -48,13 +48,13 @@ const validateDatabaseContent = (lang, resources) => {
 
   // Check for database_content structure
   if (!res.database_content) {
-    console.error(`Missing database_content structure in ${lang} translations`);
+    // console.error(`Missing database_content structure in ${lang} translations`);
     return false;
   }
 
   // Check for crops
   if (!res.database_content.crops || Object.keys(res.database_content.crops).length === 0) {
-    console.error(`Missing or empty crops in ${lang} database_content`);
+    // console.error(`Missing or empty crops in ${lang} database_content`);
     return false;
   }
 
@@ -88,7 +88,7 @@ i18n
     const path = 'database_content.crops.crop_rice';
   })
   .catch(error => {
-    console.error('i18n initialization error:', error);
+    // console.error('i18n initialization error:', error);
   });
 
 // Set document language attribute for screen readers

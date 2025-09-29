@@ -120,7 +120,7 @@ function DetectDisease() {
       }
 
       if (userLocation) {
-        const response = await fetch('http://localhost:5000/api/disease/report', {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/disease/report`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

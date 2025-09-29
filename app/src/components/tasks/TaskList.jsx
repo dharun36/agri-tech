@@ -57,16 +57,16 @@ const TaskList = ({ cropId = null }) => {
         let url = '';
         switch (activeTab) {
           case 'today':
-            url = 'http://localhost:5000/api/tasks/today';
+            url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks/today`;
             break;
           case 'upcoming':
-            url = 'http://localhost:5000/api/tasks/upcoming';
+            url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks/upcoming`;
             break;
           case 'history':
-            url = 'http://localhost:5000/api/tasks/history';
+            url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks/history`;
             break;
           default:
-            url = 'http://localhost:5000/api/tasks';
+            url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks`;
         }
 
         // Add crop filter if provided

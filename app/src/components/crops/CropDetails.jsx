@@ -25,10 +25,7 @@ import LoadingSpinner from '../ui/LoadingSpinner';
 import CropStatusHistory from './CropStatusHistory';
 import { EventFormSelector } from './CropEventForms';
 import { FaTasks, FaCloudSun, FaTemperatureHigh, FaTemperatureLow, FaWater, FaCalendarDay } from 'react-icons/fa';
-
-// Define the API base URL to ensure all requests go to the backend server
-// Use environment variables for flexibility or hardcode the URL for development
-const API_BASE_URL = 'http://localhost:5000';
+import { API_BASE_URL } from '../../config/api';
 
 const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId }) => {
   const { id: paramId } = useParams();

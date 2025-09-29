@@ -70,7 +70,7 @@ const Profile = () => {
 
         try {
           // Using the correct endpoint from auth.js: /api/auth/user/:id
-          const response = await fetch(`http://localhost:5000/api/auth/user/${userId}`, {
+          const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/user/${userId}`, {
             headers: {
               Authorization: `Bearer ${token}`
             },
@@ -250,7 +250,7 @@ const Profile = () => {
       imageFormData.append('profileImage', blob, 'profile-image.jpg');
 
       // Upload the image to the server
-      const uploadResponse = await fetch(`http://localhost:5000/api/auth/user/${userId}/profile-image`, {
+      const uploadResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/user/${userId}/profile-image`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`
@@ -325,7 +325,7 @@ const Profile = () => {
         }
 
         // Use the correct endpoint from your auth.js file
-        const response = await fetch(`http://localhost:5000/api/auth/user/${userId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/user/${userId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

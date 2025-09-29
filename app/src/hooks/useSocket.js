@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
+import { API_BASE_URL } from '../config/api';
 
 // Helper function to request notification permissions
 const requestNotificationPermission = async () => {
@@ -19,7 +20,7 @@ const requestNotificationPermission = async () => {
   return false;
 };
 
-const useSocket = (userId, baseUrl = 'http://localhost:5000') => {
+const useSocket = (userId, baseUrl = API_BASE_URL) => {
   const socketRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
   const [newAlerts, setNewAlerts] = useState([]);

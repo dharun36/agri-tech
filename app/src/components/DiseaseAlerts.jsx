@@ -57,7 +57,7 @@ const groupAlerts = (alerts) => {
 
 function DiseaseAlerts({
   userId,
-  baseUrl = 'http://localhost:5000',
+  baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000',
   showGrouped = true,
   maxItems = 10,
   showBadge = true

@@ -101,7 +101,7 @@ export const translateCropName = (cropName, namespace = 'translation') => {
   ];
 
   if (debugMode) {
-    console.log('Trying translation paths:');
+    // console.log('Trying translation paths:');
     pathFormats.forEach(path => {
       // console.log(`- ${path}: ${i18n.exists(path, { ns: namespace }) ? 'exists ✅' : 'missing ❌'}`);
     });

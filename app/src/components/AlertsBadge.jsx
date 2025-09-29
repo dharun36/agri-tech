@@ -4,7 +4,7 @@ import useSocket from '../hooks/useSocket';
 
 function AlertsBadge({
   userId,
-  baseUrl = 'http://localhost:5000',
+  baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000',
   onClick,
   className = '',
   showCount = true
