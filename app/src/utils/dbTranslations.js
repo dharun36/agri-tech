@@ -67,7 +67,8 @@ export const translateCropName = (cropName, namespace = 'translation') => {
   // Debug information
   const debugMode = true;
   if (debugMode) {
-    console.group(`Translation debug for crop: "${normalizedCropName}"`);
+    // console.group(`Translation debug for crop: "${normalizedCropName}"`);
+    // console.log(`Current language: ${i18n.language}`);
   }
 
   // Try exact match first
@@ -80,14 +81,15 @@ export const translateCropName = (cropName, namespace = 'translation') => {
     );
     if (cropKey) {
       translationKey = cropTranslations[cropKey];
-      if (debugMode)
-        console.log(`Found case-insensitive match: "${cropKey}" -> "${translationKey}"`); 
+      // if (debugMode) console.log(`Found case-insensitive match: ${cropKey} -> ${translationKey}`);
+    }
   }
 
   // Try direct translation with "crop_" prefix if no mapping found
   if (!translationKey) {
     translationKey = `crop_${normalizedCropName.toLowerCase().replace(/\s+/g, '_')}`;
-    if (debugMode) }
+    // if (debugMode) console.log(`Using generated key: ${translationKey}`);
+  }
 
   // Try multiple path formats for maximum compatibility
   const pathFormats = [
@@ -99,8 +101,9 @@ export const translateCropName = (cropName, namespace = 'translation') => {
   ];
 
   if (debugMode) {
+    console.log('Trying translation paths:');
     pathFormats.forEach(path => {
-      // Debug logging disabled
+      // console.log(`- ${path}: ${i18n.exists(path, { ns: namespace }) ? 'exists ✅' : 'missing ❌'}`);
     });
   }
 
@@ -109,7 +112,8 @@ export const translateCropName = (cropName, namespace = 'translation') => {
     if (i18n.exists(path, { ns: namespace })) {
       const translated = i18n.t(path, { ns: namespace });
       if (debugMode) {
-        console.groupEnd();
+        // console.log(`✅ Translation found at path "${path}": "${translated}"`);
+        // console.groupEnd();
       }
       return translated;
     }
@@ -117,7 +121,8 @@ export const translateCropName = (cropName, namespace = 'translation') => {
 
   // Log and return original if no translation found
   if (debugMode) {
-    console.groupEnd();
+    // console.log(`❌ No translation found for crop: ${cropName}`);
+    // console.groupEnd();
   }
 
   return cropName;
@@ -139,7 +144,8 @@ export const translateCategory = (category, namespace = 'translation') => {
   // Debug information
   const debugMode = true;
   if (debugMode) {
-    console.group(`Translation debug for category: "${normalizedCategory}"`);
+    // console.group(`Translation debug for category: "${normalizedCategory}"`);
+    // console.log(`Current language: ${i18n.language}`);
   }
 
   // Try exact match first
@@ -152,15 +158,14 @@ export const translateCategory = (category, namespace = 'translation') => {
     );
     if (categoryKey) {
       translationKey = categoryTranslations[categoryKey];
-      if (debugMode) }
+      // if (debugMode) console.log(`Found case-insensitive match: ${categoryKey} -> ${translationKey}`);
+    }
   }
 
   // Try direct translation with "category_" prefix if no mapping found
   if (!translationKey) {
     translationKey = `category_${normalizedCategory.toLowerCase().replace(/\s+/g, '_')}`;
-    if (debugMode) {
-      console.log(`Using fallback translation key: "${translationKey}"`);
-    }
+    // if (debugMode) console.log(`Using generated key: ${translationKey}`);
   }
 
   // Try multiple path formats for maximum compatibility
@@ -173,8 +178,9 @@ export const translateCategory = (category, namespace = 'translation') => {
   ];
 
   if (debugMode) {
+    // console.log('Trying translation paths:');
     pathFormats.forEach(path => {
-      // Debug logging disabled
+      // console.log(`- ${path}: ${i18n.exists(path, { ns: namespace }) ? 'exists ✅' : 'missing ❌'}`);
     });
   }
 
@@ -183,7 +189,8 @@ export const translateCategory = (category, namespace = 'translation') => {
     if (i18n.exists(path, { ns: namespace })) {
       const translated = i18n.t(path, { ns: namespace });
       if (debugMode) {
-        console.groupEnd();
+        // console.log(`✅ Translation found at path "${path}": "${translated}"`);
+        // console.groupEnd();
       }
       return translated;
     }
@@ -191,7 +198,8 @@ export const translateCategory = (category, namespace = 'translation') => {
 
   // Log and return original if no translation found
   if (debugMode) {
-    console.groupEnd();
+    // console.log(`❌ No translation found for category: ${category}`);
+    // console.groupEnd();
   }
 
   return category;

@@ -18,4 +18,4 @@ languages.forEach(lang => {
 // Test the PageTitle component specifically
 const key = 'page_titles.market_prices';
 const exists = i18n.exists(key);
-console.log(`Translation: ${i18n.t(key)}`);
+// console.log(`Translation: ${i18n.t(key)}`);
