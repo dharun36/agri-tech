@@ -15,6 +15,9 @@ import {
   FaTools,
   FaCalendarCheck
 } from 'react-icons/fa';
+import { translateCategory, translateCropName } from '../../utils/dbTranslations';
+import { translateTaskDescription, translateFixedTaskDescription } from '../../utils/taskTranslations';
+import i18n from '../../i18n';
 
 /**
  * Individual task item component with status controls
@@ -102,7 +105,22 @@ const TaskItem = ({ task, onMarkDone, onMarkSkipped, disabled = false }) => {
         <span className="flex-shrink-0">{getStatusIcon()}</span>
       </div>
 
-      <p className="text-sm mb-3 line-clamp-2 overflow-hidden flex-grow">{task.description}</p>
+      {task.category && (
+        <div className="text-xs text-gray-600 mb-1">
+          {/* Use translation utility for category */}
+          {translateCategory(task.category, 'translation')}
+        </div>
+      )}
+
+      <p className="text-sm mb-3 line-clamp-2 overflow-hidden flex-grow">
+        {task.crop
+          ? translateTaskDescription(task.description, {
+            crop: task.crop.name,
+            category: task.category
+          })
+          : translateFixedTaskDescription(task.description)
+        }
+      </p>
 
       <div className="flex items-center justify-between text-xs">
         <div className="flex-shrink-0">
@@ -114,7 +132,8 @@ const TaskItem = ({ task, onMarkDone, onMarkSkipped, disabled = false }) => {
 
         {task.crop && (
           <span className="bg-green-100 text-green-800 px-2 py-1 rounded ml-2 truncate max-w-[120px] flex-shrink-0">
-            {task.crop.name}
+            {/* Use translation utility for crop name */}
+            {translateCropName(task.crop.name, 'translation')}
           </span>
         )}
       </div>

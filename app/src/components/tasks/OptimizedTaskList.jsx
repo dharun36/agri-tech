@@ -13,6 +13,9 @@ import {
   FaExclamationTriangle
 } from 'react-icons/fa';
 
+// Get API key from environment variables
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + import.meta.env.VITE_GEMINI_API_KEY;
+
 // Memoized task item component to prevent unnecessary re-renders
 const MemoizedTaskItem = memo(TaskItem);
 
@@ -157,20 +160,67 @@ const OptimizedTaskList = ({ cropId = null }) => {
   }, [t]);
 
   // Handle task saved from recommendations modal
-  const handleTaskSaved = useCallback((newTask) => {
-    // If we're on the tab that should show this task, add it to the list
-    const shouldAddToCurrentList =
-      (activeTab === 'today' && new Date(newTask.dueDate).toDateString() === new Date().toDateString()) ||
-      (activeTab === 'upcoming' && new Date(newTask.dueDate) > new Date());
+  const handleTaskSaved = useCallback((newTask, skipToast = false, batchInfo = null) => {
+    // Handle both single tasks and arrays of tasks
+    if (Array.isArray(newTask)) {
+      // Batch task handling
+      const tasksToAdd = [];
+      newTask.forEach(task => {
+        const shouldAddToCurrentList =
+          (activeTab === 'today' && new Date(task.dueDate).toDateString() === new Date().toDateString()) ||
+          (activeTab === 'upcoming' && new Date(task.dueDate) > new Date());
 
-    if (shouldAddToCurrentList) {
-      setTasks(prevTasks => [newTask, ...prevTasks]);
+        if (shouldAddToCurrentList) {
+          tasksToAdd.push(task);
+        }
+      });
+
+      if (tasksToAdd.length > 0) {
+        setTasks(prevTasks => [...tasksToAdd, ...prevTasks]);
+      }
+
+      // Display toast for batch operation only if batchInfo is provided
+      // and only if toast hasn't been shown by the child component
+      if (!skipToast && batchInfo && batchInfo.isFromBulkSave) {
+        const { successCount, failedCount } = batchInfo;
+
+        // Only show success toast if there were successful saves
+        if (successCount > 0) {
+          toast.success(t('multiple_tasks_saved_success', {
+            count: successCount,
+            ns: 'tasks',
+            defaultValue: `${successCount} tasks saved successfully`
+          }));
+        }
+
+        // Only show error toast if there were failures
+        if (failedCount > 0) {
+          toast.error(t('multiple_tasks_failed', {
+            count: failedCount,
+            ns: 'tasks',
+            defaultValue: `Failed to save ${failedCount} tasks`
+          }));
+        }
+      }
+    } else {
+      // Single task handling
+      const shouldAddToCurrentList =
+        (activeTab === 'today' && new Date(newTask.dueDate).toDateString() === new Date().toDateString()) ||
+        (activeTab === 'upcoming' && new Date(newTask.dueDate) > new Date());
+
+      if (shouldAddToCurrentList) {
+        setTasks(prevTasks => [newTask, ...prevTasks]);
+      }
+
+      // Only show toast for individual operations when not part of a batch
+      // and only if toast hasn't been shown by the child component
+      if (!skipToast && !batchInfo) {
+        toast.success(t('task_saved_success', { ns: 'tasks' }));
+      }
     }
-
-    toast.success(t('task_saved_success', { ns: 'tasks' }));
   }, [activeTab, t]);
 
-  // Generate task recommendations
+  // Generate task recommendations directly using Gemini API
   const handleGenerateRecommendations = useCallback(async () => {
     setIsGeneratingAI(true);
     setRecommendedTasks([]);
@@ -186,20 +236,96 @@ const OptimizedTaskList = ({ cropId = null }) => {
 
       toast.info(t('generating_ai_recommendations', { ns: 'tasks' }));
 
-      // Offload the heavy AI request to the backend
-      const res = await fetch(`http://localhost:5000/api/tasks/recommendations/${cropId}`, {
+      // Get crop details to use in the prompt
+      const cropRes = await fetch(`http://localhost:5000/api/crops/${cropId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      if (!res.ok) {
-        throw new Error(`Failed to generate recommendations: ${res.status}`);
+      if (!cropRes.ok) {
+        throw new Error(`Failed to fetch crop details: ${cropRes.status}`);
       }
 
-      const data = await res.json();
+      const crop = await cropRes.json();
 
-      setRecommendedTasks(data.recommendations || []);
+      // Get existing tasks to avoid duplication
+      const tasksRes = await fetch(`http://localhost:5000/api/tasks?cropId=${cropId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!tasksRes.ok) {
+        throw new Error(`Failed to fetch existing tasks: ${tasksRes.status}`);
+      }
+
+      const tasksData = await tasksRes.json();
+      const existingTasks = tasksData.tasks || [];
+      const existingTaskTitles = existingTasks.map(task => task.title.toLowerCase());
+
+      // Create prompt for Gemini API
+      const prompt = `
+        Generate 5 agricultural tasks for a ${crop.name} crop that was planted on ${crop.plantingDate}.
+        
+        Crop Details:
+        - Name: ${crop.name}
+        - Variety: ${crop.variety || 'N/A'}
+        - Planting Date: ${crop.plantingDate}
+        - Growth Stage: ${crop.growthStage || 'Not specified'}
+        
+        For each task, provide:
+        1. A clear, specific title (not generic)
+        2. A detailed description with actionable steps
+        3. A category from this list: irrigation, fertilization, pest_control, disease_treatment, harvesting, planting, pruning, soil_management, weather_response, general
+        4. An appropriate due date based on the crop's timeline
+        
+        Format the response as a JSON array of task objects with these properties: title, description, category, dueDate.
+        
+        Please avoid suggesting these existing tasks:
+        ${existingTaskTitles.join(', ')}
+      `;
+
+      // Call Gemini API directly
+      const geminiRes = await fetch(GEMINI_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+
+      if (!geminiRes.ok) {
+        throw new Error(`Failed to get AI recommendations: ${geminiRes.status}`);
+      }
+
+      const geminiData = await geminiRes.json();
+      const geminiText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+      // Extract JSON from response
+      let recommendations = [];
+      try {
+        // Try to parse the entire response as JSON
+        recommendations = JSON.parse(geminiText);
+      } catch {
+        // Fallback: try to extract JSON array from text
+        const match = geminiText.match(/\[[\s\S]*\]/);
+        if (match) {
+          try {
+            recommendations = JSON.parse(match[0]);
+          } catch (error) {
+            throw new Error('Failed to parse AI response');
+          }
+        } else {
+          throw new Error('No valid JSON found in AI response');
+        }
+      }
+
+      // Generate unique IDs for recommendations
+      const recommendationsWithIds = recommendations.map((rec, index) => ({
+        id: `rec-${Date.now()}-${index}`,
+        ...rec
+      }));
+
+      setRecommendedTasks(recommendationsWithIds);
       toast.success(t('recommendations_generated', {
-        count: data.recommendations.length,
+        count: recommendationsWithIds.length,
         ns: 'tasks'
       }));
       setShowRecommendationsModal(true);
@@ -232,8 +358,8 @@ const OptimizedTaskList = ({ cropId = null }) => {
           onClick={handleGenerateRecommendations}
           disabled={isGeneratingAI || loading}
           className={`flex items-center px-3 py-1 rounded-md text-sm transition ${isGeneratingAI || loading
-              ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-              : 'bg-green-600 text-white hover:bg-green-700'
+            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+            : 'bg-green-600 text-white hover:bg-green-700'
             }`}
         >
           <FaRobot className="mr-1 w-4 h-4" />

@@ -29,8 +29,15 @@ import OptimizedTaskDashboard from './components/tasks/OptimizedTaskDashboard'
 import OptimizedTaskDetail from './components/tasks/OptimizedTaskDetail'
 import AppLayout from './components/AppLayout'
 import ErrorBoundary from './components/ErrorBoundary'
+import TranslationDebugger from './components/TranslationDebugger'
+// Import hooks and utilities
+import useDocumentTitle from './hooks/useDocumentTitle'
+import { pageTranslations } from './utils/translationHelper'
 
 function App() {
+  // We'll use document title in AppLayout instead of here
+  // to ensure it has access to Router context
+
   // Get user ID from localStorage for alerts
   const userId = localStorage.getItem('userId'); // Temporary hardcode for testing
 
@@ -53,6 +60,9 @@ function App() {
 
   return (
     <Router>
+      {/* Alternative approach: You could use this component instead of the hook in AppLayout */}
+      {/* <DocumentTitleHandler appName="AgriTech" /> */}
+
       <ErrorBoundary>
         <AppLayout>
           <main className="main" style={{ flex: '1', display: 'flex', flexDirection: 'column' }}>
@@ -91,7 +101,25 @@ function App() {
               {/* <Route path="*" element={<Navigate to="/home" replace />} /> */}
             </Routes>
           </main>
-          <ToastContainer position="bottom-right" autoClose={10000} />
+          <ToastContainer
+            position="bottom-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={true}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            limit={1} // Limit to just one toast at a time
+            toastStyle={{
+              marginBottom: '10px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+            }}
+          />
+
+          {/* Translation Debugger - Helps troubleshoot translation issues */}
+          {/* <TranslationDebugger /> */}
         </AppLayout>
       </ErrorBoundary>
     </Router>

@@ -1,6 +1,7 @@
 {
   "crop_tasks": "Crop Tasks",
   "crop_tasks_and_recommendations": "Crop Tasks & Recommendations",
+  "select_crop": "Select Crop",
   "select_crop_for_tasks": "Select a crop to manage tasks",
   "select_crop_to_view_tasks": "Click on any crop to view and manage its tasks",
   "tasks": "Tasks",

@@ -72,11 +72,74 @@ const TaskRecommendationsModal = ({
       .filter(([_, isSelected]) => isSelected)
       .map(([index]) => parseInt(index));
 
-    for (const index of selectedIndices) {
-      await handleSaveTask(index);
-    }
+    // Track successful saves and saved task objects
+    let successCount = 0;
+    let failedCount = 0;
+    const savedTaskObjects = [];
 
-    setSaving(false);
+    try {
+      // Save all tasks without individual toasts
+      for (const index of selectedIndices) {
+        try {
+          setSavingTaskId(index);
+          const task = recommendations[index];
+
+          if (!task.user) {
+            task.user = localStorage.getItem('userId');
+          }
+
+          const savedTask = await saveTask(cropId, task);
+          savedTaskObjects.push(savedTask);
+
+          // Mark task as saved
+          setSavedTasks(prev => ({
+            ...prev,
+            [index]: savedTask
+          }));
+
+          successCount++;
+        } catch (error) {
+          console.error('Error saving task:', error);
+          failedCount++;
+        }
+      }
+
+      // Send all saved tasks as a batch to parent
+      // Include success/failure counts so parent can show appropriate toast
+      if (savedTaskObjects.length > 0 && onTaskSaved) {
+        // Pass the array of tasks to the parent component along with metadata
+        onTaskSaved(savedTaskObjects, false, {
+          successCount,
+          failedCount,
+          isFromBulkSave: true
+        });
+      } else {
+        // Only show toasts here if we're not notifying the parent
+        // Show a single toast for all saved tasks
+        if (successCount > 0) {
+          toast.success(t('multiple_tasks_saved_success', {
+            count: successCount,
+            ns: 'tasks',
+            defaultValue: `${successCount} tasks saved successfully`
+          }));
+        }
+
+        // Show error toast only if some tasks failed
+        if (failedCount > 0) {
+          toast.error(t('multiple_tasks_failed', {
+            count: failedCount,
+            ns: 'tasks',
+            defaultValue: `Failed to save ${failedCount} tasks`
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error in bulk save operation:', error);
+      toast.error(t('bulk_save_failed', { ns: 'tasks', defaultValue: 'Failed to save tasks' }));
+    } finally {
+      setSaving(false);
+      setSavingTaskId(null);
+    }
   };
 
   // Save a single task
@@ -98,16 +161,26 @@ const TaskRecommendationsModal = ({
         [index]: savedTask
       }));
 
-      // Notify parent component
-      if (onTaskSaved) {
-        onTaskSaved(savedTask);
+      // For individual task saves (not part of bulk operation)
+      // Include skipToast=false to allow toast in parent component
+      if (onTaskSaved && !saving) {
+        // Single task handling with toast in parent
+        onTaskSaved(savedTask, false);
+        // Don't show toast here as it will be shown by parent
+      } else if (onTaskSaved && saving) {
+        // When part of bulk operation, pass skipToast=true
+        onTaskSaved(savedTask, true, { part: 'bulk' });
       }
 
-      // Show success message
-      toast.success(t('task_saved_success', { ns: 'tasks' }));
+      // Only show toast here for individual task saves if we're not notifying parent
+      if (!saving && !onTaskSaved) {
+        toast.success(t('task_saved_success', { ns: 'tasks' }));
+      }
     } catch (error) {
       console.error('Error saving task:', error);
-      toast.error(`${t('failed_to_save_task', { ns: 'tasks' })}: ${error.message}`);
+      if (!saving) {
+        toast.error(`${t('failed_to_save_task', { ns: 'tasks' })}: ${error.message}`);
+      }
     } finally {
       setSavingTaskId(null);
     }

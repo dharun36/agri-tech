@@ -10,13 +10,17 @@ export const saveEventAsTask = async (cropId, userId, eventType, eventData) => {
       throw new Error('Authentication required');
     }
 
+    // Validate and sanitize event data
+    const sanitizedEventData = sanitizeEventData(eventType, eventData);
+    console.log(`Sanitized ${eventType} event data:`, sanitizedEventData);
+
     // Create a standardized task object from the event data
     const task = {
       // userId is not needed as it's extracted from the auth token on the server
       crop: cropId, // Changed from cropId to crop to match backend expectations
-      title: generateTaskTitle(eventType, eventData),
-      description: generateTaskDescription(eventType, eventData),
-      dueDate: eventData.date || new Date().toISOString().split('T')[0],
+      title: generateTaskTitle(eventType, sanitizedEventData),
+      description: generateTaskDescription(eventType, sanitizedEventData),
+      dueDate: sanitizedEventData.date || new Date().toISOString().split('T')[0],
       priority: 'medium',
       status: 'pending',
       source: 'system_generated',
@@ -33,7 +37,7 @@ export const saveEventAsTask = async (cropId, userId, eventType, eventData) => {
     });
 
     // Also save the event to the crop
-    await saveEventToCrop(cropId, eventType, eventData, token);
+    await saveEventToCrop(cropId, eventType, sanitizedEventData, token);
 
     return response.data;
   } catch (error) {
@@ -92,20 +96,56 @@ const saveEventToCrop = async (cropId, eventType, eventData, token) => {
     }
 
     // Format the event data - different endpoints expect different data structures
-    // For simplicity, we'll just send the raw event data
-    const event = {
-      ...eventData,
-      date: eventData.date || new Date().toISOString().split('T')[0]
-    };
+    let event;
 
-    await axios.post(`http://localhost:5000/api/crops/${cropId}/${endpoint}`, event, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Special handling for cost events to match server expectations
+    if (eventType === 'cost') {
+      event = {
+        date: eventData.date || new Date().toISOString().split('T')[0],
+        category: eventData.category || 'other',
+        amount: parseFloat(eventData.amount) || 0,
+        description: eventData.description || 'No description provided'
+      };
+
+      // Validate the cost data before sending
+      if (!event.category || event.amount === undefined || isNaN(event.amount)) {
+        console.error('Invalid cost data:', event);
+        throw new Error('Cost data is invalid: category and amount are required');
+      }
+    } else {
+      // For other event types, just send the raw event data
+      event = {
+        ...eventData,
+        date: eventData.date || new Date().toISOString().split('T')[0]
+      };
+    }
+
+    console.log(`Sending ${eventType} event to endpoint: http://localhost:5000/api/crops/${cropId}/${endpoint}`);
+    console.log('Event data:', event);
+
+    try {
+      await axios.post(`http://localhost:5000/api/crops/${cropId}/${endpoint}`, event, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log(`Successfully saved ${eventType} event to crop ${cropId}`);
+    } catch (axiosError) {
+      console.error(`Error saving ${eventType} event to crop:`, axiosError);
+      if (axiosError.response) {
+        console.error('Response status:', axiosError.response.status);
+        console.error('Response data:', axiosError.response.data);
+
+        // For cost events, provide detailed debugging
+        if (eventType === 'cost') {
+          console.error('Cost event that failed:', JSON.stringify(event));
+        }
+      }
+      // We don't throw here to avoid preventing task creation if this fails
+    }
   } catch (error) {
-    console.error('Error saving event to crop:', error);
+    console.error('Error in saveEventToCrop function:', error);
     // We don't throw here to avoid preventing task creation if this fails
   }
 };
@@ -198,4 +238,84 @@ const mapEventTypeToCategory = (eventType) => {
     default:
       return 'general';
   }
+};
+
+/**
+ * Sanitizes and validates event data to prevent NaN values and ensure proper data types
+ * @param {string} eventType - The type of event
+ * @param {object} eventData - The event data to sanitize
+ * @returns {object} - The sanitized event data
+ */
+const sanitizeEventData = (eventType, eventData) => {
+  if (!eventData) {
+    return {};
+  }
+
+  // Create a copy of the event data to avoid modifying the original
+  const sanitized = { ...eventData };
+
+  // Handle common fields
+  if (sanitized.date === undefined) {
+    sanitized.date = new Date().toISOString().split('T')[0];
+  }
+
+  // Type-specific validation
+  switch (eventType) {
+    case 'cost':
+      // Ensure category matches the server's enum values
+      const validCategories = ['seeds', 'fertilizer', 'pesticide', 'labor', 'equipment', 'other'];
+      const categoryLower = (sanitized.category || '').toLowerCase();
+
+      // Try to map to a valid category
+      sanitized.category = validCategories.includes(categoryLower) ? categoryLower : 'other';
+
+      // Ensure amount is a valid number
+      if (sanitized.amount !== undefined) {
+        const parsedAmount = parseFloat(sanitized.amount);
+        sanitized.amount = isNaN(parsedAmount) ? 0 : parsedAmount;
+      } else {
+        sanitized.amount = 0;
+      }
+
+      // Ensure description exists
+      if (!sanitized.description) {
+        sanitized.description = 'Expense';
+      }
+      break;
+
+    case 'irrigation':
+    case 'fertilization':
+      // Ensure amount is a valid number
+      if (sanitized.amount !== undefined) {
+        const parsedAmount = parseFloat(sanitized.amount);
+        sanitized.amount = isNaN(parsedAmount) ? 0 : parsedAmount;
+      }
+      break;
+
+    case 'growth':
+      // Ensure height is a valid number
+      if (sanitized.height !== undefined) {
+        const parsedHeight = parseFloat(sanitized.height);
+        sanitized.height = isNaN(parsedHeight) ? 0 : parsedHeight;
+      }
+      break;
+
+    case 'harvest':
+      // Ensure yield is a valid number
+      if (sanitized.yield !== undefined) {
+        const parsedYield = parseFloat(sanitized.yield);
+        sanitized.yield = isNaN(parsedYield) ? 0 : parsedYield;
+      }
+      break;
+
+    case 'labor':
+      // Ensure hours is a valid number
+      if (sanitized.hours !== undefined) {
+        const parsedHours = parseFloat(sanitized.hours);
+        sanitized.hours = isNaN(parsedHours) ? 0 : parsedHours;
+      }
+      break;
+  }
+
+  return sanitized;
 };

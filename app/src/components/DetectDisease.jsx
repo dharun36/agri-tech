@@ -19,6 +19,7 @@ function DetectDisease() {
   const [error, setError] = useState("");
   const [isSpreadable, setIsSpreadable] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
+  const [reportSubmitted, setReportSubmitted] = useState(false);
   const [analysisData, setAnalysisData] = useState(null); // Store bilingual data
   const [locationType, setLocationType] = useState('current'); // 'current' or 'field'
   const fileInputRef = useRef(null);
@@ -28,8 +29,8 @@ function DetectDisease() {
     setAnalysis(null)
     setAnalysisData(null)
     setIsSpreadable(false)
+    setReportSubmitted(false)
     setError("")
-    setLocationType('current')
   }
 
   const handleUploadClick = () => {
@@ -142,6 +143,7 @@ function DetectDisease() {
 
         if (response.ok) {
           toast.success(t('disease_reported_successfully') || 'Disease reported successfully! Nearby farmers will be notified.');
+          setReportSubmitted(true); // Mark report as submitted
         } else {
           toast.error(t('report_failed') || 'Failed to report disease. Please try again.');
         }
@@ -168,36 +170,37 @@ function DetectDisease() {
 
         // get prediction from our new disease prediction endpoint
         const formData = new FormData();
-        formData.append("image", file); // The server expects 'image' as the field name
+        formData.append("file", file); // FastAPI expects 'file' as the field name
 
         try {
-          // Call our new endpoint on the server
-          const res = await fetch("http://localhost:5000/api/disease/predict", {
+          // Call your FastAPI disease classification model
+          const res = await fetch(`${DISEASE_API_URL}/predict`, {
             method: "POST",
             body: formData, // Use FormData for file uploads
           });
 
           if (!res.ok) {
             const errorData = await res.json().catch(() => ({}));
-            setError(errorData.error || "Unknown error from prediction API");
+            setError(errorData.detail || "Unknown error from prediction API");
             setLoading(false);
             return;
           }
 
           const pred = await res.json();
-          // The prediction result from the disease prediction endpoint
+          // The prediction result from your FastAPI model
           console.log("Disease prediction results:", pred);
 
-          // Extract the top disease prediction from the array of predictions
-          const predictedClass = pred[0]?.label || "Unknown";
-          console.log("Top predicted disease:", predictedClass, "with confidence score:", pred[0]?.score);
+          // Extract the prediction results from your model
+          const predictedClass = pred.class_name || "Unknown";
+          const confidence = pred.confidence || 0;
+          console.log("Predicted disease:", predictedClass, "with confidence:", confidence);
 
           // show immediate minimal prediction
           setAnalysis({
             detected: predictedClass,
-            description: pred.description || "",
-            treatment: pred.treatment || "",
-            advice: pred.advice || ""
+            description: `Confidence: ${(confidence * 100).toFixed(2)}%`,
+            treatment: "",
+            advice: ""
           });
 
           // Prepare language and prompt for Gemini — get response in both languages
@@ -499,10 +502,22 @@ Ensure all Tamil text is properly written in Tamil script. No extra text, just v
 
                 <button
                   onClick={handleReportIssue}
-                  disabled={reportLoading}
-                  className="w-full mt-4 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-medium py-2 px-4 rounded-lg shadow transition-colors"
+                  disabled={reportLoading || reportSubmitted}
+                  className={`w-full mt-4 font-medium py-2 px-4 rounded-lg shadow transition-colors ${reportSubmitted
+                      ? 'bg-green-600 text-white cursor-not-allowed'
+                      : reportLoading
+                        ? 'bg-orange-400 text-white cursor-not-allowed'
+                        : 'bg-orange-600 hover:bg-orange-700 text-white'
+                    }`}
                 >
-                  {reportLoading ? (
+                  {reportSubmitted ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      {t('report_submitted') || 'Report Submitted Successfully'}
+                    </span>
+                  ) : reportLoading ? (
                     <span className="flex items-center justify-center gap-2">
                       <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

@@ -25,7 +25,7 @@ const QuickEventForm = ({ crop, eventType, onClose, onSuccess }) => {
   const defaultValues = {
     irrigation: { amount: 10, unit: 'L', notes: '' },
     fertilization: { type: 'Organic', amount: 1, unit: 'kg', notes: '' },
-    cost: { description: '', amount: 0, category: 'General' },
+    cost: { description: '', amount: 0, category: 'other' }, // Using 'other' to match server's enum
     note: { content: '' },
     pestDisease: { type: '', severity: 'Low', treatment: '', notes: '' }
   };
@@ -80,9 +80,22 @@ const QuickEventForm = ({ crop, eventType, onClose, onSuccess }) => {
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
+    let parsedValue;
+
+    if (type === 'number') {
+      parsedValue = value === '' ? 0 : parseFloat(value);
+
+      // Prevent NaN values
+      if (isNaN(parsedValue)) {
+        parsedValue = 0;
+      }
+    } else {
+      parsedValue = value;
+    }
+
     setFormData({
       ...formData,
-      [name]: type === 'number' ? parseFloat(value) : value
+      [name]: parsedValue
     });
   };
 
@@ -98,6 +111,22 @@ const QuickEventForm = ({ crop, eventType, onClose, onSuccess }) => {
         throw new Error('User ID not available');
       }
 
+      // Validate form data based on event type
+      if (eventType === 'cost') {
+        if (!formData.category) {
+          throw new Error('Category is required');
+        }
+
+        // Ensure amount is a valid number
+        const amount = parseFloat(formData.amount);
+        if (isNaN(amount)) {
+          throw new Error('Please enter a valid amount');
+        }
+
+        // Update formData with the validated amount
+        formData.amount = amount;
+      }
+
       // Add timestamp to the data
       const eventData = {
         ...formData,
@@ -105,6 +134,7 @@ const QuickEventForm = ({ crop, eventType, onClose, onSuccess }) => {
         time: format(new Date(), 'HH:mm')
       };
 
+      console.log(`Submitting ${eventType} event:`, eventData);
       await saveEventAsTask(crop._id, userId, eventType, eventData);
 
       // Notify parent of success
@@ -235,13 +265,13 @@ const QuickEventForm = ({ crop, eventType, onClose, onSuccess }) => {
                 onChange={handleInputChange}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
-                <option value="Seeds">{t('seeds')}</option>
-                <option value="Fertilizer">{t('fertilizer')}</option>
-                <option value="Pesticide">{t('pesticide')}</option>
-                <option value="Labor">{t('labor')}</option>
-                <option value="Equipment">{t('equipment')}</option>
-                <option value="Irrigation">{t('irrigation')}</option>
-                <option value="General">{t('general')}</option>
+                {/* Match the exact values expected by the server: ['seeds', 'fertilizer', 'pesticide', 'labor', 'equipment', 'other'] */}
+                <option value="seeds">{t('seeds')}</option>
+                <option value="fertilizer">{t('fertilizer')}</option>
+                <option value="pesticide">{t('pesticide')}</option>
+                <option value="labor">{t('labor')}</option>
+                <option value="equipment">{t('equipment')}</option>
+                <option value="other">{t('general')}</option>
               </select>
             </div>
             <div className="mb-3">

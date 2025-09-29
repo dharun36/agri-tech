@@ -19,16 +19,36 @@ const commonCrops = [
 ];
 
 const cropImages = {
-  Rice: "https://storage.googleapis.com/a1aa/image/dfacf51c-4439-49db-e185-fc674bf808d5.jpg",
-  Wheat: "https://storage.googleapis.com/a1aa/image/3bd0901a-748b-4579-3362-3bcbabcaa020.jpg",
-  Maize: "https://storage.googleapis.com/a1aa/image/36192153-5529-4c03-1c06-c82ed080ecd2.jpg",
-  Vegetables: "https://storage.googleapis.com/a1aa/image/66694345-5244-4928-8654-e7bf1554898a.jpg",
-  Fruits: "https://storage.googleapis.com/a1aa/image/5beca4ed-ce87-41c0-226d-f8badcf32503.jpg",
-  Pulses: "https://storage.googleapis.com/a1aa/image/2f0b3c4d-6a5e-4b8c-1f7d-9f0c8e2a3b6b.jpg",
-  Onion: "https://storage.googleapis.com/a1aa/image/onion-123456.jpg",
-  Potato: "https://storage.googleapis.com/a1aa/image/potato-123456.jpg",
-  Tomato: "https://storage.googleapis.com/a1aa/image/tomato-123456.jpg",
-  Default: "https://storage.googleapis.com/a1aa/image/66694345-5244-4928-8654-e7bf1554898a.jpg"
+  Rice: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop&auto=format",
+  Wheat: "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&h=300&fit=crop&auto=format",
+  Maize: "https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&h=300&fit=crop&auto=format",
+  Soybean: "https://images.unsplash.com/photo-1571836132102-efeeacdf1e38?w=400&h=300&fit=crop&auto=format",
+  Sunflower: "https://images.unsplash.com/photo-1470509037663-253afd7f0f51?w=400&h=300&fit=crop&auto=format",
+  Mustard: "https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=300&fit=crop&auto=format",
+  Cotton: "app/public/Cotton.jpeg",
+  Jute: "https://images.unsplash.com/photo-1571833043137-5a3b1d7beb66?w=400&h=300&fit=crop&auto=format",
+  Sugarcane: "https://images.unsplash.com/photo-1586862792403-97b85ba2c535?w=400&h=300&fit=crop&auto=format",
+  Potato: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&h=300&fit=crop&auto=format",
+  Onion: "https://images.unsplash.com/photo-1508747703725-719777637510?w=400&h=300&fit=crop&auto=format",
+  Tomato: "https://images.unsplash.com/photo-1553395572-0b8e5318e32b?w=400&h=300&fit=crop&auto=format",
+  Apple: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400&h=300&fit=crop&auto=format",
+  Banana: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=400&h=300&fit=crop&auto=format",
+  Mango: "https://images.unsplash.com/photo-1553279768-865429fa0078?w=400&h=300&fit=crop&auto=format",
+  Orange: "https://images.unsplash.com/photo-1547514701-42782101795e?w=400&h=300&fit=crop&auto=format",
+  Grapes: "https://images.unsplash.com/photo-1537640538966-79f369143f8f?w=400&h=300&fit=crop&auto=format",
+  Vegetables: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=300&fit=crop&auto=format",
+  Fruits: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400&h=300&fit=crop&auto=format",
+  Default: "https://via.placeholder.com/400x300/22c55e/ffffff?text=Crop+Image",
+
+
+};
+
+// Alternative image sources for fallback
+const alternativeImages = {
+  Default: "https://via.placeholder.com/400x300/16a34a/ffffff?text=Agricultural+Crop",
+  Vegetables: "https://via.placeholder.com/400x300/059669/ffffff?text=Vegetables",
+  Fruits: "https://via.placeholder.com/400x300/dc2626/ffffff?text=Fruits",
+  Grains: "https://via.placeholder.com/400x300/d97706/ffffff?text=Grains"
 };
 
 const MarketPrices = () => {
@@ -40,7 +60,12 @@ const MarketPrices = () => {
   const [selectedDistrict, setSelectedDistrict] = useState('All');
   const [selectedCropType, setSelectedCropType] = useState('All');
   const [isSearching, setIsSearching] = useState(false);
-  const [districts, setDistricts] = useState(['All', 'Erode', 'Chennai', 'Coimbatore', 'Madurai', 'Salem']);
+  const [districts, setDistricts] = useState([
+    'All',
+    // Tamil Nadu
+    'Erode', 'Chennai', 'Coimbatore', 'Madurai', 'Salem', 'Thanjavur', 'Trichy', 'Tirunelveli', 'Karur', 'Vellore',
+
+  ]);
   const [showUserCrops, setShowUserCrops] = useState(true);
 
   // Fetch user crops once on component mount
@@ -81,22 +106,36 @@ const MarketPrices = () => {
     fetchUserCrops();
   }, []);
 
+  // Effect to refetch data when district changes
+  useEffect(() => {
+    if (userCrops.length > 0 && showUserCrops) {
+      fetchPricesForCrops(userCrops);
+    }
+  }, [selectedDistrict]); // Re-run when selectedDistrict changes
+
   // Function to fetch prices for a set of crops
-  const fetchPricesForCrops = async (crops) => {
+  const fetchPricesForCrops = async (crops, districtFilter = null) => {
     setLoading(true);
     try {
       // Extract crop names from the crops objects
       const cropNames = crops.map(crop => crop.name);
 
+      // Use provided district filter or current state
+      const district = districtFilter !== null ? districtFilter : selectedDistrict;
+      const districtParam = district !== 'All' ? district : '';
+
       // For each crop, fetch today's price from the API
       const pricePromises = cropNames.map(async (cropName) => {
-        let district = selectedDistrict !== 'All' ? selectedDistrict : '';
+        const apiUrl = `https://api.data.gov.in/resource/${DATA_ID}?api-key=${GOV_API_KEY}&format=json&filters[commodity]=${encodeURIComponent(cropName)}${districtParam ? `&filters[district]=${encodeURIComponent(districtParam)}` : ''}&limit=1`;
 
-        const apiUrl = `https://api.data.gov.in/resource/${DATA_ID}?api-key=${GOV_API_KEY}&format=json&filters[commodity]=${encodeURIComponent(cropName)}${district ? `&filters[district]=${encodeURIComponent(district)}` : ''}&limit=1`;
+        console.log(`Fetching data for ${cropName} in district: ${districtParam || 'All'}`, apiUrl); // Debug log
 
         try {
           const apiRes = await fetch(apiUrl);
           const apiData = await apiRes.json();
+
+          console.log(`API response for ${cropName}:`, apiData); // Debug log
+
           let price = "N/A";
           let marketLocation = "Unknown";
 
@@ -217,10 +256,28 @@ const MarketPrices = () => {
 
   // Function to handle district selection change
   const handleDistrictChange = (e) => {
-    setSelectedDistrict(e.target.value);
+    const newDistrict = e.target.value;
+    console.log('District changed to:', newDistrict); // Debug log
+    setSelectedDistrict(newDistrict);
+
+    // Show loading feedback
+    setLoading(true);
+
+    // Refetch data with the new district filter
     if (userCrops.length > 0 && showUserCrops) {
-      fetchPricesForCrops(userCrops);
+      fetchPricesForCrops(userCrops, newDistrict);
+    } else if (!showUserCrops && products.length > 0) {
+      // If viewing search results, re-fetch the search results with new district
+      const searchResults = products.filter(p => p.isSearchResult);
+      if (searchResults.length > 0) {
+        // Re-search with new district filter
+        const searchCrops = searchResults.map(p => ({ name: p.name }));
+        fetchPricesForCrops(searchCrops, newDistrict);
+      }
     }
+
+    // Show user feedback
+    toast.info(`Filtering prices for ${newDistrict === 'All' ? 'all districts' : newDistrict}`);
   };
 
   // Function to handle crop type selection
@@ -315,12 +372,12 @@ const MarketPrices = () => {
                 {isSearching ? (
                   <>
                     <FaSyncAlt className="animate-spin" />
-                    <span>Searching...</span>
+                    <span>{t('searching') || 'Searching...'}</span>
                   </>
                 ) : (
                   <>
                     <FaSearch />
-                    <span>Search</span>
+                    <span>{t('search') || 'Search'}</span>
                   </>
                 )}
               </button>
@@ -329,10 +386,11 @@ const MarketPrices = () => {
             <div className="flex flex-col md:flex-row gap-4 md:items-center">
               {/* District Filter */}
               <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">District:</label>
                 <select
                   value={selectedDistrict}
                   onChange={handleDistrictChange}
-                  className="bg-white border border-gray-200 rounded-md py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                  className="bg-white border border-gray-200 rounded-md py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 text-sm min-w-[160px]"
                 >
                   {districts.map(district => (
                     <option key={district} value={district}>
@@ -340,6 +398,11 @@ const MarketPrices = () => {
                     </option>
                   ))}
                 </select>
+                {selectedDistrict !== 'All' && (
+                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                    Filtered
+                  </span>
+                )}
               </div>
 
               {/* Crop Type Filter */}
@@ -350,11 +413,11 @@ const MarketPrices = () => {
                   onChange={handleCropTypeChange}
                   className="bg-white border border-gray-200 rounded-md py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                 >
-                  <option value="All">All Crop Types</option>
-                  <option value="Grain">Grains</option>
-                  <option value="Vegetable">Vegetables</option>
-                  <option value="Fruit">Fruits</option>
-                  <option value="Pulse">Pulses</option>
+                  <option value="All">{t('all_crop_types') || 'All Crop Types'}</option>
+                  <option value="Grain">{t('grains') || 'Grains'}</option>
+                  <option value="Vegetable">{t('vegetables') || 'Vegetables'}</option>
+                  <option value="Fruit">{t('fruits') || 'Fruits'}</option>
+                  <option value="Pulse">{t('pulses') || 'Pulses'}</option>
                 </select>
               </div>
 
@@ -367,7 +430,7 @@ const MarketPrices = () => {
                       ? 'border-blue-500 text-blue-700'
                       : 'border-green-500 text-green-700'}`}
                 >
-                  {showUserCrops ? 'Viewing: My Crops' : 'Viewing: Search Results'}
+                  {showUserCrops ? t('viewing_my_crops') || 'Viewing: My Crops' : t('viewing_search_results') || 'Viewing: Search Results'}
                 </button>
               </div>
             </div>
@@ -380,12 +443,12 @@ const MarketPrices = () => {
             {showUserCrops ? (
               <>
                 <FaLeaf className="text-green-500" />
-                <span className="font-medium text-gray-800">Your Crops Prices</span>
+                <span className="font-medium text-gray-800">{t('your_crops_prices') || 'Your Crops Prices'}</span>
               </>
             ) : (
               <>
                 <FaSearch className="text-blue-500" />
-                <span className="font-medium text-gray-800">Search Results</span>
+                <span className="font-medium text-gray-800">{t('search_results') || 'Search Results'}</span>
               </>
             )}
           </h3>
@@ -420,14 +483,38 @@ const MarketPrices = () => {
                     index % 3 === 1 ? 'from-blue-50 to-green-50' :
                       'from-green-50 to-yellow-50'} mb-4`}
                 >
-                  <div className="relative h-48 overflow-hidden border-l-4 border-green-500">
+                  <div className="relative h-48 overflow-hidden border-l-4 border-green-500 bg-gray-100">
                     <img
                       src={item.img}
-                      alt={item.alt}
-                      className="w-full h-full object-cover"
+                      alt={item.alt || item.name}
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      onError={(e) => {
+                        console.log(`Image failed to load for ${item.name}:`, item.img);
+                        // First fallback - try the default image
+                        if (e.target.src !== cropImages.Default) {
+                          console.log(`Trying default image for ${item.name}`);
+                          e.target.src = cropImages.Default;
+                        } else if (e.target.src !== alternativeImages.Default) {
+                          // Second fallback - use alternative default
+                          console.log(`Trying alternative image for ${item.name}`);
+                          e.target.src = alternativeImages.Default;
+                        } else {
+                          // Final fallback - use a placeholder with crop name
+                          console.log(`Using final placeholder for ${item.name}`);
+                          e.target.src = `https://via.placeholder.com/400x300/22c55e/ffffff?text=${encodeURIComponent(item.name)}`;
+                        }
+                      }}
+                      onLoad={() => {
+                        console.log(`Image loaded successfully for ${item.name}`);
+                      }}
+                      loading="lazy"
+                      style={{
+                        minHeight: '192px', // Ensure consistent height even if image fails
+                        backgroundColor: '#f3f4f6' // Gray background as fallback
+                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-4">
-                      <h4 className="text-white font-semibold text-lg">{item.name}</h4>
+                      <h4 className="text-white font-semibold text-lg drop-shadow-md">{item.name}</h4>
                     </div>
                   </div>
 

@@ -743,10 +743,10 @@ const LightThemeHome = () => {
                   <p className="text-gray-500 text-sm">{t('local_forecast') || 'Local Forecast'}</p>
                 </div>
               </div>
-              <div className="text-blue-600 font-medium text-sm flex items-center">
+              {/* <div className="text-blue-600 font-medium text-sm flex items-center">
                 <span>{t('view_details') || 'View Details'}</span>
                 <FontAwesomeIcon icon={faArrowRight} className="ml-1" />
-              </div>
+              </div> */}
             </div>
 
             {weatherLoading && (

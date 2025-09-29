@@ -132,7 +132,7 @@ const ModernCropCard = ({ crop, onAddEvent, onViewDetails, onDeleteCrop, onUpdat
           onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
-            if (window.confirm(t('are_you_sure_delete_crop') || 'Are you sure you want to delete this crop?')) {
+            if (window.confirm(t('confirm_delete_crop') || 'Are you sure you want to delete this crop?')) {
               onDeleteCrop(crop._id);
             }
           }}
@@ -277,7 +277,7 @@ const ModernCropCard = ({ crop, onAddEvent, onViewDetails, onDeleteCrop, onUpdat
               setShowActions(false);
               // Explicitly prevent any other event handlers from running
               e.preventDefault();
-              if (window.confirm(t('are_you_sure_delete_crop') || 'Are you sure you want to delete this crop?')) {
+              if (window.confirm(t('confirm_delete_crop') || 'Are you sure you want to delete this crop?')) {
                 onDeleteCrop(crop._id);
               }
             }}

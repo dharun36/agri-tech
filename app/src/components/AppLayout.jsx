@@ -3,13 +3,22 @@ import { useLocation } from 'react-router-dom';
 import VerticalHeader from './VerticalHeader';
 import MobileHeader from './header/MobileHeader';
 import MobileBottomNav from './header/MobileBottomNav';
+import PageTitle from './ui/PageTitle';
+import { getPageNameFromPath } from '../utils/translationHelper';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 import '../styles/layout.css';
 import '../styles/animations.css';
 
-const AppLayout = ({ children }) => {
+const AppLayout = ({ children, pageTitle }) => {
   const location = useLocation();
   const path = location.pathname;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Page name for translation - use provided pageTitle or determine from path
+  const pageName = pageTitle || getPageNameFromPath(path);
+
+  // Use the document title hook here, where we have router context
+  useDocumentTitle(path, 'AgriTech');
 
   // Check if current path is login, signup, or landing page
   const isExcludedPath = path === '/' || path === '/login' || path === '/signup';
@@ -97,6 +106,13 @@ const AppLayout = ({ children }) => {
         }}
         onClick={() => mobileMenuOpen && setMobileMenuOpen(false)}
       >
+        {/* Page title for non-excluded paths */}
+        {!isExcludedPath && (
+          <div className="page-title-container px-4 py-2 bg-white/90 backdrop-blur-sm sticky top-0 z-10">
+            <PageTitle pageName={pageName} className="text-xl md:text-2xl font-bold text-primary-600" />
+          </div>
+        )}
+
         {children}
       </div>
     </>

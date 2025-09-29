@@ -98,7 +98,41 @@ const CropWidget = ({ cropId, onClose }) => {
         throw new Error('User ID not available');
       }
 
-      await saveEventAsTask(cropId, userId, eventType, formData);
+      // Validate and sanitize data before saving
+      let processedData = { ...formData };
+
+      // Special handling for cost events
+      if (eventType === 'cost') {
+        // Ensure category value is in lowercase to match server expectations
+        if (processedData.category) {
+          // Map common cost categories to the server's expected enum values
+          const categoryMapping = {
+            'Seeds': 'seeds',
+            'Fertilizer': 'fertilizer',
+            'Pesticide': 'pesticide',
+            'Labor': 'labor',
+            'Equipment': 'equipment',
+            'Irrigation': 'other',
+            'General': 'other'
+          };
+
+          processedData.category = categoryMapping[processedData.category] || 'other';
+        } else {
+          processedData.category = 'other'; // Default
+        }
+
+        // Ensure amount is a valid number
+        if (processedData.amount !== undefined) {
+          const amount = parseFloat(processedData.amount);
+          processedData.amount = isNaN(amount) ? 0 : amount;
+        } else {
+          processedData.amount = 0;
+        }
+
+        console.log('Processed cost data:', processedData);
+      }
+
+      await saveEventAsTask(cropId, userId, eventType, processedData);
       setActiveEventForm(null);
       setEventSuccess(`${t(eventType)} ${t('added_successfully')}`);
 

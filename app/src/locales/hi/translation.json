@@ -1,4 +1,60 @@
 {
+  "database_content": {
+    "crops": {
+      "crop_rice": "चावल",
+      "crop_wheat": "गेहूं",
+      "crop_corn": "मक्का",
+      "crop_cotton": "कपास",
+      "crop_sugarcane": "गन्ना",
+      "crop_potato": "आलू",
+      "crop_tomato": "टमाटर",
+      "crop_onion": "प्याज",
+      "crop_chilli": "मिर्च",
+      "crop_garlic": "लहसुन"
+    },
+    "categories": {
+      "category_irrigation": "सिंचाई",
+      "category_fertilization": "उर्वरक",
+      "category_pest_control": "कीट नियंत्रण",
+      "category_disease_treatment": "रोग उपचार",
+      "category_harvesting": "फसल कटाई",
+      "category_planting": "रोपण",
+      "category_pruning": "छंटाई",
+      "category_soil_management": "मिट्टी प्रबंधन",
+      "category_weather_response": "मौसम प्रतिक्रिया",
+      "category_general": "सामान्य"
+    },
+    "diseases": {
+      "disease_blast": "ब्लास्ट",
+      "disease_blight": "झुलसा",
+      "disease_rust": "किट्ट",
+      "disease_powdery_mildew": "चूर्णिल आसिता",
+      "disease_leaf_spot": "पत्ती धब्बा",
+      "disease_root_rot": "जड़ सड़न"
+    }
+  },
+  "fixed_task_descriptions": {
+    "water_your_crops_today": "आज अपनी फसलों को पानी दें",
+    "apply_fertilizer": "उर्वरक लगाएं",
+    "check_for_pests": "कीटों की जांच करें",
+    "harvest_your_crops": "अपनी फसलों की कटाई करें",
+    "prepare_soil_for_planting": "रोपण के लिए मिट्टी तैयार करें",
+    "plant_new_seeds": "नए बीज लगाएं",
+    "prune_excess_branches": "अतिरिक्त शाखाओं की छंटाई करें",
+    "monitor_soil_moisture": "मिट्टी की नमी की निगरानी करें",
+    "prepare_for_upcoming_rain": "आने वाली बारिश के लिए तैयार करें",
+    "check_crop_health": "फसल के स्वास्थ्य की जांच करें"
+  },
+  "task_descriptions": {
+    "water_your_crop": "अपने {crop} को पानी दें",
+    "apply_fertilizer_to_crop": "अपने {crop} में उर्वरक लगाएं",
+    "check_crop_for_pests": "अपने {crop} में कीटों की जांच करें",
+    "harvest_your_crop": "अपने {crop} की कटाई करें",
+    "prepare_soil_for_planting_crop": "{crop} लगाने के लिए मिट्टी तैयार करें",
+    "plant_new_crop_seeds": "नए {crop} के बीज लगाएं",
+    "prune_excess_branches_from_crop": "अपने {crop} की अतिरिक्त शाखाओं की छंटाई करें",
+    "protect_crop_from_frost": "अपने {crop} को पाले से बचाएं"
+  },
   "notifications": {
     "enableTitle": "सूचनाएं सक्षम करें",
     "enableDescription": "अपनी फसलों की सुरक्षा के लिए अपने क्षेत्र में रोग प्रकोप के बारे में समय पर अलर्ट प्राप्त करें।",
@@ -98,6 +154,25 @@
   "manual_watering": "मैनुअल सिंचाई",
   "rainwater_only": "केवल बारिश का पानी",
   "loamy": "लोमी",
+  "page_titles": {
+    "home": "होम",
+    "tasks": "फसल कार्य",
+    "weather": "मौसम",
+    "crops": "फसलें",
+    "disease_detection": "रोग पहचान",
+    "crop_recommendation": "फसल सिफारिशें",
+    "task_details": "कार्य विवरण",
+    "add_task": "नया कार्य जोड़ें",
+    "crop_details": "फसल विवरण",
+    "add_crop": "नई फसल जोड़ें",
+    "market_prices": "बाज़ार मूल्य",
+    "government_schemes": "सरकारी योजनाएँ",
+    "alerts": "अलर्ट",
+    "profile": "प्रोफाइल",
+    "settings": "सेटिंग्स",
+    "help": "मदद",
+    "about": "हमारे बारे में"
+  },
   "clay": "मिट्टी",
   "sandy": "रेतीला",
   "black_cotton": "काली कपास",

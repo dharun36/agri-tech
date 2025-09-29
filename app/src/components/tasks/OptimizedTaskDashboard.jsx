@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link, useParams } from 'react-router-dom';
 import { FaPlus, FaSeedling, FaChevronLeft, FaChevronRight, FaInfoCircle } from 'react-icons/fa';
 import OptimizedTaskList from './OptimizedTaskList';
-
+import { translateCropName } from '../../utils/dbTranslations';
+import i18n from '../../i18n';
 /**
  * Skeleton loader for crops section
  */
@@ -29,15 +30,15 @@ const OptimizedTaskDashboard = () => {
   const { t } = useTranslation(['translation', 'tasks']);
   const navigate = useNavigate();
   const location = useLocation();
+  const params = useParams();
 
   const [crops, setCrops] = useState([]);
   const [activeCropIndex, setActiveCropIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Parse URL params to see if a specific crop should be selected
-  const urlParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const cropIdFromUrl = urlParams.get('cropId');
+  // Get the cropId from URL params
+  const cropIdFromUrl = params.cropId;
 
   // Get active crop ID - used for task filtering and memory
   const activeCropId = useMemo(() => {
@@ -98,7 +99,7 @@ const OptimizedTaskDashboard = () => {
       // Update URL without full page reload
       const newCropId = crops[activeCropIndex - 1]?._id;
       if (newCropId) {
-        navigate(`/tasks?cropId=${newCropId}`, { replace: true });
+        navigate(`/tasks/${newCropId}`, { replace: true });
       }
     }
   };
@@ -111,7 +112,7 @@ const OptimizedTaskDashboard = () => {
       // Update URL without full page reload
       const newCropId = crops[activeCropIndex + 1]?._id;
       if (newCropId) {
-        navigate(`/tasks?cropId=${newCropId}`, { replace: true });
+        navigate(`/tasks/${newCropId}`, { replace: true });
       }
     }
   };
@@ -123,7 +124,7 @@ const OptimizedTaskDashboard = () => {
     // Update URL without full page reload
     const newCropId = crops[index]?._id;
     if (newCropId) {
-      navigate(`/tasks?cropId=${newCropId}`, { replace: true });
+      navigate(`/tasks/${newCropId}`, { replace: true });
     }
   };
 
@@ -177,8 +178,8 @@ const OptimizedTaskDashboard = () => {
             onClick={handlePrevCrop}
             disabled={activeCropIndex === 0}
             className={`p-2 rounded-full mr-2 ${activeCropIndex === 0
-                ? 'text-gray-300 cursor-not-allowed'
-                : 'text-gray-600 hover:bg-gray-100'
+              ? 'text-gray-300 cursor-not-allowed'
+              : 'text-gray-600 hover:bg-gray-100'
               }`}
             aria-label="Previous crop"
           >
@@ -187,19 +188,27 @@ const OptimizedTaskDashboard = () => {
 
           {/* Scrollable crop list */}
           <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar flex-grow">
-            {crops.map((crop, index) => (
-              <button
-                key={crop._id}
-                onClick={() => handleCropSelect(index)}
-                className={`px-4 py-3 rounded-lg flex items-center whitespace-nowrap transition-all ${index === activeCropIndex
+            {crops.map((crop, index) => {
+              // Log crop information for debugging
+              console.log(`Crop name from DB: "${crop.name}", Language: ${i18n.language}`);
+              const translatedName = translateCropName(crop.name, 'translation');
+              console.log(`Translated name: "${translatedName}"`);
+
+              return (
+                <button
+                  key={crop._id}
+                  onClick={() => handleCropSelect(index)}
+                  className={`px-4 py-3 rounded-lg flex items-center whitespace-nowrap transition-all ${index === activeCropIndex
                     ? 'bg-green-600 text-white font-medium shadow-md'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-              >
-                <FaSeedling className="mr-2" />
-                {crop.name}
-              </button>
-            ))}
+                    }`}
+                >
+                  <FaSeedling className="mr-2" />
+                  {/* Use translation utility for crop names */}
+                  {translatedName}
+                </button>
+              );
+            })}
           </div>
 
           {/* Next button */}
@@ -207,8 +216,8 @@ const OptimizedTaskDashboard = () => {
             onClick={handleNextCrop}
             disabled={activeCropIndex === crops.length - 1}
             className={`p-2 rounded-full ml-2 ${activeCropIndex === crops.length - 1
-                ? 'text-gray-300 cursor-not-allowed'
-                : 'text-gray-600 hover:bg-gray-100'
+              ? 'text-gray-300 cursor-not-allowed'
+              : 'text-gray-600 hover:bg-gray-100'
               }`}
             aria-label="Next crop"
           >
@@ -221,16 +230,18 @@ const OptimizedTaskDashboard = () => {
 
   return (
     <div className="container mx-auto p-4">
+      {/* Debug info - Remove in production */}
+      {/* <div className="bg-gray-100 p-2 mb-4 rounded text-xs">
+        <p><strong>Current Language:</strong> {i18n.language}</p>
+        <p><strong>Rice Translation:</strong> {i18n.t('database_content.crops.crop_rice')}</p>
+        <p><strong>Wheat Translation:</strong> {i18n.t('database_content.crops.crop_wheat')}</p>
+        <p><strong>Translation Path:</strong> database_content.crops.crop_NAME</p>
+      </div> */}
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{t('tasks', { ns: 'tasks' })}</h1>
 
-        <Link
-          to="/tasks/add"
-          className="bg-green-600 text-white px-4 py-2 rounded-md flex items-center hover:bg-green-700 transition"
-        >
-          <FaPlus className="mr-2" />
-          {t('add_new_task', { ns: 'tasks' })}
-        </Link>
+
       </div>
 
       {renderCropSelection()}
