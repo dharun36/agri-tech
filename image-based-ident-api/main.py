@@ -6,6 +6,8 @@ from io import BytesIO
 from PIL import Image
 from pathlib import Path
 import logging
+import os
+import uvicorn
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("plant-disease-api")
@@ -100,5 +102,8 @@ async def predict(
 
     return {"class_name": class_name, "class_index": class_index, "confidence": confidence}
 
-# if __name__ == "__main__":
-#     uvicorn.run(app, host='localhost', port=10000)
+if __name__ == "__main__":
+    # When running directly (or in many hosting environments), bind to 0.0.0.0
+    # Use PORT environment variable if provided by the host, otherwise default to 8000
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host='0.0.0.0', port=port)
