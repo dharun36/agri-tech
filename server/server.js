@@ -190,5 +190,7 @@ schedule.scheduleJob('0 5 * * *', async function () {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Bind host explicitly so PaaS port scans detect the listening socket
+const HOST = process.env.HOST || '0.0.0.0';
+server.listen(PORT, HOST, () => console.log(`Server running on ${HOST}:${PORT}`));
 
