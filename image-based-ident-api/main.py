@@ -14,6 +14,7 @@ from io import BytesIO
 from PIL import Image
 from pathlib import Path
 import logging
+from datetime import datetime
 import os
 import uvicorn
 
@@ -54,17 +55,24 @@ logger.info(f"Model path set to {model_path}")
 # We'll load the model asynchronously on startup so the process can bind a port
 # even if the saved_model is not present at deploy time.
 MODEL = None
+MODEL_ERROR = None
+MODEL_LOADED_AT = None
 
 
 def load_model_sync(path: str):
     """Blocking model load. Intended to run in a thread/executor."""
-    global MODEL
+    global MODEL, MODEL_LOADED_AT, MODEL_ERROR
     try:
         logger.info(f"Attempting to load model from {path}")
-        MODEL = tf.keras.layers.TFSMLayer(path, call_endpoint='serving_default')
+        loaded = tf.keras.layers.TFSMLayer(path, call_endpoint='serving_default')
+        MODEL = loaded
+        # record successful load
+        MODEL_ERROR = None
+        MODEL_LOADED_AT = datetime.utcnow().isoformat() + 'Z'
         logger.info("Model loaded successfully.")
     except Exception as e:
         MODEL = None
+        MODEL_ERROR = str(e)
         logger.exception(f"Failed to load model from {path}: {e}")
 
 
@@ -125,6 +133,28 @@ async def startup_event():
 @app.get('/ping')
 async def ping():
     return {"message": "ok"}
+
+
+@app.get('/model-status')
+async def model_status():
+    """Return model readiness and environment info.
+
+    Useful for load balancer readiness probes and debugging.
+    """
+    model_exists = Path(model_path).exists()
+    try:
+        gpu_devices = tf.config.list_physical_devices('GPU')
+        gpu_available = len(gpu_devices) > 0
+    except Exception:
+        gpu_available = False
+
+    return {
+        "loaded": MODEL is not None,
+        "model_exists": model_exists,
+        "gpu_available": gpu_available,
+        "loaded_at": MODEL_LOADED_AT,
+        "error": MODEL_ERROR,
+    }
 
 def read_file_as_image(data) -> np.ndarray:
     try:
