@@ -42,9 +42,77 @@ CLASS_NAMES = [
 ]
 
 model_path = str(Path(__file__).parent.absolute() / "saved_model")
-logger.info(f"Loading model from {model_path}")
-MODEL = tf.keras.layers.TFSMLayer(model_path, call_endpoint='serving_default')
-logger.info("Model loaded.")
+logger.info(f"Model path set to {model_path}")
+# We'll load the model asynchronously on startup so the process can bind a port
+# even if the saved_model is not present at deploy time.
+MODEL = None
+
+
+def load_model_sync(path: str):
+    """Blocking model load. Intended to run in a thread/executor."""
+    global MODEL
+    try:
+        logger.info(f"Attempting to load model from {path}")
+        MODEL = tf.keras.layers.TFSMLayer(path, call_endpoint='serving_default')
+        logger.info("Model loaded successfully.")
+    except Exception as e:
+        MODEL = None
+        logger.exception(f"Failed to load model from {path}: {e}")
+
+
+def ensure_saved_model_from_url(path: str, url: str) -> bool:
+    """If the saved_model directory is missing and a MODEL_URL is provided,
+    download and unpack it. Returns True if model directory exists after this.
+    """
+    try:
+        p = Path(path)
+        if p.exists():
+            return True
+        # download
+        import urllib.request
+        import tempfile
+        import shutil
+
+        logger.info(f"Downloading model archive from {url}")
+        tmpdir = Path(tempfile.mkdtemp(prefix="model_dl_"))
+        archive_path = tmpdir / "model_archive"
+        urllib.request.urlretrieve(url, str(archive_path))
+        # Try to unpack common archive formats
+        try:
+            shutil.unpack_archive(str(archive_path), extract_dir=str(p))
+        except Exception:
+            # If it's not an archive, maybe the server provided an already unpacked saved_model tar or folder zip
+            # Try moving the downloaded file into place
+            p.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(archive_path), str(p / archive_path.name))
+
+        logger.info(f"Model downloaded and available at {p}")
+        return p.exists()
+    except Exception as e:
+        logger.exception(f"Failed to download or prepare model from {url}: {e}")
+        return False
+
+
+import asyncio
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Trigger background model loading so the server can start serving health checks
+    and quickly bind a port even if the model is large or missing at deploy time."""
+    model_dir = model_path
+    model_url = os.environ.get("MODEL_URL")
+
+    if not Path(model_dir).exists() and model_url:
+        # Attempt to download model in background (best-effort)
+        loop = asyncio.get_running_loop()
+        ok = await loop.run_in_executor(None, ensure_saved_model_from_url, model_dir, model_url)
+        if not ok:
+            logger.warning("Model not present after attempted download from MODEL_URL")
+
+    # Start blocking load in executor so startup doesn't block indefinitely
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(None, load_model_sync, model_dir)
 
 @app.get('/ping')
 async def ping():
@@ -77,7 +145,16 @@ async def predict(
 
     img = read_file_as_image(raw)
 
-    predictions = MODEL(img)
+    # Ensure model is loaded
+    if MODEL is None:
+        # Model not available yet
+        raise HTTPException(status_code=503, detail="Model is not loaded yet. Try again later.")
+
+    try:
+        predictions = MODEL(img)
+    except Exception as e:
+        logger.exception(f"Error running prediction: {e}")
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
     # Extract probabilities
     if isinstance(predictions, dict):

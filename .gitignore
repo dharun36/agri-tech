@@ -24,11 +24,12 @@ build/
 
 # Model files (if you want to ignore large model binaries)
 *.mar
-*.pb
 *.h5
 *.pth
 *.pt
 *.ckpt
+image-based-ident-api/venv/
+
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
