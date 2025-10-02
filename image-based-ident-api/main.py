@@ -1,5 +1,13 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import os
+# Prevent TensorFlow from attempting to initialize CUDA / GPU drivers on hosts
+# that do not have compatible NVIDIA drivers or GPU access (common on PaaS).
+# Setting CUDA_VISIBLE_DEVICES to empty string makes TF invisible to GPUs and
+# avoids calls to cuInit which produce errors when drivers are absent.
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
+# Reduce TensorFlow logging verbosity (optional)
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
 import numpy as np
 import tensorflow as tf
 from io import BytesIO
