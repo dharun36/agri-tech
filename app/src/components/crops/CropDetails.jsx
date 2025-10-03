@@ -467,7 +467,7 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
                 {t('field_location')}
               </div>
               <div className="text-lg">
-                {crop.locationName || crop.fieldId || 'N/A'}
+                {crop.locationName || crop.location || crop.fieldLocation?.name || crop.fieldId || 'N/A'}
               </div>
             </div>
 

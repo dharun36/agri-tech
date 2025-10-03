@@ -122,9 +122,8 @@ const LightThemeHome = () => {
   // Crop modal state
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
-  const [isCropDetailsModalOpen, setIsCropDetailsModalOpen] = useState(false);
+  // Removed: isCropDetailsModalOpen, selectedCropData - now using page navigation instead
   const [currentCropId, setCurrentCropId] = useState(null);
-  const [selectedCropData, setSelectedCropData] = useState(null);
   const [expense, setExpense] = useState({ description: '', category: 'Fertilizer', amount: 0 });
   const [cropLoading, setCropLoading] = useState(false);
   const [cropError, setCropError] = useState('');
@@ -588,44 +587,14 @@ const LightThemeHome = () => {
     }
   };
 
-  // Open crop details modal
-  const openCropDetailsModal = async (cropId) => {
-    setCurrentCropId(cropId);
-    setCropLoading(true);
-    setIsCropDetailsModalOpen(true);
-
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      // Fetch the crop details
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops/${cropId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!res.ok) throw new Error('Failed to fetch crop details');
-
-      const cropData = await res.json();
-      setSelectedCropData(cropData);
-    } catch (err) {
-      console.error('Error fetching crop details:', err);
-      setCropError('Failed to fetch crop details');
-    } finally {
-      setCropLoading(false);
-    }
+  // Navigate to crop details page
+  const openCropDetailsModal = (cropId) => {
+    navigate(`/crops/${cropId}`);
   };
 
-  // Close crop details modal
+  // Close crop details modal (kept for backward compatibility, but not used)
   const closeCropDetailsModal = () => {
-    setIsCropDetailsModalOpen(false);
-    setCurrentCropId(null);
-    setSelectedCropData(null);
-    setCropError('');
+    // No longer needed since we navigate to a page
   };
 
   // Remove crop from backend
@@ -1002,30 +971,7 @@ const LightThemeHome = () => {
           />
         )}
 
-        {/* Crop Details Modal */}
-        {isCropDetailsModalOpen && selectedCropData && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-            <div className="bg-white rounded-lg w-full max-w-4xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-semibold">{selectedCropData.name}</h2>
-                <button
-                  onClick={closeCropDetailsModal}
-                  className="text-gray-500 hover:text-gray-700 focus:outline-none"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </button>
-              </div>
-
-              {/* Render the CropDetails component inline */}
-              <CropDetails
-                initialCropData={selectedCropData}
-                cropId={currentCropId}
-              />
-            </div>
-          </div>
-        )}
+        {/* Crop Details Modal - Removed: Now navigates to /crops/:id page instead */}
       </div>
     </div>
   );

@@ -28,6 +28,7 @@ const cropImages = {
   Sunflower: "https://images.unsplash.com/photo-1470509037663-253afd7f0f51?w=400&h=300&fit=crop&auto=format",
   Mustard: "https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=300&fit=crop&auto=format",
   Cotton: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTAq5Yrk5FmP78lUWRjQ7IVhMm0b_1BtPV07Q&s',
+  Tomato: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDAGJTHC_zTRWAO4-Wlon3MPQvkGqQbLPRfA&s",
   Jute: "https://images.unsplash.com/photo-1571833043137-5a3b1d7beb66?w=400&h=300&fit=crop&auto=format",
   Sugarcane: "https://www.mahagro.com/cdn/shop/articles/iStock_000063947343_Medium_4e1c882b-faf0-4487-b45b-c2b557d32442.jpg?v=1541408129",
   Potato: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&h=300&fit=crop&auto=format",

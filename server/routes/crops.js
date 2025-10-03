@@ -70,7 +70,8 @@ router.post('/', async (req, res) => {
       name, status, variety, plantingDate, harvestDate,
       seedSource, plantingMethod, fieldId, location,
       soilType, previousCrop, companionCrops, trapCrops,
-      beneficialPlants, notes, initialCost
+      beneficialPlants, notes, initialCost, irrigationType,
+      growthDays, fieldLocation
     } = req.body;
 
     if (!name) return res.status(400).json({ message: 'Name required' });
@@ -88,10 +89,32 @@ router.post('/', async (req, res) => {
     if (seedSource) cropData.seedSource = seedSource;
     if (plantingMethod) cropData.plantingMethod = plantingMethod;
     if (fieldId) cropData.fieldId = fieldId;
+    if (irrigationType) cropData.irrigationType = irrigationType;
+    if (growthDays) cropData.growthDays = Number(growthDays);
 
-    // Handle flattened location structure
-    if (location) {
-      if (location.name) cropData.locationName = location.name;
+    // Handle location as a simple string (alternative to complex location object)
+    if (typeof location === 'string') {
+      cropData.location = location;
+      cropData.locationName = location;
+    }
+
+    // Handle fieldLocation object (from AI-generated data)
+    if (fieldLocation) {
+      cropData.fieldLocation = fieldLocation;
+      if (fieldLocation.latitude) cropData.locationLatitude = fieldLocation.latitude;
+      if (fieldLocation.longitude) cropData.locationLongitude = fieldLocation.longitude;
+      if (fieldLocation.name) {
+        cropData.locationName = fieldLocation.name;
+        cropData.location = fieldLocation.name;
+      }
+    }
+
+    // Handle flattened location structure (complex object)
+    if (location && typeof location === 'object') {
+      if (location.name) {
+        cropData.locationName = location.name;
+        cropData.location = location.name;
+      }
       if (location.coordinates) {
         if (location.coordinates.latitude) cropData.locationLatitude = location.coordinates.latitude;
         if (location.coordinates.longitude) cropData.locationLongitude = location.coordinates.longitude;

@@ -76,6 +76,7 @@ const cropSchema = new mongoose.Schema({
   fieldId: String,
   // Use a flat structure for location to avoid GeoJSON schema conflicts
   locationName: String,
+  location: String, // Alternative field for location name
   locationLatitude: Number,
   locationLongitude: Number,
   locationArea: Number,
@@ -86,6 +87,15 @@ const cropSchema = new mongoose.Schema({
   },
   soilType: String,
   previousCrop: String,
+  irrigationType: String, // Added: Drip, Sprinkler, Flood, Manual, Rainwater
+  growthDays: Number, // Added: Expected days from planting to harvest
+
+  // Field location object (alternative structure for compatibility)
+  fieldLocation: {
+    latitude: Number,
+    longitude: Number,
+    name: String
+  },
 
   // Companion planting and trap crops
   companionCrops: [String],
