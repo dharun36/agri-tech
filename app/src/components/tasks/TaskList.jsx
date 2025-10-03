@@ -126,7 +126,7 @@ const TaskList = ({ cropId = null }) => {
       }
 
       // 1. Fetch crop data
-      const cropRes = await fetch(`http://localhost:5000/api/crops/${cropId}`, {
+      const cropRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops/${cropId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

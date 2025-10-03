@@ -237,7 +237,7 @@ const OptimizedTaskList = ({ cropId = null }) => {
       toast.info(t('generating_ai_recommendations', { ns: 'tasks' }));
 
       // Get crop details to use in the prompt
-      const cropRes = await fetch(`http://localhost:5000/api/crops/${cropId}`, {
+      const cropRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops/${cropId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
