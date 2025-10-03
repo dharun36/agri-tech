@@ -48,7 +48,7 @@ CLASS_NAMES = [
     "Tomato___Tomato_mosaic_virus", "Tomato___healthy"
 ]
 
-model_path = str(Path(__file__).parent.absolute() / "saved_model")
+model_path = str(Path(__file__).parent.absolute() / "model.tflite")
 logger.info(f"Model path set to {model_path}")
 # We'll load the model asynchronously on startup so the process can bind a port
 # even if the saved_model is not present at deploy time.
@@ -60,6 +60,14 @@ MODEL_LOADED_AT = None
 def load_model_sync(path: str):
     """Blocking model load. Intended to run in a thread/executor."""
     global MODEL, MODEL_LOADED_AT, MODEL_ERROR
+    
+    # Safety check: don't try to load .tflite files with this function
+    if path.endswith('.tflite'):
+        MODEL = None
+        MODEL_ERROR = "Cannot load .tflite file with load_model_sync. Use load_tflite_sync instead."
+        logger.error(MODEL_ERROR)
+        return
+    
     try:
         logger.info(f"Attempting to load SavedModel from {path}")
         # Import TensorFlow here so we don't pay the memory cost on import time
@@ -172,33 +180,57 @@ import asyncio
 async def startup_event():
     """Trigger background model loading so the server can start serving health checks
     and quickly bind a port even if the model is large or missing at deploy time."""
-    model_dir = model_path
+    
+    # ALWAYS prefer TFLite model first (lightweight, low memory usage)
+    # Check for model.tflite in the same directory as this script
+    script_dir = Path(__file__).parent
+    tflite_path = script_dir / "model.tflite"
+    
+    # Allow override via environment variable
+    tflite_model_env = os.environ.get("TFLITE_MODEL")
     model_url = os.environ.get("MODEL_URL")
-
-    # If a TFLite model path/url is provided we will prefer that since
-    # TFLite models are typically much smaller and use far less RAM.
-    tflite_model = os.environ.get("TFLITE_MODEL")
-
-    if tflite_model:
-        # If TFLITE_MODEL is a URL, download it into the model_dir
+    
+    # Priority 1: Use local model.tflite if it exists
+    if tflite_path.exists():
+        logger.info(f"✅ Found local TFLite model at {tflite_path}, loading...")
+        loop = asyncio.get_running_loop()
+        loop.run_in_executor(None, load_tflite_sync, str(tflite_path))
+        return
+    
+    # Priority 2: Check TFLITE_MODEL environment variable
+    if tflite_model_env:
+        logger.info(f"TFLITE_MODEL environment variable set to: {tflite_model_env}")
         from urllib.parse import urlparse
-        parsed = urlparse(tflite_model)
+        parsed = urlparse(tflite_model_env)
+        
         if parsed.scheme in ('http', 'https'):
-            ok = await asyncio.get_running_loop().run_in_executor(None, ensure_saved_model_from_url, model_dir, tflite_model)
-            if ok:
-                # Save the downloaded file location
-                tflite_local = Path(model_dir) / Path(tflite_model).name
+            # Download TFLite model from URL
+            logger.info(f"Downloading TFLite model from URL...")
+            ok = await asyncio.get_running_loop().run_in_executor(
+                None, ensure_saved_model_from_url, str(tflite_path), tflite_model_env
+            )
+            if ok and tflite_path.exists():
+                logger.info(f"✅ Downloaded TFLite model to {tflite_path}")
+                loop = asyncio.get_running_loop()
+                loop.run_in_executor(None, load_tflite_sync, str(tflite_path))
+                return
             else:
-                tflite_local = None
+                logger.warning("Failed to download TFLite model from URL")
         else:
-            tflite_local = Path(tflite_model)
-
-        if tflite_local and tflite_local.exists():
-            # Load TFLite in background
-            loop = asyncio.get_running_loop()
-            loop.run_in_executor(None, load_tflite_sync, str(tflite_local))
-            return
-
+            # Use path from environment variable
+            tflite_env_path = Path(tflite_model_env)
+            if tflite_env_path.exists():
+                logger.info(f"✅ Using TFLite model from env var: {tflite_env_path}")
+                loop = asyncio.get_running_loop()
+                loop.run_in_executor(None, load_tflite_sync, str(tflite_env_path))
+                return
+            else:
+                logger.warning(f"TFLITE_MODEL path does not exist: {tflite_env_path}")
+    
+    # Priority 3: Fall back to SavedModel (not recommended for low-memory environments)
+    model_dir = model_path
+    logger.warning("⚠️ TFLite model not found, falling back to SavedModel (high memory usage!)")
+    
     if not Path(model_dir).exists() and model_url:
         # Attempt to download model in background (best-effort)
         loop = asyncio.get_running_loop()
