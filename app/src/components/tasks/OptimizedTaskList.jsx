@@ -99,7 +99,7 @@ const OptimizedTaskList = ({ cropId = null }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/status`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'}/api/tasks/${taskId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ const OptimizedTaskList = ({ cropId = null }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/status`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'}/api/tasks/${taskId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -248,7 +248,7 @@ const OptimizedTaskList = ({ cropId = null }) => {
       const crop = await cropRes.json();
 
       // Get existing tasks to avoid duplication
-      const tasksRes = await fetch(`http://localhost:5000/api/tasks?cropId=${cropId}`, {
+      const tasksRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks?cropId=${cropId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

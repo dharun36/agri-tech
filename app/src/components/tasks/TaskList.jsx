@@ -137,7 +137,7 @@ const TaskList = ({ cropId = null }) => {
       const cropData = await cropRes.json();
 
       // 2. Fetch previous activities for this crop
-      const activitiesRes = await fetch(`http://localhost:5000/api/activities/crop/${cropId}?limit=10`, {
+      const activitiesRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/activities/crop/${cropId}?limit=10`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -217,7 +217,7 @@ const TaskList = ({ cropId = null }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/status`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks/${taskId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -248,7 +248,7 @@ const TaskList = ({ cropId = null }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/status`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks/${taskId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

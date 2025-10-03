@@ -65,7 +65,7 @@ const saveEventToCrop = async (cropId, eventType, eventData, token) => {
         tags: eventData.tags || []
       };
 
-      await axios.post(`http://localhost:5000/api/activities`, activityData, {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/activities`, activityData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

@@ -115,7 +115,7 @@ const OptimizedTaskDetail = () => {
         return;
       }
 
-      const res = await fetch(`http://localhost:5000/api/tasks/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/tasks/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -170,7 +170,7 @@ const OptimizedTaskDetail = () => {
         return;
       }
 
-      const res = await fetch(`http://localhost:5000/api/tasks/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/tasks/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -206,7 +206,7 @@ const OptimizedTaskDetail = () => {
         return;
       }
 
-      const res = await fetch(`http://localhost:5000/api/tasks/${id}/status`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/tasks/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -246,7 +246,7 @@ const OptimizedTaskDetail = () => {
         return;
       }
 
-      const res = await fetch(`http://localhost:5000/api/tasks/${id}/status`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/tasks/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -290,7 +290,7 @@ const OptimizedTaskDetail = () => {
         return;
       }
 
-      const res = await fetch(`http://localhost:5000/api/tasks/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/tasks/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
