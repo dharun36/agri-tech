@@ -13,6 +13,7 @@ body {
 body {
   position: relative;
   min-height: 100%;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
 }
 
 #root {
@@ -24,5 +25,20 @@ body {
 * {
   padding: 0px;
   margin: 0px;
-  
+  box-sizing: border-box;
+}
+
+/* Reserve avatar size to avoid layout shifts */
+.avatar-placeholder {
+  width: 80px;
+  height: 80px;
+  min-width: 80px;
+  min-height: 80px;
+}
+
+/* Ensure images don't cause layout shifts */
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }

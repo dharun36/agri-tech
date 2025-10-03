@@ -49,6 +49,8 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/crops', require('./routes/crops'));
 app.use('/api/disease', require('./routes/disease'));
 app.use('/api/activities', require('./routes/activities'));
+// Market prices proxy
+app.use('/api/market', require('./routes/market'));
 // Use optimized task routes when specified in environment, otherwise use regular routes
 if (process.env.USE_OPTIMIZED_ROUTES === 'true') {
   console.log('Using optimized task routes');
@@ -193,4 +195,19 @@ const PORT = process.env.PORT || 5000;
 // Bind host explicitly so PaaS port scans detect the listening socket
 const HOST = process.env.HOST || '0.0.0.0';
 server.listen(PORT, HOST, () => console.log(`Server running on ${HOST}:${PORT}`));
+// If a frontend build exists in ../app/dist or ../app/dist, serve it (SPA fallback)
+const fs = require('fs');
+const pathStatic = require('path');
+const possibleBuildDirs = [pathStatic.join(__dirname, '..', 'app', 'dist'), pathStatic.join(__dirname, '..', 'app', 'build'), pathStatic.join(__dirname, '..', 'app', 'dist')];
+const existing = possibleBuildDirs.find(d => fs.existsSync(d));
+if (existing) {
+  console.log('Serving frontend from', existing);
+  app.use(express.static(existing));
+  // SPA fallback: return index.html for any unknown GET route
+  app.get('*', (req, res) => {
+    const indexPath = pathStatic.join(existing, 'index.html');
+    if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
+    return res.status(404).send('Not found');
+  });
+}
 
