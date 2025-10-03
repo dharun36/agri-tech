@@ -4,7 +4,10 @@ import os
 # Reduce TensorFlow logging verbosity (optional)
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
 import numpy as np
-import tensorflow as tf
+# NOTE: TensorFlow import is deferred until we actually need it. Importing
+# tensorflow at module import time can use a lot of memory and cause the
+# process to be killed on small instances (Render free tier 512MB). We'll
+# import inside the loader so the FastAPI app can bind a port quickly.
 from io import BytesIO
 from PIL import Image
 from pathlib import Path
@@ -58,17 +61,75 @@ def load_model_sync(path: str):
     """Blocking model load. Intended to run in a thread/executor."""
     global MODEL, MODEL_LOADED_AT, MODEL_ERROR
     try:
-        logger.info(f"Attempting to load model from {path}")
-        loaded = tf.keras.layers.TFSMLayer(path, call_endpoint='serving_default')
-        MODEL = loaded
-        # record successful load
-        MODEL_ERROR = None
-        MODEL_LOADED_AT = datetime.utcnow().isoformat() + 'Z'
-        logger.info("Model loaded successfully.")
+        logger.info(f"Attempting to load SavedModel from {path}")
+        # Import TensorFlow here so we don't pay the memory cost on import time
+        import importlib
+        tf = importlib.import_module('tensorflow')
+
+        # Prefer loading as a saved_model (tf.saved_model.load) or keras model
+        # depending on what's present. Use saved_model.load which is generally
+        # lighter than full Keras model wrapping.
+        try:
+            loaded = tf.saved_model.load(path)
+            MODEL = loaded
+            MODEL_ERROR = None
+            MODEL_LOADED_AT = datetime.utcnow().isoformat() + 'Z'
+            logger.info("SavedModel loaded successfully via tf.saved_model.load().")
+            return
+        except Exception as e_saved:
+            logger.warning(f"tf.saved_model.load failed: {e_saved}; trying tf.keras.models.load_model()")
+
+        # Try Keras load as a fallback
+        try:
+            loaded = tf.keras.models.load_model(path)
+            MODEL = loaded
+            MODEL_ERROR = None
+            MODEL_LOADED_AT = datetime.utcnow().isoformat() + 'Z'
+            logger.info("Model loaded successfully via tf.keras.models.load_model().")
+            return
+        except Exception as e_keras:
+            raise RuntimeError(f"Failed to load model via saved_model ({e_saved}) and keras.load_model ({e_keras})")
     except Exception as e:
         MODEL = None
         MODEL_ERROR = str(e)
         logger.exception(f"Failed to load model from {path}: {e}")
+
+
+def load_tflite_sync(tflite_path: str):
+    """Load a TFLite model and wrap a predict function around it."""
+    global MODEL, MODEL_LOADED_AT, MODEL_ERROR
+    try:
+        logger.info(f"Attempting to load TFLite model from {tflite_path}")
+        # Prefer the lightweight tflite_runtime if available
+        try:
+            from tflite_runtime.interpreter import Interpreter
+        except Exception:
+            # Fallback to TensorFlow's lite interpreter if tensorflow is available
+            import importlib
+            tf = importlib.import_module('tensorflow')
+            Interpreter = tf.lite.Interpreter
+
+        interp = Interpreter(model_path=str(tflite_path))
+        interp.allocate_tensors()
+
+        input_details = interp.get_input_details()
+        output_details = interp.get_output_details()
+
+        def predict_fn(np_input):
+            # np_input expected shape (1, H, W, C) and dtype float32
+            interp.set_tensor(input_details[0]['index'], np_input.astype(np.float32))
+            interp.invoke()
+            out = interp.get_tensor(output_details[0]['index'])
+            return out
+
+        MODEL = predict_fn
+        MODEL_ERROR = None
+        MODEL_LOADED_AT = datetime.utcnow().isoformat() + 'Z'
+        logger.info("TFLite model loaded and ready (predict function available).")
+    except Exception as e:
+        MODEL = None
+        MODEL_ERROR = str(e)
+        logger.exception(f"Failed to load TFLite model from {tflite_path}: {e}")
 
 
 def ensure_saved_model_from_url(path: str, url: str) -> bool:
@@ -113,6 +174,30 @@ async def startup_event():
     and quickly bind a port even if the model is large or missing at deploy time."""
     model_dir = model_path
     model_url = os.environ.get("MODEL_URL")
+
+    # If a TFLite model path/url is provided we will prefer that since
+    # TFLite models are typically much smaller and use far less RAM.
+    tflite_model = os.environ.get("TFLITE_MODEL")
+
+    if tflite_model:
+        # If TFLITE_MODEL is a URL, download it into the model_dir
+        from urllib.parse import urlparse
+        parsed = urlparse(tflite_model)
+        if parsed.scheme in ('http', 'https'):
+            ok = await asyncio.get_running_loop().run_in_executor(None, ensure_saved_model_from_url, model_dir, tflite_model)
+            if ok:
+                # Save the downloaded file location
+                tflite_local = Path(model_dir) / Path(tflite_model).name
+            else:
+                tflite_local = None
+        else:
+            tflite_local = Path(tflite_model)
+
+        if tflite_local and tflite_local.exists():
+            # Load TFLite in background
+            loop = asyncio.get_running_loop()
+            loop.run_in_executor(None, load_tflite_sync, str(tflite_local))
+            return
 
     if not Path(model_dir).exists() and model_url:
         # Attempt to download model in background (best-effort)
