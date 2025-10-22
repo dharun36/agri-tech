@@ -1,4 +1,4 @@
-# 🌾 AgriTech - Smart Agricultural Management Platform
+# AgriTech - Smart Agricultural Management Platform
 
 <div align="center">
 
@@ -18,7 +18,7 @@
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [About the Project](#-about-the-project)
 - [Key Features](#-key-features)
@@ -33,23 +33,23 @@
 
 ---
 
-## 🌟 About the Project
+## About the Project
 
 AgriTech is a comprehensive agricultural platform designed to help farmers make data-driven decisions. From AI-powered plant disease detection to real-time weather forecasting and market price tracking, AgriTech provides all the tools modern farmers need in one place.
 
 ### Why AgriTech?
 
-- **🎯 Farmer-Centric Design** - Built with input from real farmers
-- **📱 Mobile-First** - Progressive Web App works on any device
-- **🌍 Accessible** - Multi-language support (English, Hindi, Tamil)
-- **⚡ Fast & Lightweight** - Optimized for low-bandwidth connections
-- **💰 Cost-Effective** - Deployed on free-tier services
+- ** Farmer-Centric Design** - Built with input from real farmers
+- ** Mobile-First** - Progressive Web App works on any device
+- ** Accessible** - Multi-language support (English, Hindi, Tamil)
+- ** Fast & Lightweight** - Optimized for low-bandwidth connections
+- ** Cost-Effective** - Deployed on free-tier services
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-### 🔍 AI Plant Disease Detection
+### AI Plant Disease Detection
 Upload photos of your plants and get instant disease identification using a TensorFlow Lite model trained on 38+ plant diseases. Includes treatment recommendations and confidence scores.
 
 **Supported Plants:**
@@ -59,45 +59,45 @@ Upload photos of your plants and get instant disease identification using a Tens
 - Raspberries, Soybeans, Squash
 - Strawberries, Tomatoes, and more!
 
-### 🌱 Smart Crop Recommendations
+### Smart Crop Recommendations
 Get personalized crop suggestions based on:
 - Soil type and pH levels
 - Climate conditions
 - Geographic location
 - Historical yield data
 
-### 🌤️ Weather Analysis & Forecasts
+### Weather Analysis & Forecasts
 - Real-time weather data from Tomorrow.io API
 - 7-day forecasts with hourly breakdowns
 - Agricultural weather insights (frost alerts, rain predictions)
 - Temperature, humidity, wind speed tracking
 
-### 📊 Market Prices
+### Market Prices
 - Live commodity prices for major crops
 - Historical price trends
 - Best time to sell recommendations
 - Regional market variations
 
-### 🏛️ Government Schemes
+### Government Schemes
 Access information about:
 - Agricultural subsidies
 - Insurance programs
 - Training initiatives
 - Financial assistance schemes
 
-### ✅ Task Management
+### Task Management
 - Create and track farming activities
 - Set reminders for planting, harvesting, spraying
 - Calendar view of all tasks
 - Task recommendations based on crop type
 
-### 👤 User Profiles & Authentication
+### User Profiles & Authentication
 - Secure JWT-based authentication
 - Profile management
 - Farm details tracking
 - Activity history
 
-### 🌐 Multi-Language Support
+### Multi-Language Support
 - English (en)
 - Hindi (hi)
 - Tamil (ta)
@@ -105,7 +105,7 @@ Access information about:
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 - **Framework:** React 18.3 with Vite
@@ -141,7 +141,7 @@ Access information about:
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 AgriTech/
@@ -204,7 +204,7 @@ AgriTech/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -264,7 +264,7 @@ The AI service will run on `http://localhost:8000`
 
 ---
 
-## 🌐 Deployment
+## Deployment
 
 ### Frontend (Render Static Site)
 
@@ -303,7 +303,7 @@ The AI service will run on `http://localhost:8000`
 
 ---
 
-## 🔐 Environment Variables
+## Environment Variables
 
 ### Frontend (`app/.env`)
 
@@ -342,7 +342,7 @@ No environment variables needed! The service automatically uses the local `model
 
 ---
 
-## 📚 API Documentation
+## API Documentation
 
 ### Backend API (Node.js)
 
@@ -404,7 +404,7 @@ POST /predict
 
 ---
 
-## 🎨 Features in Detail
+## Features in Detail
 
 ### Disease Detection Flow
 
@@ -432,7 +432,7 @@ POST /predict
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Here's how you can help:
 
@@ -452,19 +452,19 @@ Contributions are welcome! Here's how you can help:
 
 ---
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 👥 Authors
+## Authors
 
 **Dharun** - [@dharun36](https://github.com/dharun36)
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Plant disease dataset from PlantVillage
 - Weather data from Tomorrow.io
