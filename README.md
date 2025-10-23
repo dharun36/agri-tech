@@ -2,7 +2,6 @@
 
 <div align="center">
 
-![AgriTech Banner](app/public/hero.jpg)
 
 **An intelligent agricultural management system that empowers farmers with AI-driven insights, disease detection, and comprehensive farm management tools.**
 
