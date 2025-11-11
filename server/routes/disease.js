@@ -4,7 +4,8 @@ const router = express.Router();
 const mongoose = require('mongoose');
 // node-fetch v3 is ESM only - either use import or downgrade to v2
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-const { sendMail } = require('../utils/mailer');
+// Use enhanced mailer which provides SMTP + HTTP (SendGrid/Mailgun) fallbacks
+const { sendMail, testConnection } = require('../utils/mailer-enhanced');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
@@ -34,15 +35,18 @@ router.post('/report', async (req, res) => {
     return res.status(400).json({ message: 'Disease and location required' });
   }
   try {
+    console.log('🔍 Disease report received:', { disease, location: location.coordinates });
 
     const usersNearby = await User.find({
       location: {
         $near: {
           $geometry: location,
-          $maxDistance: 10000
+          $maxDistance: 500000  // 500km radius for testing (was 10000)
         }
       }
     });
+
+    console.log(`📍 Found ${usersNearby.length} users within 500km of [${location.coordinates.join(', ')}]`);
 
     // Create in-app notifications for each user
     let alerts = [];
@@ -74,6 +78,7 @@ router.post('/report', async (req, res) => {
 
       // Send email notification (non-blocking)
       if (user.email) {
+        console.log(`📧 Sending email to: ${user.email}`);
         sendMail({
           to: user.email,
           subject: `Disease Alert: ${disease} detected in your area`,
@@ -346,7 +351,7 @@ router.post('/send-summary', async (req, res) => {
       </div>
     `;
 
-    const result = await sendEnhancedMail({
+    const result = await sendMail({
       to: email,
       subject: `📊 AgriTech: Disease Alert Summary (${alerts.length} alerts)`,
       text: emailText,

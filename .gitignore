@@ -29,7 +29,7 @@ build/
 *.pt
 *.ckpt
 image-based-ident-api/venv/
-
+image-based-ident-api/__pycache__
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/

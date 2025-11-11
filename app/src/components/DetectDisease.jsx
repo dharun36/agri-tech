@@ -120,6 +120,14 @@ function DetectDisease() {
       }
 
       if (userLocation) {
+        console.log('Reporting disease to:', `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/disease/report`);
+        console.log('Report data:', {
+          disease: analysis.detected,
+          description: analysis.description,
+          location: userLocation,
+          locationType: locationType
+        });
+
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/disease/report`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -136,19 +144,30 @@ function DetectDisease() {
           })
         });
 
+        console.log('Report response status:', response.status);
+        const responseText = await response.text();
+        console.log('Report response:', responseText);
+
         if (response.ok) {
           toast.success(t('disease_reported_successfully') || 'Disease reported successfully! Nearby farmers will be notified.');
           setReportSubmitted(true); // Mark report as submitted
         } else {
-          toast.error(t('report_failed') || 'Failed to report disease. Please try again.');
+          console.error('Report failed:', responseText);
+          toast.error(t('report_failed') || `Failed to report disease: ${responseText}`);
         }
       } else {
         toast.error(t('location_required') || 'Location access required to report disease outbreak.');
       }
     } catch (error) {
       console.error('Report error:', error);
-      toast.error(t('report_error') || 'Error reporting disease. Please try again.');
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      toast.error(t('report_error') || `Error reporting disease: ${error.message}. Please check console for details.`);
     } finally {
+      console.log('Setting report loading to false');
       setReportLoading(false);
     }
   }
