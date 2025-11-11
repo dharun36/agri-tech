@@ -1,42 +1,33 @@
 const express = require('express');
-const User = require('../models/User');
 const router = express.Router();
-const mongoose = require('mongoose');
-// node-fetch v3 is ESM only - either use import or downgrade to v2
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-// Use enhanced mailer which provides SMTP + HTTP (SendGrid/Mailgun) fallbacks
-const { sendMail, testConnection } = require('../utils/mailer-enhanced');
 const multer = require('multer');
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
+const fetch = require('node-fetch');
+const { sendMail, testConnection } = require('../utils/mailer-enhanced');
+const DiseaseAlert = require('../models/disease');
+const User = require('../models/User');
 
-// Configure multer for image uploads
-const upload = multer({
-  dest: 'uploads/disease-images/',
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/disease-images/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
   }
 });
 
-const DiseaseAlert = require('../models/disease');
+const upload = multer({ storage: storage });
 
-
-
-// POST /api/disease/report
-// Body: { disease, description, location: { type: 'Point', coordinates: [lng, lat] } }
+// POST /api/disease/report - Report a disease in a location
 router.post('/report', async (req, res) => {
-  const { disease, description, location, bilingualData } = req.body;
-  if (!disease || !location || !Array.isArray(location.coordinates)) {
-    return res.status(400).json({ message: 'Disease and location required' });
-  }
   try {
-    console.log('🔍 Disease report received:', { disease, location: location.coordinates });
+    const { disease, description, location, bilingualData } = req.body;
 
+    console.log(`📢 Disease report received:`, { disease, description, location: location.coordinates });
+
+    // Find users within 500km radius for testing (was 10km)
     const usersNearby = await User.find({
       location: {
         $near: {
@@ -79,35 +70,191 @@ router.post('/report', async (req, res) => {
       // Send email notification (non-blocking)
       if (user.email) {
         console.log(`📧 Sending email to: ${user.email}`);
+
+        // Simple bilingual email template  
+        const htmlTemplate = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Disease Alert</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; line-height: 1.6; }
+            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .header { background: #dc2626; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; }
+            .alert-box { background: #fef2f2; border: 2px solid #fca5a5; border-radius: 6px; padding: 15px; margin: 15px 0; }
+            .info-box { background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 15px 0; }
+            .action-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 15px; margin: 15px 0; }
+            .button { background: #16a34a; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0; }
+            .footer { background: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #666; }
+            .divider { border-top: 2px solid #e5e5e5; margin: 20px 0; }
+            h1 { margin: 0; font-size: 24px; }
+            h2 { color: #dc2626; margin: 0 0 10px 0; }
+            h3 { color: #059669; margin: 15px 0 10px 0; }
+            .lang-label { background: #6b7280; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; margin: 10px 0; display: inline-block; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🚨 Disease Alert / நோய் எச்சரிக்கை</h1>
+              <p style="margin: 5px 0 0 0; opacity: 0.9;">AgriTech Smart Agriculture System</p>
+            </div>
+            
+            <div class="content">
+              <!-- English Content -->
+              <div class="lang-label">🇺🇸 ENGLISH</div>
+              
+              <h2>Hello ${user.name || 'Farmer'}!</h2>
+              
+              <div class="alert-box">
+                <h3>🦠 Disease Detected: ${disease}</h3>
+                <p><strong>Description:</strong> ${description}</p>
+                <p><strong>Location:</strong> Near ${location.coordinates.join(', ')}</p>
+                <p><strong>⚠️ Important:</strong> This disease can spread to your crops. Take immediate action!</p>
+              </div>
+              
+              <div class="action-box">
+                <h3>✅ What You Should Do:</h3>
+                <ul>
+                  <li><strong>Check your crops</strong> for similar symptoms immediately</li>
+                  <li><strong>Isolate infected plants</strong> from healthy ones</li>
+                  <li><strong>Contact agricultural experts</strong> for professional advice</li>
+                  <li><strong>Apply proper treatment</strong> if needed</li>
+                  <li><strong>Monitor nearby crops</strong> regularly</li>
+                </ul>
+              </div>
+              
+              <div class="info-box">
+                <p><strong>📞 Need Help?</strong></p>
+                <p>📧 Email: support@agritech.com</p>
+                <p>📱 Phone: +91-9876543210</p>
+                <a href="#" class="button">📱 Open AgriTech App</a>
+              </div>
+              
+              <!-- Divider -->
+              <div class="divider"></div>
+              
+              <!-- Tamil Content -->
+              <div class="lang-label">🇮🇳 தமிழ்</div>
+              
+              <h2>வணக்கம் ${user.name || 'விவசாயி'}!</h2>
+              
+              <div class="alert-box">
+                <h3>🦠 நோய் கண்டறியப்பட்டது: ${disease}</h3>
+                <p><strong>விளக்கம்:</strong> ${description}</p>
+                <p><strong>இடம்:</strong> ${location.coordinates.join(', ')} அருகில்</p>
+                <p><strong>⚠️ முக்கியம்:</strong> இந்த நோய் உங்கள் பயிர்களுக்கு பரவலாம். உடனே நடவடிக்கை எடுங்கள்!</p>
+              </div>
+              
+              <div class="action-box">
+                <h3>✅ நீங்கள் செய்ய வேண்டியது:</h3>
+                <ul>
+                  <li><strong>உங்கள் பயிர்களை சரிபார்க்கவும்</strong> - இதே அறிகுறிகள் உள்ளதா என பாருங்கள்</li>
+                  <li><strong>நோயுள்ள செடிகளை தனிமைப்படுத்துங்கள்</strong> - ஆரோக்கியமான செடிகளிலிருந்து தனித்து வையுங்கள்</li>
+                  <li><strong>விவசாய நிபுணர்களை தொடர்பு கொள்ளுங்கள்</strong> - நிபுணர் ஆலோசனை பெறுங்கள்</li>
+                  <li><strong>தேவையான சிகிச்சை அளியுங்கள்</strong> - உரிய மருந்து தெளிக்கவும்</li>
+                  <li><strong>அருகிலுள்ள பயிர்களை கண்காணிக்கவும்</strong> - தொடர்ந்து பார்த்துக் கொள்ளுங்கள்</li>
+                </ul>
+              </div>
+              
+              <div class="info-box">
+                <p><strong>📞 உதவி வேண்டுமா?</strong></p>
+                <p>📧 மின்னஞ்சல்: support@agritech.com</p>
+                <p>📱 தொலைபேசி: +91-9876543210</p>
+                <a href="#" class="button">📱 AgriTech பயன்பாட்டைத் திறக்கவும்</a>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <p><strong>AgriTech Team / AgriTech குழு</strong></p>
+              <p>Smart Agriculture Solutions / ஸ்மார்ட் விவசாய தீர்வுகள்</p>
+              <p style="margin-top: 10px; font-size: 11px;">
+                This alert is based on nearby farmer reports. Always consult local experts.<br>
+                இந்த எச்சரிக்கை அருகிலுள்ள விவசாயிகளின் அறிக்கையின் அடிப்படையில் உள்ளது.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+        `;
+
+        const textContent = `
+=== DISEASE ALERT / நோய் எச்சரிக்கை ===
+
+🇺🇸 ENGLISH:
+===============
+Dear ${user.name || 'Farmer'},
+
+🚨 URGENT: Disease detected in your area!
+
+Disease: ${disease}
+Description: ${description}
+Location: Near ${location.coordinates.join(', ')}
+
+WHAT TO DO:
+✓ Check your crops for similar symptoms
+✓ Isolate infected plants from healthy ones  
+✓ Contact agricultural experts for advice
+✓ Apply proper treatment if needed
+✓ Monitor nearby crops regularly
+
+Need help? 
+📧 Email: support@agritech.com
+📱 Phone: +91-9876543210
+
+Best regards,
+AgriTech Team
+Smart Agriculture Solutions
+
+🇮🇳 தமிழ்:
+============
+அன்புள்ள ${user.name || 'விவசாயி'},
+
+🚨 அவசரம்: உங்கள் பகுதியில் நோய் கண்டறியப்பட்டுள்ளது!
+
+நோய்: ${disease}
+விளக்கம்: ${description}
+இடம்: ${location.coordinates.join(', ')} அருகில்
+
+என்ன செய்ய வேண்டும்:
+✓ உங்கள் பயிர்களில் இதே அறிகுறிகள் உள்ளதா பாருங்கள்
+✓ நோயுள்ள செடிகளை ஆரோக்கியமான செடிகளிலிருந்து தனித்து வையுங்கள்
+✓ விவசாய நிபுணர்களிடம் ஆலோசனை பெறுங்கள்  
+✓ தேவையான சிகிச்சை அளியுங்கள்
+✓ அருகிலுள்ள பயிர்களை தொடர்ந்து கண்காணிக்கவும்
+
+உதவி வேண்டுமா?
+📧 மின்னஞ்சல்: support@agritech.com
+📱 தொலைபேசி: +91-9876543210
+
+நன்றி,
+AgriTech குழு
+ஸ்மார்ட் விவசாய தீர்வுகள்
+
+---
+This alert is based on nearby farmer reports.
+இந்த எச்சரிக்கை அருகிலுள்ள விவசாயிகளின் அறிக்கையின் அடிப்படையில்.
+        `;
+
         sendMail({
           to: user.email,
-          subject: `Disease Alert: ${disease} detected in your area`,
-          text: `Dear ${user.name || 'Farmer'},\n\nA new disease has been detected in your area:\n\nDisease: ${disease}\nDescription: ${description}\nLocation: ${location.coordinates.join(', ')}\n\nPlease check your AgriTech app for more details.\n\nBest regards,\nAgriTech Team`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #dc2626;">🚨 Disease Alert</h2>
-              <p>Dear ${user.name || 'Farmer'},</p>
-              <p>A new disease has been detected in your area:</p>
-              <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 16px 0;">
-                <h3 style="margin: 0; color: #dc2626;">${disease}</h3>
-                <p style="margin: 8px 0 0 0;">${description}</p>
-                <p style="margin: 8px 0 0 0; font-size: 14px; color: #666;"><strong>Location:</strong> ${location.coordinates.join(', ')}</p>
-              </div>
-              <p>Please check your AgriTech app for more details and recommended actions.</p>
-              <p style="margin-top: 32px;">Best regards,<br><strong>AgriTech Team</strong></p>
-            </div>
-          `
-        }).catch(err => {
-          console.error(`Failed to send email to ${user.email}:`, err.message);
+          subject: `🚨 Disease Alert / நோய் எச்சரிக்கை: ${disease}`,
+          text: textContent,
+          html: htmlTemplate
+        }).catch(error => {
+          console.error(`❌ Failed to send email to ${user.email}:`, error);
         });
       }
     }
     res.json({ notified: usersNearby.length, alerts });
   } catch (err) {
+    console.error('Error in disease report:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 
 // POST /api/disease/predict - Endpoint to predict plant disease from image
 router.post('/predict', upload.single('image'), async (req, res) => {
@@ -128,248 +275,174 @@ router.post('/predict', upload.single('image'), async (req, res) => {
       "https://api-inference.huggingface.co/models/linkanjarad/mobilenet_v2_1.0_224-plant-disease-identification",
       {
         headers: {
-          Authorization: `Bearer ${process.env.HF_TOKEN}`,
+          Authorization: `Bearer ${process.env.HUGGING_FACE_TOKEN}`,
           "Content-Type": "application/json",
         },
         method: "POST",
-        body: JSON.stringify({ inputs: base64Image }),
+        body: JSON.stringify({
+          inputs: base64Image,
+        }),
       }
     );
 
-    // Delete the temporary file after sending to the API
+    const predictions = await response.json();
+    console.log('Hugging Face API response:', predictions);
+
+    // Clean up the uploaded file
     fs.unlinkSync(imagePath);
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Hugging Face API error:', errorData);
-      return res.status(response.status).json({ error: 'Disease prediction failed', details: errorData });
+    if (Array.isArray(predictions) && predictions.length > 0) {
+      // Sort predictions by confidence score
+      const sortedPredictions = predictions.sort((a, b) => b.score - a.score);
+      res.json({ predictions: sortedPredictions });
+    } else {
+      res.status(500).json({ error: 'Failed to get predictions from the model' });
     }
 
-    const result = await response.json();
-    console.log('HF API response:', JSON.stringify(result).substring(0, 200) + '...');
-
-    // Make sure the response is in expected format
-    const formattedResult = Array.isArray(result) ? result : [{
-      label: result.label || "Unknown",
-      score: result.score || 0
-    }];
-
-    return res.json(formattedResult);
   } catch (error) {
-    console.error('Disease prediction error:', error);
-    return res.status(500).json({ error: 'Internal server error', details: error.message });
+    console.error('Error predicting disease:', error);
+
+    // Clean up file if it exists
+    if (req.file) {
+      const imagePath = path.join(__dirname, '..', req.file.path);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
+
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// GET /api/disease/alerts?userId=xxx
+// GET /api/disease/alerts - Get disease alerts for user
 router.get('/alerts', async (req, res) => {
-  const { userId } = req.query;
-  if (!userId) return res.status(400).json({ message: 'userId required' });
   try {
-    const alerts = await DiseaseAlert.find({ user: userId, read: false }).sort({ createdAt: -1 });
+    // Try to get userId from query parameter or authenticated user
+    const userId = req.query.userId || req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'User ID required' });
+    }
+
+    console.log(`📋 Fetching alerts for user: ${userId}`);
+
+    const alerts = await DiseaseAlert.find({ user: userId })
+      .sort({ createdAt: -1 })
+      .limit(20); // Limit to latest 20 alerts
+
+    console.log(`📋 Found ${alerts.length} alerts for user ${userId}`);
     res.json({ alerts });
   } catch (err) {
+    console.error('Error fetching alerts:', err);
     res.status(500).json({ message: 'Server error' });
-  }
-
-
-  async function handleImageDiagnosis(req, res) {
-    // ... run model, get result ...
-    const { label, confidence } = result;
-
-    if (label && label.toLowerCase() !== 'healthy') {
-      // build email
-      const subject = `Alert: ${label} detected (${Math.round(confidence * 100)}%)`;
-      const text = `A disease (${label}) was detected for user ${userId || 'unknown'}.
-Confidence: ${Math.round(confidence * 100)}%
-Image: ${req.body.imageUrl || 'attached'}
-Time: ${new Date().toISOString()}`;
-
-      try {
-        await sendMail({
-          to: userEmail, // determine the recipient (farmer/user)
-          subject,
-          text,
-          html: `<p>${text}</p>`,
-          // attachments: [{ filename: 'image.jpg', path: '/tmp/upload.jpg' }]
-        });
-        // respond or continue
-      } catch (err) {
-        console.error('Email send failed', err);
-        // log, but don't block main flow — consider retry or queue
-      }
-    }
-
-    res.json({ result });
   }
 });
 
-// PATCH /api/disease/alerts/read (mark all as read for a user)
+// PATCH /api/disease/alerts/read - Mark alerts as read for user
 router.patch('/alerts/read', async (req, res) => {
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ message: 'userId required' });
   try {
-    await DiseaseAlert.updateMany({ user: userId, read: false }, { $set: { read: true } });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+    const { userId } = req.body;
 
-// PATCH /api/disease/alerts/:alertId/read (mark single alert as read)
-router.patch('/alerts/:alertId/read', async (req, res) => {
-  const { alertId } = req.params;
-  if (!alertId) return res.status(400).json({ message: 'alertId required' });
-  try {
-    const alert = await DiseaseAlert.findByIdAndUpdate(
-      alertId,
-      { $set: { read: true } },
-      { new: true }
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID required' });
+    }
+
+    console.log(`📋 Marking alerts as read for user: ${userId}`);
+
+    // Update all unread alerts for this user
+    const result = await DiseaseAlert.updateMany(
+      { user: userId, read: { $ne: true } },
+      { $set: { read: true, readAt: new Date() } }
     );
-    if (!alert) {
-      return res.status(404).json({ message: 'Alert not found' });
-    }
-    res.json({ success: true, alert });
+
+    console.log(`📋 Marked ${result.modifiedCount} alerts as read for user ${userId}`);
+    res.json({ success: true, markedAsRead: result.modifiedCount });
   } catch (err) {
+    console.error('Error marking alerts as read:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-
-router.post('/proxy', async (req, res) => {
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(req.body),
-    });
-    const data = await response.json();
-    res.status(response.status).json(data);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch from API" });
-  }
-});
-
-// Test email endpoint
+// POST /api/disease/test-email - Test email functionality
 router.post('/test-email', async (req, res) => {
-  const { to, subject, text } = req.body;
-
-  if (!to || !subject || !text) {
-    return res.status(400).json({ message: 'to, subject, and text are required' });
-  }
-
   try {
-    const result = await sendMail({
-      to,
-      subject,
-      text,
-      html: `<p>${text}</p>`
-    });
+    const { email } = req.body;
 
-    res.json({
-      success: true,
-      messageId: result.messageId,
-      message: 'Email sent successfully'
-    });
-  } catch (error) {
-    console.error('Test email failed:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to send email'
-    });
-  }
-});
-
-
-
-// POST /api/disease/send-summary
-// Send email summary of recent alerts for a user
-router.post('/send-summary', async (req, res) => {
-  const { userId, email, period = 7 } = req.body; // period in days
-
-  if (!userId || !email) {
-    return res.status(400).json({ message: 'userId and email are required' });
-  }
-
-  try {
-    // Get recent alerts for the user
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - period);
-
-    const alerts = await DiseaseAlert.find({
-      user: userId,
-      createdAt: { $gte: startDate }
-    }).sort({ createdAt: -1 });
-
-    if (alerts.length === 0) {
-      return res.json({ message: 'No recent alerts to send' });
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
     }
 
-    // Group alerts by disease
-    const summary = {};
-    alerts.forEach(alert => {
-      if (!summary[alert.disease]) {
-        summary[alert.disease] = {
-          count: 0,
-          latestDate: alert.createdAt,
-          description: alert.description
-        };
-      }
-      summary[alert.disease].count++;
-      if (alert.createdAt > summary[alert.disease].latestDate) {
-        summary[alert.disease].latestDate = alert.createdAt;
-      }
-    });
-
-    // Create email content
-    let emailText = `Disease Alert Summary (Last ${period} days)\n\n`;
-    let emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2E7D32;">🌱 Disease Alert Summary</h2>
-        <p>Here's your disease alert summary for the last ${period} days:</p>
-        <div style="background-color: #f9f9f9; padding: 16px; border-radius: 8px;">
-    `;
-
-    Object.entries(summary).forEach(([disease, info]) => {
-      emailText += `- ${disease}: ${info.count} alert(s), latest: ${new Date(info.latestDate).toLocaleDateString()}\n`;
-      emailHtml += `
-        <div style="margin-bottom: 16px; padding: 12px; background-color: white; border-radius: 4px; border-left: 4px solid #4CAF50;">
-          <h4 style="margin: 0; color: #2E7D32;">${disease}</h4>
-          <p style="margin: 4px 0; color: #666;">Count: ${info.count} alert(s)</p>
-          <p style="margin: 4px 0; color: #666;">Latest: ${new Date(info.latestDate).toLocaleDateString()}</p>
+    const testEmailContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>AgriTech Test Email</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .header { background: #16a34a; color: white; padding: 15px; text-align: center; border-radius: 6px; margin-bottom: 20px; }
+        .content { text-align: center; }
+        .emoji { font-size: 48px; margin: 20px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h2>🌾 AgriTech Email Test</h2>
         </div>
-      `;
-    });
-
-    emailHtml += `
+        <div class="content">
+          <div class="emoji">✅</div>
+          <h3>Email System Working!</h3>
+          <p>This is a test email from your AgriTech system.</p>
+          <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+          <hr style="margin: 20px 0;">
+          <p style="font-size: 14px; color: #666;">
+            <strong>AgriTech Team</strong><br>
+            Smart Agriculture Solutions
+          </p>
         </div>
-        <p style="margin-top: 20px;">Total alerts: <strong>${alerts.length}</strong></p>
-        <p style="color: #666; font-size: 12px; margin-top: 32px;">
-          This summary was generated on ${new Date().toLocaleString()}<br>
-          AgriTech Disease Detection System
-        </p>
       </div>
+    </body>
+    </html>
     `;
 
     const result = await sendMail({
       to: email,
-      subject: `📊 AgriTech: Disease Alert Summary (${alerts.length} alerts)`,
-      text: emailText,
-      html: emailHtml
+      subject: '✅ AgriTech Email Test - System Working',
+      text: `AgriTech Email Test\n\nThis is a test email from your AgriTech system.\nDate: ${new Date().toLocaleString()}\n\nAgriTech Team\nSmart Agriculture Solutions`,
+      html: testEmailContent
     });
 
+    console.log('✅ Test email sent successfully:', result);
     res.json({
       success: true,
-      message: 'Summary email sent successfully',
-      alertCount: alerts.length,
-      method: result.method
+      message: 'Test email sent successfully',
+      details: result
     });
 
   } catch (error) {
-    console.error('Error sending summary email:', error);
+    console.error('❌ Failed to send test email:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Failed to send email',
+      details: error.message
+    });
+  }
+});
+
+// POST /api/disease/test-connection - Test email service connection
+router.post('/test-connection', async (req, res) => {
+  try {
+    const connectionResult = await testConnection();
+    console.log('📧 Email connection test result:', connectionResult);
+    res.json({ success: true, connection: connectionResult });
+  } catch (error) {
+    console.error('❌ Email connection test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Connection test failed',
+      details: error.message
     });
   }
 });
