@@ -54,191 +54,265 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
   const [todayTasks, setTodayTasks] = useState([]);
   const [completedTasks, setCompletedTasks] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Generate realistic, practical farming tasks - updated
+  // Fetch daily tasks from API - generated only once per day
   useEffect(() => {
-    const generateRealisticTasks = () => {
-      if (!crops || crops.length === 0) {
-        setTodayTasks([]);
-        return;
-      }
+    const fetchDailyTasks = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      console.log('🔄 Generating realistic farming tasks for crops:', crops.length);
+        console.log('🔄 Fetching daily tasks from API...');
 
-      const tasks = [];
-      const today = new Date();
-      const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-
-      crops.forEach(crop => {
-        // Only generate tasks for active crops
-        if (crop.status !== 'Growing' && crop.status !== 'Planning') {
+        const token = localStorage.getItem('token');
+        console.log('🔑 Auth token:', token ? 'Found' : 'Not found', token?.substring(0, 20) + '...');
+        if (!token) {
+          console.warn('No auth token found');
+          setTodayTasks([]);
           return;
         }
 
-        const cropName = crop.name || crop.cropName;
-
-        // 1. Irrigation Tasks - Check every 2-3 days based on real farming needs
-        if (crop.status === 'Growing') {
-          const lastWatered = crop.lastIrrigation ? new Date(crop.lastIrrigation) : null;
-          const daysSinceWater = lastWatered
-            ? Math.floor((today - lastWatered) / (1000 * 60 * 60 * 24))
-            : 5; // Assume needs water if no record
-
-          // Different crops have different water needs
-          let waterInterval = 2; // Default 2 days
-          if (cropName.toLowerCase().includes('rice') || cropName.toLowerCase().includes('paddy')) {
-            waterInterval = 1; // Rice needs daily water
-          } else if (cropName.toLowerCase().includes('wheat') || cropName.toLowerCase().includes('corn')) {
-            waterInterval = 3; // Grains can go 3 days
+        const response = await fetch('http://localhost:5000/api/tasks/daily', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
+        });
 
-          if (daysSinceWater >= waterInterval) {
-            tasks.push({
-              id: `water-${crop._id}`,
-              title: `Water ${cropName}`,
-              description: lastWatered
-                ? `Last watered ${daysSinceWater} days ago. Check soil moisture level first.`
-                : 'Check soil moisture and water thoroughly if dry.',
-              category: 'IRRIGATION',
-              estimatedTime: '15-20 min',
-              cropName: cropName,
-              cropId: crop._id
-            });
-          }
+        console.log('📡 API Response status:', response.status, response.statusText);
 
-          // 2. Fertilizer Tasks - Based on realistic crop growth cycles
-          const plantingDate = crop.plantingDate ? new Date(crop.plantingDate) : null;
-          const cropAge = plantingDate ? Math.floor((today - plantingDate) / (1000 * 60 * 60 * 24)) : 0;
-
-          // Apply fertilizer at key growth stages
-          if (cropAge === 21 || cropAge === 45 || cropAge === 70) { // 3 weeks, 6 weeks, 10 weeks
-            tasks.push({
-              id: `fertilize-${crop._id}`,
-              title: `Apply fertilizer to ${cropName}`,
-              description: `Apply balanced NPK fertilizer (10:10:10). Crop is ${cropAge} days old.`,
-              category: 'FERTILIZATION',
-              estimatedTime: '25-30 min',
-              cropName: cropName,
-              cropId: crop._id
-            });
-          }
-
-          // 3. Weekly Pest Inspection - Monday is inspection day
-          if (dayOfWeek === 1) { // Monday
-            tasks.push({
-              id: `inspect-${crop._id}`,
-              title: `Weekly pest inspection - ${cropName}`,
-              description: 'Check leaves (top and bottom), stems, and around the base for pests or diseases.',
-              category: 'PEST_CONTROL',
-              estimatedTime: '10-15 min',
-              cropName: cropName,
-              cropId: crop._id
-            });
-          }
-
-          // 4. Harvest preparation - when getting close to harvest
-          const harvestDate = crop.harvestDate ? new Date(crop.harvestDate) : null;
-          if (harvestDate) {
-            const daysToHarvest = Math.floor((harvestDate - today) / (1000 * 60 * 60 * 24));
-            if (daysToHarvest <= 7 && daysToHarvest > 0) {
-              tasks.push({
-                id: `harvest-prep-${crop._id}`,
-                title: `Prepare for ${cropName} harvest`,
-                description: `Harvest in ${daysToHarvest} days. Check crop maturity and prepare harvesting tools.`,
-                category: 'HARVESTING',
-                estimatedTime: '30-45 min',
-                cropName: cropName,
-                cropId: crop._id
-              });
-            }
-          }
-
-          // 5. Weeding - Every 2 weeks
-          if (cropAge > 0 && cropAge % 14 === 0) {
-            tasks.push({
-              id: `weed-${crop._id}`,
-              title: `Remove weeds around ${cropName}`,
-              description: 'Remove weeds that compete with your crop for nutrients and water.',
-              category: 'MONITORING',
-              estimatedTime: '20-30 min',
-              cropName: cropName,
-              cropId: crop._id
-            });
-          }
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ API Error response:', errorText);
+          throw new Error(`Failed to fetch daily tasks: ${response.status} - ${errorText}`);
         }
 
-        // 6. Soil preparation for planning crops
-        if (crop.status === 'Planning') {
-          tasks.push({
-            id: `prep-soil-${crop._id}`,
-            title: `Prepare field for ${cropName}`,
-            description: 'Clear weeds, till soil 6-8 inches deep, and add compost or organic matter.',
-            category: 'SOIL_MANAGEMENT',
-            estimatedTime: '60-90 min',
-            cropName: cropName,
-            cropId: crop._id
-          });
-        }
-      });
+        const data = await response.json();
 
-      // Limit to realistic number of daily tasks
-      const finalTasks = tasks.slice(0, 6); // Max 6 tasks per day is realistic
-      console.log('📋 Generated realistic farming tasks:', finalTasks);
-      setTodayTasks(finalTasks);
+        if (data.success) {
+          console.log(`📋 Retrieved ${data.tasks.length} daily tasks`, data);
+          setTodayTasks(data.tasks || []);
+
+          // Show generation status in console
+          if (data.generated) {
+            console.log('✨ New tasks generated for today');
+          } else {
+            console.log('♻️ Using existing tasks for today');
+          }
+        } else {
+          throw new Error(data.message || 'Failed to get daily tasks');
+        }
+
+      } catch (err) {
+        console.error('Error fetching daily tasks:', err);
+        setError(err.message);
+        setTodayTasks([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    generateRealisticTasks();
-  }, [crops, refreshKey]);
+    fetchDailyTasks();
+  }, [refreshKey]); // Remove crops dependency - API will handle crop data
 
-  // Simple task completion handler
-  const handleMarkAsDone = async (task) => {
-    console.log('✅ Marking task as done:', task.title);
+  // Task skip handler - marks task as skipped
+  const handleSkipTask = async (task, reason = '') => {
+    console.log('⏭️ Skipping task via API:', task.title);
     setLoading(true);
 
     try {
-      // Remove from today's tasks
-      setTodayTasks(prev => prev.filter(t => t.id !== task.id));
-
-      // Add to completed tasks
-      setCompletedTasks(prev => [...prev, { ...task, completedAt: new Date() }]);
-
-      // Call parent callback if provided
-      if (onTaskComplete) {
-        onTaskComplete(task);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No auth token found');
       }
 
-      toast.success(`Task completed: ${task.title}`);
+      const requestBody = {
+        status: 'skipped'
+      };
+      if (reason.trim()) {
+        requestBody.feedback = { notes: reason.trim() };
+      }
+
+      const response = await fetch(`http://localhost:5000/api/tasks/${task._id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to skip task: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Remove from today's tasks
+      setTodayTasks(prev => prev.filter(t => t._id !== task._id));
+
+      // Add to completed tasks with skipped status
+      setCompletedTasks(prev => [...prev, { ...result, skippedAt: new Date(), status: 'skipped' }]);
+
+      // Show success message
+      toast.success(`⏭️ Task skipped: ${task.title}`, {
+        position: "top-right",
+        autoClose: 3000,
+      });
+
+    } catch (error) {
+      console.error('Error skipping task:', error);
+      toast.error(`Failed to skip task: ${error.message}`, {
+        position: "top-right",
+        autoClose: 5000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // State for completion modal
+  const [completionModal, setCompletionModal] = useState({ show: false, task: null });
+  const [completionNotes, setCompletionNotes] = useState('');
+
+  // Task completion handler - now calls API to update database
+  const handleMarkAsDone = async (task, notes = '') => {
+    console.log('✅ Marking task as done via API:', task.title);
+    setLoading(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No auth token found');
+      }
+
+      const requestBody = {};
+      if (notes.trim()) {
+        requestBody.notes = notes.trim();
+      }
+
+      const response = await fetch(`http://localhost:5000/api/tasks/${task._id}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to complete task: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Remove from today's tasks
+        setTodayTasks(prev => prev.filter(t => t._id !== task._id));
+
+        // Add to completed tasks
+        setCompletedTasks(prev => [...prev, { ...result.task, completedAt: new Date() }]);
+
+        // Call parent callback if provided
+        if (onTaskComplete) {
+          onTaskComplete(result.task);
+        }
+
+        toast.success(result.message || `Task completed: ${task.title}`);
+        console.log('✅ Task marked as complete:', result.task.title);
+      } else {
+        throw new Error(result.message || 'Failed to complete task');
+      }
+
     } catch (error) {
       console.error('Error completing task:', error);
-      toast.error('Error completing task.');
+      toast.error(`Error completing task: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   const getCategoryInfo = (category) => {
-    return TASK_CATEGORIES[category] || TASK_CATEGORIES.GENERAL;
+    // Convert API category names to display format
+    const categoryMapping = {
+      'irrigation': 'IRRIGATION',
+      'fertilization': 'FERTILIZATION',
+      'pest_control': 'PEST_CONTROL',
+      'soil_management': 'SOIL_MANAGEMENT',
+      'harvesting': 'HARVESTING',
+      'general': 'GENERAL'
+    };
+
+    const displayCategory = categoryMapping[category] || category.toUpperCase();
+    return TASK_CATEGORIES[displayCategory] || TASK_CATEGORIES.GENERAL;
   };
 
+  // Show loading state while fetching from API
   if (loading && todayTasks.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center mb-6">
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-600 text-white mr-3">
-            <FaSeedling className="text-lg" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-800">
-              Today's Farm Tasks
-            </h3>
-            <p className="text-green-600 text-sm font-medium">Loading recommendations...</p>
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden min-h-[500px] max-h-[520px] w-full max-w-full">{/* Added min-height for consistency */}
+        <div className="bg-white border-b border-gray-200 p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 mr-4">
+                <FaLeaf className="text-green-600 text-lg" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Today's Tasks</h3>
+                <p className="text-green-600 text-sm">Loading farm recommendations...</p>
+              </div>
+            </div>
+            <div className="bg-green-600 text-white px-3 py-1.5 rounded-full text-sm font-semibold">
+              ...
+            </div>
           </div>
         </div>
 
-        <div className="flex justify-center items-center py-12">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-green-200"></div>
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-green-600 absolute top-0 left-0"></div>
+        <div className="p-5 min-h-[400px] max-h-96 overflow-y-auto bg-white">{/* Added min-height for loading state */}
+          <div className="flex justify-center items-center py-12">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-green-200"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-green-600 absolute top-0 left-0"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if API call failed
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden min-h-[500px] max-h-[520px] w-full max-w-full">{/* Added min-height for error state */}
+        <div className="bg-white border-b border-gray-200 p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100 mr-4">
+                <FaTimes className="text-red-600 text-lg" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Today's Tasks</h3>
+                <p className="text-red-600 text-sm">Failed to load tasks</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 min-h-[400px] max-h-96 overflow-y-auto bg-white">{/* Added min-height for error state */}
+          <div className="text-center py-8">
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mx-auto mb-4">
+              <FaTimes className="text-2xl" />
+            </div>
+            <h4 className="text-lg font-bold text-gray-800 mb-2">Failed to Load Tasks</h4>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            >
+              Retry
+            </button>
           </div>
         </div>
       </div>
@@ -246,7 +320,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden max-h-[550px] w-full max-w-full">
+    <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden min-h-[500px] max-h-[550px] w-full max-w-full">{/* Added min-height to match weather widget */}
       {/* Enhanced header with green colors and white background */}
       <div className="bg-white border-b border-gray-200 p-5">
         <div className="flex items-center justify-between">
@@ -267,11 +341,11 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
       </div>
 
       {/* Scrollable content with height to match weather widget */}
-      <div className="p-2 max-h-96 overflow-y-auto bg-white">
+      <div className="p-2 min-h-[400px] max-h-96 overflow-y-auto bg-white">{/* Added min-height for consistent sizing */}
         {todayTasks.length === 0 ? (
           <div className="text-center py-8">
             <div className="flex items-center justify-center w-16 h-16 rounded-full text-green-600 mx-auto mb-4">
-              <MdCheckCircle  className="text-2xl" />
+              <MdCheckCircle className="text-2xl" />
             </div>
             <h4 className="text-lg font-bold text-gray-800 mb-2">All Tasks Complete!</h4>
             <p className="text-gray-600">Your farm is up to date</p>
@@ -284,7 +358,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
 
               return (
                 <div
-                  key={task.id || index}
+                  key={task._id || task.id || index}
                   className="bg-white rounded-xl border border-gray-100 p-2 hover:shadow-lg hover:border-green-200 transition-all duration-300"
                 >
                   <div className="flex items-start justify-between gap-4">
@@ -292,11 +366,9 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                     <div className="w-full">
                       <div className="flex items-center justify-between pb-2">
                         <div className="text-sm bg-green-100 text-green-700 px-3 rounded-lg font-semibold">
-
-                          {task.cropName}
+                          <FaSeedling className="inline mr-2 text-xs" />
+                          {task.crop?.name || task.cropName || 'Unknown Crop'}
                         </div>
-
-
                       </div>
 
                       <div className="flex items-start gap-4 flex-1">
@@ -312,23 +384,83 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                             {task.title}
                           </h4>
 
-                          <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                            {task.description}
-                          </p>
-                        </div>
-                        {/* Enhanced action button with proper alignment */}
-                        <button
-                          onClick={() => handleMarkAsDone(task)}
-                          disabled={loading}
-                          className="bg-transparent text-white p-2.5 transition-all duration-200 disabled:opacity-50 hover:scale-105 flex-shrink-0 hover:shadow-md flex items-center justify-center"
-                          title="Mark as Complete"
-                        >
-                          {loading ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></div>
-                          ) : (<MdCheckCircle className="text-green-500 w-8 h-8" />
+                          {/* Enhanced description with better formatting */}
+                          <div className="text-sm text-gray-600 mb-3 leading-relaxed">
+                            {task.description.split('\n').map((line, lineIndex) => {
+                              // Handle emoji-based sections
+                              if (line.trim().startsWith('🚿') || line.trim().startsWith('🌱') ||
+                                line.trim().startsWith('🔍') || line.trim().startsWith('🌾') ||
+                                line.trim().startsWith('🌿') || line.trim().startsWith('🚜')) {
+                                return (
+                                  <div key={lineIndex} className="font-semibold text-green-700 mb-1">
+                                    {line.trim()}
+                                  </div>
+                                );
+                              }
 
-                          )}
-                        </button>
+                              // Handle bullet points and steps
+                              if (line.trim().startsWith('•') || line.trim().startsWith('✅')) {
+                                return (
+                                  <div key={lineIndex} className="ml-2 text-xs mb-1">
+                                    {line.trim()}
+                                  </div>
+                                );
+                              }
+
+                              // Handle info lines with emojis
+                              if (line.trim().startsWith('📅') || line.trim().startsWith('📊') ||
+                                line.trim().startsWith('💡') || line.trim().startsWith('🎯') ||
+                                line.trim().startsWith('⏰') || line.trim().startsWith('📋')) {
+                                return (
+                                  <div key={lineIndex} className="text-xs text-blue-600 mb-1 font-medium">
+                                    {line.trim()}
+                                  </div>
+                                );
+                              }
+
+                              // Handle regular lines
+                              if (line.trim()) {
+                                return (
+                                  <div key={lineIndex} className="mb-1">
+                                    {line.trim()}
+                                  </div>
+                                );
+                              }
+
+                              // Empty lines for spacing
+                              return <br key={lineIndex} />;
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Action buttons: Complete and Skip */}
+                        <div className="flex gap-2 flex-shrink-0">
+                          {/* Simple complete button */}
+                          <button
+                            onClick={() => handleMarkAsDone(task)}
+                            disabled={loading}
+                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-2.5 rounded-lg transition-all duration-200 disabled:opacity-50 hover:scale-105 shadow-sm hover:shadow-md flex items-center gap-2"
+                            title="Complete Task"
+                          >
+                            {loading ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></div>
+                            ) : (
+                              <FaCheck className="w-4 h-4" />
+                            )}
+                            <span className="text-sm font-medium">Done</span>
+                          </button>
+
+                          {/* Skip button */}
+                          <button
+                            onClick={() => setCompletionModal({ show: true, task, type: 'skip' })}
+                            disabled={loading}
+                            className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2.5 rounded-lg transition-all duration-200 disabled:opacity-50 hover:scale-105 shadow-sm hover:shadow-md flex items-center gap-2"
+                            title="Skip Task"
+                          >
+                            <FaTimes className="w-4 h-4" />
+                            <span className="text-sm font-medium">Skip</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -338,30 +470,50 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
           </div>
         )}
 
-        {/* Enhanced completed tasks section with green colors */}
+        {/* Enhanced completed/skipped tasks section */}
         {completedTasks.length > 0 && (
-          <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-200">
+          <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
             <h4 className="text-base font-bold text-gray-800 mb-4 flex items-center">
-              Completed Today ({completedTasks.length})
+              Completed Today ({completedTasks.filter(t => t.status !== 'skipped').length})
+              {completedTasks.filter(t => t.status === 'skipped').length > 0 &&
+                ` • Skipped (${completedTasks.filter(t => t.status === 'skipped').length})`
+              }
             </h4>
 
             <div className="space-y-3">
-              {completedTasks.slice(0, 2).map((task, index) => (
+              {completedTasks.slice(0, 3).map((task, index) => (
                 <div
                   key={task.id || index}
-                  className="flex items-center justify-between bg-white p-3 rounded-lg border border-green-100 shadow-sm"
+                  className={`flex items-center justify-between bg-white p-3 rounded-lg border shadow-sm ${task.status === 'skipped' ? 'border-gray-200' : 'border-green-100'
+                    }`}
                 >
-                  <span className="text-gray-600 line-through font-medium truncate">{task.title}</span>
-                  <span className="text-green-600 text-sm font-semibold ml-3 bg-green-100 px-2 py-1 rounded-lg">
-                    {new Date(task.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <div className="flex items-center gap-2">
+                    {task.status === 'skipped' ? (
+                      <FaTimes className="text-gray-500 text-sm" />
+                    ) : (
+                      <FaCheck className="text-green-600 text-sm" />
+                    )}
+                    <span className={`font-medium truncate ${task.status === 'skipped' ? 'text-gray-500 line-through' : 'text-gray-600 line-through'
+                      }`}>
+                      {task.title}
+                    </span>
+                  </div>
+                  <span className={`text-sm font-semibold ml-3 px-2 py-1 rounded-lg ${task.status === 'skipped'
+                      ? 'text-gray-600 bg-gray-100'
+                      : 'text-green-600 bg-green-100'
+                    }`}>
+                    {new Date(task.completedAt || task.skippedAt).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
                   </span>
                 </div>
               ))}
 
-              {completedTasks.length > 2 && (
+              {completedTasks.length > 3 && (
                 <div className="text-center pt-2">
-                  <span className="text-green-600 text-sm font-semibold bg-green-100 px-3 py-1 rounded-full">
-                    +{completedTasks.length - 2} more completed
+                  <span className="text-gray-600 text-sm font-semibold bg-gray-100 px-3 py-1 rounded-full">
+                    +{completedTasks.length - 3} more
                   </span>
                 </div>
               )}
@@ -369,6 +521,83 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
           </div>
         )}
       </div>
+
+      {/* Task Action Modal (Complete or Skip) */}
+      {completionModal.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                {completionModal.type === 'complete' ? '✅ Complete Task' : '⏭️ Skip Task'}
+              </h3>
+
+              <div className="mb-4">
+                <h4 className={`font-semibold mb-2 ${completionModal.type === 'complete' ? 'text-green-700' : 'text-gray-700'}`}>
+                  {completionModal.task?.title}
+                </h4>
+                <p className="text-sm text-gray-600">
+                  {completionModal.task?.crop?.name} • {completionModal.task?.category}
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label htmlFor="task-notes" className="block text-sm font-medium text-gray-700 mb-2">
+                  {completionModal.type === 'complete' ? 'Notes (optional)' : 'Reason for skipping (optional)'}
+                </label>
+                <textarea
+                  id="task-notes"
+                  value={completionNotes}
+                  onChange={(e) => setCompletionNotes(e.target.value)}
+                  placeholder={
+                    completionModal.type === 'complete'
+                      ? "Add any notes about how the task went, observations, or next steps..."
+                      : "Why are you skipping this task? (weather, no time, already done, etc.)"
+                  }
+                  className={`w-full p-3 border border-gray-300 rounded-lg resize-none h-32 text-sm focus:ring-2 focus:border-transparent ${completionModal.type === 'complete' ? 'focus:ring-green-500' : 'focus:ring-gray-500'
+                    }`}
+                />
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setCompletionModal({ show: false, task: null, type: null });
+                    setCompletionNotes('');
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (completionModal.type === 'complete') {
+                      await handleMarkAsDone(completionModal.task, completionNotes);
+                    } else if (completionModal.type === 'skip') {
+                      await handleSkipTask(completionModal.task, completionNotes);
+                    }
+                    setCompletionModal({ show: false, task: null, type: null });
+                    setCompletionNotes('');
+                  }}
+                  disabled={loading}
+                  className={`px-6 py-2 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 ${completionModal.type === 'complete'
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-gray-600 hover:bg-gray-700'
+                    }`}
+                >
+                  {loading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></div>
+                  ) : completionModal.type === 'complete' ? (
+                    <FaCheck className="w-4 h-4" />
+                  ) : (
+                    <FaTimes className="w-4 h-4" />
+                  )}
+                  {completionModal.type === 'complete' ? 'Complete Task' : 'Skip Task'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
