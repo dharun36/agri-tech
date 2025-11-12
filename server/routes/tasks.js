@@ -1,7 +1,7 @@
 const express = require('express');
 const Task = require('../models/Task');
-const DailyTaskGeneration = require('../models/DailyTaskGeneration');
 const Crop = require('../models/Crop');
+const Activity = require('../models/Activity');
 const auth = require('../middleware/auth');
 const mongoose = require('mongoose');
 const { generateRecommendations, saveRecommendations, generateAllUserTaskRecommendations } = require('../utils/taskRecommendationGenerator');
@@ -32,7 +32,10 @@ router.get('/', async (req, res) => {
     } = req.query;
 
     // Build query
-    const query = { user: req.user._id };
+    const query = {
+      user: req.user._id,
+      generationType: 'individual_task' // Only return individual tasks, not generation trackers
+    };
 
     // Filter by status if provided
     if (status) {
@@ -111,14 +114,14 @@ router.get('/', async (req, res) => {
 router.get('/daily', async (req, res) => {
   try {
     const userId = req.user._id;
-    
+
     // Check if tasks were already generated today
-    const todaysGeneration = await DailyTaskGeneration.getTodaysGeneration(userId);
-    
-    if (todaysGeneration && todaysGeneration.status === 'completed') {
+    const todaysGeneration = await Task.getTodaysGeneration(userId);
+
+    if (todaysGeneration && todaysGeneration.status === 'done') {
       // Tasks already generated today, return existing tasks
       const tasks = await Task.find({
-        _id: { $in: todaysGeneration.taskIds },
+        _id: { $in: todaysGeneration.dailyGeneration.taskIds },
         status: 'pending' // Only return pending tasks
       }).populate('crop', 'name variety status').sort({ priority: -1 });
 
@@ -127,7 +130,7 @@ router.get('/daily', async (req, res) => {
         tasks,
         generated: false,
         generatedAt: todaysGeneration.createdAt,
-        totalGenerated: todaysGeneration.tasksGenerated,
+        totalGenerated: todaysGeneration.dailyGeneration.tasksGenerated,
         completionPercentage: todaysGeneration.completionPercentage
       });
     }
@@ -136,9 +139,9 @@ router.get('/daily', async (req, res) => {
     console.log('🔄 Generating daily tasks for user:', userId);
 
     // Get user's active crops
-    const crops = await Crop.find({ 
-      user: userId, 
-      status: { $in: ['Growing', 'Planning'] } 
+    const crops = await Crop.find({
+      user: userId,
+      status: { $in: ['Growing', 'Planning'] }
     });
 
     if (crops.length === 0) {
@@ -160,13 +163,13 @@ router.get('/daily', async (req, res) => {
 
     for (const crop of crops) {
       const cropTasks = await generateDailyTasksForCrop(crop, today, dayOfWeek);
-      
+
       if (cropTasks.length > 0) {
         // Save tasks to database
         const savedTasks = await Task.insertMany(cropTasks);
         tasks.push(...savedTasks);
         taskIds.push(...savedTasks.map(task => task._id));
-        
+
         cropsProcessed.push({
           cropId: crop._id,
           cropName: crop.name,
@@ -175,18 +178,26 @@ router.get('/daily', async (req, res) => {
       }
     }
 
-    // Create generation record
-    const dailyGeneration = new DailyTaskGeneration({
+    // Create generation tracking record
+    const dailyGenerationTracker = new Task({
       user: userId,
-      date: today,
-      tasksGenerated: tasks.length,
-      taskIds,
-      cropsProcessed,
-      totalTasks: tasks.length,
-      status: 'completed'
+      title: `Daily Generation - ${today.toDateString()}`,
+      description: `Daily task generation tracking record`,
+      category: 'general',
+      dueDate: today,
+      status: 'done', // Mark as done to indicate generation is complete
+      generationType: 'daily_generation_tracker',
+      dailyGeneration: {
+        date: today,
+        tasksGenerated: tasks.length,
+        taskIds,
+        cropsProcessed,
+        totalTasks: tasks.length,
+        completedTasks: 0
+      }
     });
 
-    await dailyGeneration.save();
+    await dailyGenerationTracker.save();
 
     // Populate crop data for response
     const populatedTasks = await Task.find({
@@ -204,187 +215,390 @@ router.get('/daily', async (req, res) => {
 
   } catch (error) {
     console.error('Error getting/generating daily tasks:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: 'Server error', 
-      error: error.message 
+      message: 'Server error',
+      error: error.message
     });
   }
 });
 
 /**
  * Helper function to generate daily tasks for a specific crop
+ * Enhanced with activities data for smarter task generation
  */
 async function generateDailyTasksForCrop(crop, today, dayOfWeek) {
   const tasks = [];
   const cropName = crop.name || crop.cropName;
+  const userId = crop.user;
 
-  // 1. Irrigation Tasks - Check every 2-3 days based on real farming needs
+  // Get recent activities for this crop (last 30 days)
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const recentActivities = await Activity.find({
+    crop: crop._id,
+    user: userId,
+    date: { $gte: thirtyDaysAgo }
+  }).sort({ date: -1 });
+
+  // Helper function to get last activity of a type
+  const getLastActivityOfType = (activityType) => {
+    return recentActivities.find(activity =>
+      activity.activityType === activityType ||
+      activity.title.toLowerCase().includes(activityType.toLowerCase())
+    );
+  };
+
+  // Helper function to check if activity happened recently
+  const wasRecentlyDone = (activityType, daysThreshold = 7) => {
+    const lastActivity = getLastActivityOfType(activityType);
+    if (!lastActivity) return false;
+
+    const daysSince = Math.floor((today - lastActivity.date) / (1000 * 60 * 60 * 24));
+    return daysSince <= daysThreshold;
+  };
+
+  // 1. SMART IRRIGATION TASKS - Based on activities and crop data
   if (crop.status === 'Growing') {
-    const lastWatered = crop.lastIrrigation ? new Date(crop.lastIrrigation) : null;
+    // Check for recent watering activities
+    const lastWateringActivity = getLastActivityOfType('watering') ||
+      getLastActivityOfType('irrigation') ||
+      recentActivities.find(a => a.title.toLowerCase().includes('water'));
+
+    const lastWatered = lastWateringActivity ? lastWateringActivity.date :
+      (crop.lastIrrigation ? new Date(crop.lastIrrigation) : null);
+
     const daysSinceWater = lastWatered
       ? Math.floor((today - lastWatered) / (1000 * 60 * 60 * 24))
       : 5; // Assume needs water if no record
 
-    // Different crops have different water needs
-    let waterInterval = 2; // Default 2 days
+    // Crop-specific water intervals with weather consideration
+    let waterInterval = 2;
+    let waterAdvice = '';
+
     if (cropName.toLowerCase().includes('rice') || cropName.toLowerCase().includes('paddy')) {
-      waterInterval = 1; // Rice needs daily water
-    } else if (cropName.toLowerCase().includes('wheat') || cropName.toLowerCase().includes('corn')) {
-      waterInterval = 3; // Grains can go 3 days
+      waterInterval = 1;
+      waterAdvice = 'Keep water level 2-3 inches above soil. Rice requires constant moisture.';
+    } else if (cropName.toLowerCase().includes('wheat') || cropName.toLowerCase().includes('corn') ||
+      cropName.toLowerCase().includes('maize')) {
+      waterInterval = 3;
+      waterAdvice = 'Deep watering is better than frequent shallow watering for grain crops.';
+    } else if (cropName.toLowerCase().includes('tomato') || cropName.toLowerCase().includes('pepper')) {
+      waterInterval = 2;
+      waterAdvice = 'Water at soil level to avoid wetting leaves and preventing disease.';
+    } else if (cropName.toLowerCase().includes('lettuce') || cropName.toLowerCase().includes('spinach')) {
+      waterInterval = 1;
+      waterAdvice = 'Leafy greens need consistent moisture but avoid waterlogging.';
+    } else {
+      waterAdvice = 'Check soil moisture 2 inches deep - water if dry to touch.';
     }
 
     if (daysSinceWater >= waterInterval) {
+      const urgency = daysSinceWater > waterInterval + 2 ? 'URGENT' : '';
+      const lastWaterInfo = lastWateringActivity ?
+        `Last watered on ${lastWateringActivity.date.toLocaleDateString()} (${daysSinceWater} days ago)` :
+        `No recent watering recorded (${daysSinceWater} days since last irrigation)`;
+
       tasks.push({
         crop: crop._id,
         user: crop.user,
-        title: `Water ${cropName}`,
-        description: lastWatered
-          ? `Last watered ${daysSinceWater} days ago. Check soil moisture level first.`
-          : 'Check soil moisture and water thoroughly if dry.',
+        title: `${urgency ? urgency + ' - ' : ''}Water ${cropName}`,
+        description: `🚿 IRRIGATION NEEDED\n\n📅 ${lastWaterInfo}\n\n💡 ${waterAdvice}\n\n🔍 Check: Soil moisture at root level, leaf drooping, and weather forecast before watering.`,
         category: 'irrigation',
         priority: daysSinceWater > waterInterval + 2 ? 'high' : 'medium',
         dueDate: today,
-        source: 'system_generated'
+        source: 'system_generated',
+        generationFactors: {
+          cropStage: crop.status,
+          weather: { daysSinceWater }
+        }
       });
     }
 
-    // 2. Fertilizer Tasks - Based on realistic crop growth cycles
+    // 2. SMART FERTILIZER TASKS - Based on planting date and previous fertilization
     const plantingDate = crop.plantingDate ? new Date(crop.plantingDate) : null;
     const cropAge = plantingDate ? Math.floor((today - plantingDate) / (1000 * 60 * 60 * 24)) : 0;
 
-    // Apply fertilizer at key growth stages
-    if (cropAge === 21 || cropAge === 45 || cropAge === 70) { // 3 weeks, 6 weeks, 10 weeks
-      tasks.push({
-        crop: crop._id,
-        user: crop.user,
-        title: `Apply fertilizer to ${cropName}`,
-        description: `Apply balanced NPK fertilizer (10:10:10). Crop is ${cropAge} days old.`,
-        category: 'fertilization',
-        priority: 'medium',
-        dueDate: today,
-        source: 'system_generated'
-      });
-    }
+    const lastFertilizing = getLastActivityOfType('fertiliz');
+    const daysSinceFertilizer = lastFertilizing ?
+      Math.floor((today - lastFertilizing.date) / (1000 * 60 * 60 * 24)) : 999;
 
-    // 3. Weekly Pest Inspection - Monday is inspection day
-    if (dayOfWeek === 1) { // Monday
-      tasks.push({
-        crop: crop._id,
-        user: crop.user,
-        title: `Weekly pest inspection - ${cropName}`,
-        description: 'Check leaves (top and bottom), stems, and around the base for pests or diseases.',
-        category: 'pest_control',
-        priority: 'low',
-        dueDate: today,
-        source: 'system_generated'
-      });
-    }
+    // Growth stage-based fertilization with activity history
+    if (cropAge > 0) {
+      let shouldFertilize = false;
+      let fertilizerType = '';
+      let fertilizerReason = '';
 
-    // 4. Harvest preparation - when getting close to harvest
-    const harvestDate = crop.harvestDate ? new Date(crop.harvestDate) : null;
-    if (harvestDate) {
-      const daysToHarvest = Math.floor((harvestDate - today) / (1000 * 60 * 60 * 24));
-      if (daysToHarvest <= 7 && daysToHarvest > 0) {
+      if ((cropAge === 21 || (cropAge >= 18 && cropAge <= 24)) && daysSinceFertilizer > 14) {
+        shouldFertilize = true;
+        fertilizerType = 'Nitrogen-rich fertilizer (21-0-0 or similar)';
+        fertilizerReason = '3-week stage: Focus on leaf and stem development';
+      } else if ((cropAge === 45 || (cropAge >= 42 && cropAge <= 48)) && daysSinceFertilizer > 20) {
+        shouldFertilize = true;
+        fertilizerType = 'Balanced NPK fertilizer (10-10-10)';
+        fertilizerReason = '6-week stage: Support overall growth and prepare for flowering';
+      } else if ((cropAge === 70 || (cropAge >= 67 && cropAge <= 73)) && daysSinceFertilizer > 25) {
+        shouldFertilize = true;
+        fertilizerType = 'Phosphorus-potassium fertilizer (0-20-20)';
+        fertilizerReason = '10-week stage: Promote flowering and fruit development';
+      }
+
+      if (shouldFertilize) {
+        const lastFertInfo = lastFertilizing ?
+          `Last fertilized on ${lastFertilizing.date.toLocaleDateString()} (${daysSinceFertilizer} days ago)` :
+          'No recent fertilization recorded';
+
         tasks.push({
           crop: crop._id,
           user: crop.user,
-          title: `Prepare for ${cropName} harvest`,
-          description: `Harvest in ${daysToHarvest} days. Check crop maturity and prepare harvesting tools.`,
-          category: 'harvesting',
-          priority: 'high',
+          title: `Apply fertilizer to ${cropName}`,
+          description: `🌱 FERTILIZATION SCHEDULED\n\n📅 Crop age: ${cropAge} days old\n📊 ${lastFertInfo}\n\n💡 Recommended: ${fertilizerType}\n🎯 Purpose: ${fertilizerReason}\n\n📋 Apply early morning or evening, water lightly after application.`,
+          category: 'fertilization',
+          priority: 'medium',
           dueDate: today,
-          source: 'system_generated'
+          source: 'system_generated',
+          generationFactors: {
+            cropStage: `${cropAge} days old`,
+            weather: { daysSinceFertilizer }
+          }
         });
       }
     }
 
-    // 5. Weeding - Every 2 weeks
-    if (cropAge > 0 && cropAge % 14 === 0) {
+    // 3. SMART PEST INSPECTION - Based on recent inspection history
+    if (dayOfWeek === 1 || !wasRecentlyDone('inspection', 7)) {
+      const lastInspection = getLastActivityOfType('inspection');
+      const inspectionInfo = lastInspection ?
+        `Last inspection: ${lastInspection.date.toLocaleDateString()}` :
+        'No recent inspection recorded';
+
+      // Crop-specific pest concerns
+      let pestConcerns = '';
+      if (cropName.toLowerCase().includes('tomato')) {
+        pestConcerns = '🐛 Watch for: Hornworms, aphids, whiteflies\n🍄 Disease: Blight, fusarium wilt';
+      } else if (cropName.toLowerCase().includes('corn') || cropName.toLowerCase().includes('maize')) {
+        pestConcerns = '🐛 Watch for: Corn borers, armyworms, cutworms\n🍄 Disease: Corn smut, leaf blight';
+      } else if (cropName.toLowerCase().includes('rice')) {
+        pestConcerns = '🐛 Watch for: Brown planthopper, rice bugs\n🍄 Disease: Blast, bacterial leaf blight';
+      } else {
+        pestConcerns = '🐛 Watch for: Aphids, spider mites, caterpillars\n🍄 Disease: Fungal spots, wilting';
+      }
+
       tasks.push({
         crop: crop._id,
         user: crop.user,
-        title: `Remove weeds around ${cropName}`,
-        description: 'Remove weeds that compete with your crop for nutrients and water.',
-        category: 'soil_management',
+        title: `Weekly pest inspection - ${cropName}`,
+        description: `🔍 PEST & DISEASE INSPECTION\n\n📅 ${inspectionInfo}\n\n${pestConcerns}\n\n📋 Check: Top and bottom of leaves, stems, soil around base\n📸 Take photos of any issues for identification`,
+        category: 'pest_control',
         priority: 'medium',
         dueDate: today,
         source: 'system_generated'
       });
     }
+
+    // 4. HARVEST PREPARATION - Enhanced with activity tracking
+    const harvestDate = crop.harvestDate ? new Date(crop.harvestDate) : null;
+    if (harvestDate) {
+      const daysToHarvest = Math.floor((harvestDate - today) / (1000 * 60 * 60 * 24));
+      if (daysToHarvest <= 7 && daysToHarvest > 0) {
+        const lastHarvestPrep = recentActivities.find(a =>
+          a.title.toLowerCase().includes('harvest') ||
+          a.title.toLowerCase().includes('tool') ||
+          a.title.toLowerCase().includes('prepare')
+        );
+
+        const prepInfo = lastHarvestPrep ?
+          `Previous prep: ${lastHarvestPrep.date.toLocaleDateString()}` :
+          'No harvest preparation recorded';
+
+        tasks.push({
+          crop: crop._id,
+          user: crop.user,
+          title: `🚨 Prepare for ${cropName} harvest`,
+          description: `🌾 HARVEST PREPARATION\n\n⏰ Harvest scheduled in ${daysToHarvest} days\n📅 ${prepInfo}\n\n✅ Tasks:\n• Check crop maturity indicators\n• Clean and sharpen harvesting tools\n• Prepare storage containers\n• Check weather forecast\n• Plan harvesting schedule\n\n💡 Early morning harvest often gives best quality.`,
+          category: 'harvesting',
+          priority: 'high',
+          dueDate: today,
+          source: 'system_generated',
+          generationFactors: {
+            weather: { daysToHarvest }
+          }
+        });
+      }
+    }
+
+    // 5. SMART WEEDING - Based on maintenance history
+    const lastWeeding = getLastActivityOfType('maintenance') ||
+      recentActivities.find(a => a.title.toLowerCase().includes('weed'));
+    const daysSinceWeeding = lastWeeding ?
+      Math.floor((today - lastWeeding.date) / (1000 * 60 * 60 * 24)) : 999;
+
+    if ((cropAge > 0 && cropAge % 14 === 0) || daysSinceWeeding > 14) {
+      const weedingInfo = lastWeeding ?
+        `Last weeding: ${lastWeeding.date.toLocaleDateString()} (${daysSinceWeeding} days ago)` :
+        'No recent weeding activity recorded';
+
+      tasks.push({
+        crop: crop._id,
+        user: crop.user,
+        title: `Remove weeds around ${cropName}`,
+        description: `🌿 WEED MANAGEMENT\n\n📅 ${weedingInfo}\n\n🎯 Why: Weeds compete for nutrients, water, and sunlight\n\n📋 Method:\n• Hand-pull small weeds when soil is moist\n• Use hoe for larger areas\n• Mulch after weeding to prevent regrowth\n\n⏰ Best time: After watering or rain when soil is soft`,
+        category: 'soil_management',
+        priority: 'medium',
+        dueDate: today,
+        source: 'system_generated',
+        generationFactors: {
+          weather: { daysSinceWeeding }
+        }
+      });
+    }
   }
 
-  // 6. Soil preparation for planning crops
+  // 6. SOIL PREPARATION FOR PLANNING CROPS - Enhanced with detailed instructions
   if (crop.status === 'Planning') {
+    const lastSoilPrep = getLastActivityOfType('maintenance') ||
+      recentActivities.find(a => a.title.toLowerCase().includes('soil') ||
+        a.title.toLowerCase().includes('till'));
+
+    const prepInfo = lastSoilPrep ?
+      `Previous soil work: ${lastSoilPrep.date.toLocaleDateString()}` :
+      'No recent soil preparation recorded';
+
+    // Get soil-specific advice based on crop type
+    let soilAdvice = '';
+    if (cropName.toLowerCase().includes('tomato') || cropName.toLowerCase().includes('pepper')) {
+      soilAdvice = '🎯 Target: Well-draining, pH 6.0-6.8, rich in organic matter';
+    } else if (cropName.toLowerCase().includes('rice')) {
+      soilAdvice = '🎯 Target: Clay-loam soil, can hold water, pH 6.0-7.0';
+    } else if (cropName.toLowerCase().includes('corn') || cropName.toLowerCase().includes('wheat')) {
+      soilAdvice = '🎯 Target: Deep, fertile soil with good drainage, pH 6.0-7.0';
+    } else {
+      soilAdvice = '🎯 Target: Well-draining soil rich in organic matter';
+    }
+
     tasks.push({
       crop: crop._id,
       user: crop.user,
       title: `Prepare field for ${cropName}`,
-      description: 'Clear weeds, till soil 6-8 inches deep, and add compost or organic matter.',
+      description: `🚜 FIELD PREPARATION\n\n📅 ${prepInfo}\n\n${soilAdvice}\n\n📋 Steps:\n• Clear weeds and debris\n• Till soil 6-8 inches deep\n• Add compost or aged manure\n• Level the field\n• Test soil pH if possible\n\n💡 Let soil settle for 1-2 weeks before planting`,
       category: 'soil_management',
       priority: 'medium',
       dueDate: today,
-      source: 'system_generated'
+      source: 'system_generated',
+      generationFactors: {
+        cropStage: 'Planning phase'
+      }
     });
   }
 
-  // Limit to realistic number of daily tasks per crop
-  return tasks.slice(0, 3); // Max 3 tasks per crop per day
+  // Limit to realistic number of daily tasks per crop (max 2-3 tasks)
+  return tasks.slice(0, 3);
 }
 
 /**
  * @route   POST /api/tasks/:id/complete
- * @desc    Mark a daily task as completed
+ * @desc    Mark a daily task as completed and create activity record
  * @access  Private
  */
 router.post('/:id/complete', async (req, res) => {
   try {
     const taskId = req.params.id;
     const userId = req.user._id;
+    const { notes, images } = req.body; // Optional completion details
 
     // Find and update the task
     const task = await Task.findOneAndUpdate(
-      { _id: taskId, user: userId, status: 'pending' },
-      { 
+      { _id: taskId, user: userId, status: 'pending', generationType: 'individual_task' },
+      {
         status: 'done',
-        completedDate: new Date()
+        completedDate: new Date(),
+        ...(notes && { 'feedback.notes': notes }),
+        ...(images && { 'feedback.images': images })
       },
       { new: true }
     ).populate('crop', 'name variety status');
 
     if (!task) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'Task not found or already completed' 
+        message: 'Task not found or already completed'
       });
     }
 
-    // Update the daily generation record
+    // Create corresponding activity record for learning
+    try {
+      let activityType = 'general';
+
+      // Map task categories to activity types
+      switch (task.category) {
+        case 'irrigation':
+          activityType = 'watering';
+          break;
+        case 'pest_control':
+          activityType = 'inspection';
+          break;
+        case 'soil_management':
+          activityType = 'maintenance';
+          break;
+        case 'fertilization':
+          activityType = 'fertilization';
+          break;
+        case 'harvesting':
+          activityType = 'harvesting';
+          break;
+        default:
+          activityType = 'general';
+      }
+
+      // Create activity record
+      const activity = new Activity({
+        crop: task.crop._id,
+        user: userId,
+        title: `Completed: ${task.title}`,
+        description: `✅ Task completed via AgriTech system\n\nOriginal task: ${task.description}${notes ? `\n\nUser notes: ${notes}` : ''}`,
+        activityType: activityType,
+        date: new Date(),
+        tags: ['system-generated', 'task-completion', task.category]
+      });
+
+      await activity.save();
+
+      console.log(`📝 Created activity record for task completion: ${task.title}`);
+    } catch (activityError) {
+      // Don't fail the task completion if activity creation fails
+      console.error('Error creating activity record:', activityError);
+    }
+
+    // Update the daily generation tracker record
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    await DailyTaskGeneration.updateOne(
-      { user: userId, date: today },
-      { $inc: { completedTasks: 1 } }
+    await Task.updateOne(
+      {
+        user: userId,
+        generationType: 'daily_generation_tracker',
+        'dailyGeneration.date': today
+      },
+      { $inc: { 'dailyGeneration.completedTasks': 1 } }
     );
 
     res.json({
       success: true,
       task,
-      message: `Task completed: ${task.title}`
+      message: `✅ Task completed: ${task.title}`,
+      activityCreated: true
     });
 
   } catch (error) {
     console.error('Error completing daily task:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: 'Server error', 
-      error: error.message 
+      message: 'Server error',
+      error: error.message
     });
   }
-});
-
-/**
+});/**
  * @route   GET /api/tasks/today
  * @desc    Get today's tasks for the authenticated user
  * @access  Private
@@ -399,6 +613,7 @@ router.get('/today', async (req, res) => {
 
     const query = {
       user: req.user._id,
+      generationType: 'individual_task', // Only individual tasks
       dueDate: { $gte: today, $lt: tomorrow },
       status: 'pending'
     };
@@ -434,6 +649,7 @@ router.get('/upcoming', async (req, res) => {
 
     const query = {
       user: req.user._id,
+      generationType: 'individual_task', // Only individual tasks
       dueDate: { $gt: today, $lte: nextWeek },
       status: 'pending'
     };
@@ -474,6 +690,7 @@ router.get('/history', async (req, res) => {
     // Build query
     const query = {
       user: req.user._id,
+      generationType: 'individual_task', // Only individual tasks
       status: Array.isArray(status) ? { $in: status } : status
     };
 
@@ -540,7 +757,11 @@ router.get('/crop/:cropId', async (req, res) => {
     }
 
     // Build query
-    const query = { crop: cropId, user: req.user._id };
+    const query = {
+      crop: cropId,
+      user: req.user._id,
+      generationType: 'individual_task' // Only individual tasks
+    };
 
     // Filter by status if provided
     if (status) {
@@ -593,7 +814,8 @@ router.get('/:id', async (req, res) => {
   try {
     const task = await Task.findOne({
       _id: req.params.id,
-      user: req.user._id
+      user: req.user._id,
+      generationType: 'individual_task' // Only individual tasks
     }).populate('crop', 'name variety status');
 
     if (!task) {
@@ -682,7 +904,8 @@ router.put('/:id/status', async (req, res) => {
 
     const task = await Task.findOne({
       _id: req.params.id,
-      user: req.user._id
+      user: req.user._id,
+      generationType: 'individual_task' // Only individual tasks
     });
 
     if (!task) {
@@ -729,7 +952,8 @@ router.patch('/:id/complete', async (req, res) => {
   try {
     const task = await Task.findOne({
       _id: req.params.id,
-      user: req.user._id
+      user: req.user._id,
+      generationType: 'individual_task' // Only individual tasks
     });
 
     if (!task) {
@@ -772,7 +996,8 @@ router.put('/:id', async (req, res) => {
 
     const task = await Task.findOne({
       _id: req.params.id,
-      user: req.user._id
+      user: req.user._id,
+      generationType: 'individual_task' // Only individual tasks
     });
 
     if (!task) {
@@ -818,7 +1043,8 @@ router.delete('/:id', async (req, res) => {
   try {
     const task = await Task.findOneAndDelete({
       _id: req.params.id,
-      user: req.user._id
+      user: req.user._id,
+      generationType: 'individual_task' // Only individual tasks
     });
 
     if (!task) {
