@@ -54,191 +54,194 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
   const [todayTasks, setTodayTasks] = useState([]);
   const [completedTasks, setCompletedTasks] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Generate realistic, practical farming tasks - updated
+  // Fetch daily tasks from API - generated only once per day
   useEffect(() => {
-    const generateRealisticTasks = () => {
-      if (!crops || crops.length === 0) {
-        setTodayTasks([]);
-        return;
-      }
+    const fetchDailyTasks = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        console.log('🔄 Fetching daily tasks from API...');
 
-      console.log('🔄 Generating realistic farming tasks for crops:', crops.length);
-
-      const tasks = [];
-      const today = new Date();
-      const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-
-      crops.forEach(crop => {
-        // Only generate tasks for active crops
-        if (crop.status !== 'Growing' && crop.status !== 'Planning') {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.warn('No auth token found');
+          setTodayTasks([]);
           return;
         }
 
-        const cropName = crop.name || crop.cropName;
-
-        // 1. Irrigation Tasks - Check every 2-3 days based on real farming needs
-        if (crop.status === 'Growing') {
-          const lastWatered = crop.lastIrrigation ? new Date(crop.lastIrrigation) : null;
-          const daysSinceWater = lastWatered
-            ? Math.floor((today - lastWatered) / (1000 * 60 * 60 * 24))
-            : 5; // Assume needs water if no record
-
-          // Different crops have different water needs
-          let waterInterval = 2; // Default 2 days
-          if (cropName.toLowerCase().includes('rice') || cropName.toLowerCase().includes('paddy')) {
-            waterInterval = 1; // Rice needs daily water
-          } else if (cropName.toLowerCase().includes('wheat') || cropName.toLowerCase().includes('corn')) {
-            waterInterval = 3; // Grains can go 3 days
+        const response = await fetch('/api/tasks/daily', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
+        });
 
-          if (daysSinceWater >= waterInterval) {
-            tasks.push({
-              id: `water-${crop._id}`,
-              title: `Water ${cropName}`,
-              description: lastWatered
-                ? `Last watered ${daysSinceWater} days ago. Check soil moisture level first.`
-                : 'Check soil moisture and water thoroughly if dry.',
-              category: 'IRRIGATION',
-              estimatedTime: '15-20 min',
-              cropName: cropName,
-              cropId: crop._id
-            });
-          }
-
-          // 2. Fertilizer Tasks - Based on realistic crop growth cycles
-          const plantingDate = crop.plantingDate ? new Date(crop.plantingDate) : null;
-          const cropAge = plantingDate ? Math.floor((today - plantingDate) / (1000 * 60 * 60 * 24)) : 0;
-
-          // Apply fertilizer at key growth stages
-          if (cropAge === 21 || cropAge === 45 || cropAge === 70) { // 3 weeks, 6 weeks, 10 weeks
-            tasks.push({
-              id: `fertilize-${crop._id}`,
-              title: `Apply fertilizer to ${cropName}`,
-              description: `Apply balanced NPK fertilizer (10:10:10). Crop is ${cropAge} days old.`,
-              category: 'FERTILIZATION',
-              estimatedTime: '25-30 min',
-              cropName: cropName,
-              cropId: crop._id
-            });
-          }
-
-          // 3. Weekly Pest Inspection - Monday is inspection day
-          if (dayOfWeek === 1) { // Monday
-            tasks.push({
-              id: `inspect-${crop._id}`,
-              title: `Weekly pest inspection - ${cropName}`,
-              description: 'Check leaves (top and bottom), stems, and around the base for pests or diseases.',
-              category: 'PEST_CONTROL',
-              estimatedTime: '10-15 min',
-              cropName: cropName,
-              cropId: crop._id
-            });
-          }
-
-          // 4. Harvest preparation - when getting close to harvest
-          const harvestDate = crop.harvestDate ? new Date(crop.harvestDate) : null;
-          if (harvestDate) {
-            const daysToHarvest = Math.floor((harvestDate - today) / (1000 * 60 * 60 * 24));
-            if (daysToHarvest <= 7 && daysToHarvest > 0) {
-              tasks.push({
-                id: `harvest-prep-${crop._id}`,
-                title: `Prepare for ${cropName} harvest`,
-                description: `Harvest in ${daysToHarvest} days. Check crop maturity and prepare harvesting tools.`,
-                category: 'HARVESTING',
-                estimatedTime: '30-45 min',
-                cropName: cropName,
-                cropId: crop._id
-              });
-            }
-          }
-
-          // 5. Weeding - Every 2 weeks
-          if (cropAge > 0 && cropAge % 14 === 0) {
-            tasks.push({
-              id: `weed-${crop._id}`,
-              title: `Remove weeds around ${cropName}`,
-              description: 'Remove weeds that compete with your crop for nutrients and water.',
-              category: 'MONITORING',
-              estimatedTime: '20-30 min',
-              cropName: cropName,
-              cropId: crop._id
-            });
-          }
+        if (!response.ok) {
+          throw new Error(`Failed to fetch daily tasks: ${response.status}`);
         }
 
-        // 6. Soil preparation for planning crops
-        if (crop.status === 'Planning') {
-          tasks.push({
-            id: `prep-soil-${crop._id}`,
-            title: `Prepare field for ${cropName}`,
-            description: 'Clear weeds, till soil 6-8 inches deep, and add compost or organic matter.',
-            category: 'SOIL_MANAGEMENT',
-            estimatedTime: '60-90 min',
-            cropName: cropName,
-            cropId: crop._id
-          });
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log(`📋 Retrieved ${data.tasks.length} daily tasks`, data);
+          setTodayTasks(data.tasks || []);
+          
+          // Show generation status in console
+          if (data.generated) {
+            console.log('✨ New tasks generated for today');
+          } else {
+            console.log('♻️ Using existing tasks for today');
+          }
+        } else {
+          throw new Error(data.message || 'Failed to get daily tasks');
         }
-      });
 
-      // Limit to realistic number of daily tasks
-      const finalTasks = tasks.slice(0, 6); // Max 6 tasks per day is realistic
-      console.log('📋 Generated realistic farming tasks:', finalTasks);
-      setTodayTasks(finalTasks);
+      } catch (err) {
+        console.error('Error fetching daily tasks:', err);
+        setError(err.message);
+        setTodayTasks([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    generateRealisticTasks();
-  }, [crops, refreshKey]);
+    fetchDailyTasks();
+  }, [refreshKey]); // Remove crops dependency - API will handle crop data
 
-  // Simple task completion handler
+  // Task completion handler - now calls API to update database
   const handleMarkAsDone = async (task) => {
-    console.log('✅ Marking task as done:', task.title);
+    console.log('✅ Marking task as done via API:', task.title);
     setLoading(true);
 
     try {
-      // Remove from today's tasks
-      setTodayTasks(prev => prev.filter(t => t.id !== task.id));
-
-      // Add to completed tasks
-      setCompletedTasks(prev => [...prev, { ...task, completedAt: new Date() }]);
-
-      // Call parent callback if provided
-      if (onTaskComplete) {
-        onTaskComplete(task);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No auth token found');
       }
 
-      toast.success(`Task completed: ${task.title}`);
+      const response = await fetch(`/api/tasks/${task._id}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to complete task: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Remove from today's tasks
+        setTodayTasks(prev => prev.filter(t => t._id !== task._id));
+
+        // Add to completed tasks
+        setCompletedTasks(prev => [...prev, { ...result.task, completedAt: new Date() }]);
+
+        // Call parent callback if provided
+        if (onTaskComplete) {
+          onTaskComplete(result.task);
+        }
+
+        toast.success(result.message || `Task completed: ${task.title}`);
+        console.log('✅ Task marked as complete:', result.task.title);
+      } else {
+        throw new Error(result.message || 'Failed to complete task');
+      }
+
     } catch (error) {
       console.error('Error completing task:', error);
-      toast.error('Error completing task.');
+      toast.error(`Error completing task: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   const getCategoryInfo = (category) => {
-    return TASK_CATEGORIES[category] || TASK_CATEGORIES.GENERAL;
+    // Convert API category names to display format
+    const categoryMapping = {
+      'irrigation': 'IRRIGATION',
+      'fertilization': 'FERTILIZATION', 
+      'pest_control': 'PEST_CONTROL',
+      'soil_management': 'SOIL_MANAGEMENT',
+      'harvesting': 'HARVESTING',
+      'general': 'GENERAL'
+    };
+    
+    const displayCategory = categoryMapping[category] || category.toUpperCase();
+    return TASK_CATEGORIES[displayCategory] || TASK_CATEGORIES.GENERAL;
   };
 
+  // Show loading state while fetching from API
   if (loading && todayTasks.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center mb-6">
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-600 text-white mr-3">
-            <FaSeedling className="text-lg" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-800">
-              Today's Farm Tasks
-            </h3>
-            <p className="text-green-600 text-sm font-medium">Loading recommendations...</p>
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden max-h-[520px] w-full max-w-full">
+        <div className="bg-white border-b border-gray-200 p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 mr-4">
+                <FaLeaf className="text-green-600 text-lg" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Today's Tasks</h3>
+                <p className="text-green-600 text-sm">Loading farm recommendations...</p>
+              </div>
+            </div>
+            <div className="bg-green-600 text-white px-3 py-1.5 rounded-full text-sm font-semibold">
+              ...
+            </div>
           </div>
         </div>
+        
+        <div className="p-5 max-h-96 overflow-y-auto bg-white">
+          <div className="flex justify-center items-center py-12">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-green-200"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-green-600 absolute top-0 left-0"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-        <div className="flex justify-center items-center py-12">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-green-200"></div>
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-green-600 absolute top-0 left-0"></div>
+  // Show error state if API call failed
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden max-h-[520px] w-full max-w-full">
+        <div className="bg-white border-b border-gray-200 p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100 mr-4">
+                <FaTimes className="text-red-600 text-lg" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Today's Tasks</h3>
+                <p className="text-red-600 text-sm">Failed to load tasks</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-5 max-h-96 overflow-y-auto bg-white">
+          <div className="text-center py-8">
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mx-auto mb-4">
+              <FaTimes className="text-2xl" />
+            </div>
+            <h4 className="text-lg font-bold text-gray-800 mb-2">Failed to Load Tasks</h4>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            >
+              Retry
+            </button>
           </div>
         </div>
       </div>
@@ -284,7 +287,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
 
               return (
                 <div
-                  key={task.id || index}
+                  key={task._id || task.id || index}
                   className="bg-white rounded-xl border border-gray-100 p-2 hover:shadow-lg hover:border-green-200 transition-all duration-300"
                 >
                   <div className="flex items-start justify-between gap-4">
@@ -292,11 +295,9 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                     <div className="w-full">
                       <div className="flex items-center justify-between pb-2">
                         <div className="text-sm bg-green-100 text-green-700 px-3 rounded-lg font-semibold">
-
-                          {task.cropName}
+                          <FaSeedling className="inline mr-2 text-xs" />
+                          {task.crop?.name || task.cropName || 'Unknown Crop'}
                         </div>
-
-
                       </div>
 
                       <div className="flex items-start gap-4 flex-1">
@@ -316,17 +317,18 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                             {task.description}
                           </p>
                         </div>
+                        
                         {/* Enhanced action button with proper alignment */}
                         <button
                           onClick={() => handleMarkAsDone(task)}
                           disabled={loading}
-                          className="bg-transparent text-white p-2.5 transition-all duration-200 disabled:opacity-50 hover:scale-105 flex-shrink-0 hover:shadow-md flex items-center justify-center"
+                          className="bg-green-600 hover:bg-green-700 text-white p-2.5 rounded-lg transition-all duration-200 disabled:opacity-50 hover:scale-105 flex-shrink-0 shadow-sm hover:shadow-md flex items-center justify-center"
                           title="Mark as Complete"
                         >
                           {loading ? (
                             <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></div>
-                          ) : (<MdCheckCircle className="text-green-500 w-8 h-8" />
-
+                          ) : (
+                            <FaCheck className="w-4 h-4" />
                           )}
                         </button>
                       </div>

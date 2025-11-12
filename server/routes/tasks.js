@@ -1,5 +1,6 @@
 const express = require('express');
 const Task = require('../models/Task');
+const DailyTaskGeneration = require('../models/DailyTaskGeneration');
 const Crop = require('../models/Crop');
 const auth = require('../middleware/auth');
 const mongoose = require('mongoose');
@@ -99,6 +100,287 @@ router.get('/', async (req, res) => {
   } catch (error) {
     console.error('Error fetching tasks:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
+ * @route   GET /api/tasks/daily
+ * @desc    Get or generate today's tasks for the authenticated user (once per day)
+ * @access  Private
+ */
+router.get('/daily', async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    // Check if tasks were already generated today
+    const todaysGeneration = await DailyTaskGeneration.getTodaysGeneration(userId);
+    
+    if (todaysGeneration && todaysGeneration.status === 'completed') {
+      // Tasks already generated today, return existing tasks
+      const tasks = await Task.find({
+        _id: { $in: todaysGeneration.taskIds },
+        status: 'pending' // Only return pending tasks
+      }).populate('crop', 'name variety status').sort({ priority: -1 });
+
+      return res.json({
+        success: true,
+        tasks,
+        generated: false,
+        generatedAt: todaysGeneration.createdAt,
+        totalGenerated: todaysGeneration.tasksGenerated,
+        completionPercentage: todaysGeneration.completionPercentage
+      });
+    }
+
+    // Tasks not generated today, generate new ones
+    console.log('🔄 Generating daily tasks for user:', userId);
+
+    // Get user's active crops
+    const crops = await Crop.find({ 
+      user: userId, 
+      status: { $in: ['Growing', 'Planning'] } 
+    });
+
+    if (crops.length === 0) {
+      return res.json({
+        success: true,
+        tasks: [],
+        generated: false,
+        message: 'No active crops found for task generation'
+      });
+    }
+
+    // Generate tasks for today
+    const tasks = [];
+    const taskIds = [];
+    const cropsProcessed = [];
+
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+
+    for (const crop of crops) {
+      const cropTasks = await generateDailyTasksForCrop(crop, today, dayOfWeek);
+      
+      if (cropTasks.length > 0) {
+        // Save tasks to database
+        const savedTasks = await Task.insertMany(cropTasks);
+        tasks.push(...savedTasks);
+        taskIds.push(...savedTasks.map(task => task._id));
+        
+        cropsProcessed.push({
+          cropId: crop._id,
+          cropName: crop.name,
+          tasksCreated: cropTasks.length
+        });
+      }
+    }
+
+    // Create generation record
+    const dailyGeneration = new DailyTaskGeneration({
+      user: userId,
+      date: today,
+      tasksGenerated: tasks.length,
+      taskIds,
+      cropsProcessed,
+      totalTasks: tasks.length,
+      status: 'completed'
+    });
+
+    await dailyGeneration.save();
+
+    // Populate crop data for response
+    const populatedTasks = await Task.find({
+      _id: { $in: taskIds }
+    }).populate('crop', 'name variety status').sort({ priority: -1 });
+
+    res.json({
+      success: true,
+      tasks: populatedTasks,
+      generated: true,
+      generatedAt: new Date(),
+      totalGenerated: tasks.length,
+      cropsProcessed: cropsProcessed.length
+    });
+
+  } catch (error) {
+    console.error('Error getting/generating daily tasks:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error', 
+      error: error.message 
+    });
+  }
+});
+
+/**
+ * Helper function to generate daily tasks for a specific crop
+ */
+async function generateDailyTasksForCrop(crop, today, dayOfWeek) {
+  const tasks = [];
+  const cropName = crop.name || crop.cropName;
+
+  // 1. Irrigation Tasks - Check every 2-3 days based on real farming needs
+  if (crop.status === 'Growing') {
+    const lastWatered = crop.lastIrrigation ? new Date(crop.lastIrrigation) : null;
+    const daysSinceWater = lastWatered
+      ? Math.floor((today - lastWatered) / (1000 * 60 * 60 * 24))
+      : 5; // Assume needs water if no record
+
+    // Different crops have different water needs
+    let waterInterval = 2; // Default 2 days
+    if (cropName.toLowerCase().includes('rice') || cropName.toLowerCase().includes('paddy')) {
+      waterInterval = 1; // Rice needs daily water
+    } else if (cropName.toLowerCase().includes('wheat') || cropName.toLowerCase().includes('corn')) {
+      waterInterval = 3; // Grains can go 3 days
+    }
+
+    if (daysSinceWater >= waterInterval) {
+      tasks.push({
+        crop: crop._id,
+        user: crop.user,
+        title: `Water ${cropName}`,
+        description: lastWatered
+          ? `Last watered ${daysSinceWater} days ago. Check soil moisture level first.`
+          : 'Check soil moisture and water thoroughly if dry.',
+        category: 'irrigation',
+        priority: daysSinceWater > waterInterval + 2 ? 'high' : 'medium',
+        dueDate: today,
+        source: 'system_generated'
+      });
+    }
+
+    // 2. Fertilizer Tasks - Based on realistic crop growth cycles
+    const plantingDate = crop.plantingDate ? new Date(crop.plantingDate) : null;
+    const cropAge = plantingDate ? Math.floor((today - plantingDate) / (1000 * 60 * 60 * 24)) : 0;
+
+    // Apply fertilizer at key growth stages
+    if (cropAge === 21 || cropAge === 45 || cropAge === 70) { // 3 weeks, 6 weeks, 10 weeks
+      tasks.push({
+        crop: crop._id,
+        user: crop.user,
+        title: `Apply fertilizer to ${cropName}`,
+        description: `Apply balanced NPK fertilizer (10:10:10). Crop is ${cropAge} days old.`,
+        category: 'fertilization',
+        priority: 'medium',
+        dueDate: today,
+        source: 'system_generated'
+      });
+    }
+
+    // 3. Weekly Pest Inspection - Monday is inspection day
+    if (dayOfWeek === 1) { // Monday
+      tasks.push({
+        crop: crop._id,
+        user: crop.user,
+        title: `Weekly pest inspection - ${cropName}`,
+        description: 'Check leaves (top and bottom), stems, and around the base for pests or diseases.',
+        category: 'pest_control',
+        priority: 'low',
+        dueDate: today,
+        source: 'system_generated'
+      });
+    }
+
+    // 4. Harvest preparation - when getting close to harvest
+    const harvestDate = crop.harvestDate ? new Date(crop.harvestDate) : null;
+    if (harvestDate) {
+      const daysToHarvest = Math.floor((harvestDate - today) / (1000 * 60 * 60 * 24));
+      if (daysToHarvest <= 7 && daysToHarvest > 0) {
+        tasks.push({
+          crop: crop._id,
+          user: crop.user,
+          title: `Prepare for ${cropName} harvest`,
+          description: `Harvest in ${daysToHarvest} days. Check crop maturity and prepare harvesting tools.`,
+          category: 'harvesting',
+          priority: 'high',
+          dueDate: today,
+          source: 'system_generated'
+        });
+      }
+    }
+
+    // 5. Weeding - Every 2 weeks
+    if (cropAge > 0 && cropAge % 14 === 0) {
+      tasks.push({
+        crop: crop._id,
+        user: crop.user,
+        title: `Remove weeds around ${cropName}`,
+        description: 'Remove weeds that compete with your crop for nutrients and water.',
+        category: 'soil_management',
+        priority: 'medium',
+        dueDate: today,
+        source: 'system_generated'
+      });
+    }
+  }
+
+  // 6. Soil preparation for planning crops
+  if (crop.status === 'Planning') {
+    tasks.push({
+      crop: crop._id,
+      user: crop.user,
+      title: `Prepare field for ${cropName}`,
+      description: 'Clear weeds, till soil 6-8 inches deep, and add compost or organic matter.',
+      category: 'soil_management',
+      priority: 'medium',
+      dueDate: today,
+      source: 'system_generated'
+    });
+  }
+
+  // Limit to realistic number of daily tasks per crop
+  return tasks.slice(0, 3); // Max 3 tasks per crop per day
+}
+
+/**
+ * @route   POST /api/tasks/:id/complete
+ * @desc    Mark a daily task as completed
+ * @access  Private
+ */
+router.post('/:id/complete', async (req, res) => {
+  try {
+    const taskId = req.params.id;
+    const userId = req.user._id;
+
+    // Find and update the task
+    const task = await Task.findOneAndUpdate(
+      { _id: taskId, user: userId, status: 'pending' },
+      { 
+        status: 'done',
+        completedDate: new Date()
+      },
+      { new: true }
+    ).populate('crop', 'name variety status');
+
+    if (!task) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Task not found or already completed' 
+      });
+    }
+
+    // Update the daily generation record
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    await DailyTaskGeneration.updateOne(
+      { user: userId, date: today },
+      { $inc: { completedTasks: 1 } }
+    );
+
+    res.json({
+      success: true,
+      task,
+      message: `Task completed: ${task.title}`
+    });
+
+  } catch (error) {
+    console.error('Error completing daily task:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error', 
+      error: error.message 
+    });
   }
 });
 
