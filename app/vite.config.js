@@ -9,6 +9,7 @@ import path from 'path'
 // - resolve.alias for `@` -> `src` helps cleaner imports
 // - build tuning: increased chunk warning limit and explicit outDir
 // - server/preview defaults for local testing
+
 export default defineConfig(({ mode }) => {
   const basePath = process.env.BASE_PATH || '/'
 

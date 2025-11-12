@@ -814,9 +814,8 @@ const LightThemeHome = () => {
           {/* Today's Tasks Widget */}
           {crops.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition h-fit">
-              <div className="p-6">
-                <TodayTasksWidget crops={crops} refreshKey={taskRefreshKey} />
-              </div>
+
+              <TodayTasksWidget crops={crops} refreshKey={taskRefreshKey} />
             </div>
           )}
 

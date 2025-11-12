@@ -3,30 +3,19 @@ import { useTranslation } from 'react-i18next';
 import {
   FaCheckCircle,
   FaTimes,
-  FaClock,
+  FaHourglass,
   FaTint,
   FaLeaf,
   FaSeedling,
   FaBug,
   FaThermometerHalf,
   FaCalendarDay,
-  FaArrowRight,
-  FaFire,
-  FaExclamationTriangle,
   FaStar,
-  FaPlay,
-  FaMagic,
-  FaRocket,
-  FaGem
+  FaCheck,
+  FaMagic
 } from 'react-icons/fa';
+import { MdCheckCircle } from "react-icons/md";
 import { toast } from 'react-toastify';
-
-// Task priority levels
-const TASK_PRIORITY = {
-  HIGH: 'high',
-  MEDIUM: 'medium',
-  LOW: 'low'
-};
 
 // Task categories matching AgriTech project theme
 const TASK_CATEGORIES = {
@@ -66,7 +55,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
   const [completedTasks, setCompletedTasks] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Generate realistic, practical farming tasks
+  // Generate realistic, practical farming tasks - updated
   useEffect(() => {
     const generateRealisticTasks = () => {
       if (!crops || crops.length === 0) {
@@ -111,7 +100,6 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                 ? `Last watered ${daysSinceWater} days ago. Check soil moisture level first.`
                 : 'Check soil moisture and water thoroughly if dry.',
               category: 'IRRIGATION',
-              priority: daysSinceWater > waterInterval + 2 ? TASK_PRIORITY.HIGH : TASK_PRIORITY.MEDIUM,
               estimatedTime: '15-20 min',
               cropName: cropName,
               cropId: crop._id
@@ -129,7 +117,6 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
               title: `Apply fertilizer to ${cropName}`,
               description: `Apply balanced NPK fertilizer (10:10:10). Crop is ${cropAge} days old.`,
               category: 'FERTILIZATION',
-              priority: TASK_PRIORITY.MEDIUM,
               estimatedTime: '25-30 min',
               cropName: cropName,
               cropId: crop._id
@@ -143,7 +130,6 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
               title: `Weekly pest inspection - ${cropName}`,
               description: 'Check leaves (top and bottom), stems, and around the base for pests or diseases.',
               category: 'PEST_CONTROL',
-              priority: TASK_PRIORITY.LOW,
               estimatedTime: '10-15 min',
               cropName: cropName,
               cropId: crop._id
@@ -160,7 +146,6 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                 title: `Prepare for ${cropName} harvest`,
                 description: `Harvest in ${daysToHarvest} days. Check crop maturity and prepare harvesting tools.`,
                 category: 'HARVESTING',
-                priority: TASK_PRIORITY.HIGH,
                 estimatedTime: '30-45 min',
                 cropName: cropName,
                 cropId: crop._id
@@ -175,7 +160,6 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
               title: `Remove weeds around ${cropName}`,
               description: 'Remove weeds that compete with your crop for nutrients and water.',
               category: 'MONITORING',
-              priority: TASK_PRIORITY.MEDIUM,
               estimatedTime: '20-30 min',
               cropName: cropName,
               cropId: crop._id
@@ -190,7 +174,6 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
             title: `Prepare field for ${cropName}`,
             description: 'Clear weeds, till soil 6-8 inches deep, and add compost or organic matter.',
             category: 'SOIL_MANAGEMENT',
-            priority: TASK_PRIORITY.MEDIUM,
             estimatedTime: '60-90 min',
             cropName: cropName,
             cropId: crop._id
@@ -198,15 +181,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
         }
       });
 
-      // Sort by priority and limit to realistic number of daily tasks
-      const priorityOrder = {
-        [TASK_PRIORITY.HIGH]: 0,
-        [TASK_PRIORITY.MEDIUM]: 1,
-        [TASK_PRIORITY.LOW]: 2
-      };
-
-      tasks.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
-
+      // Limit to realistic number of daily tasks
       const finalTasks = tasks.slice(0, 6); // Max 6 tasks per day is realistic
       console.log('📋 Generated realistic farming tasks:', finalTasks);
       setTodayTasks(finalTasks);
@@ -241,41 +216,6 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
     }
   };
 
-  const getPriorityIcon = (priority) => {
-    const baseClasses = "flex items-center px-2 py-1 rounded-full text-xs font-medium";
-
-    switch (priority) {
-      case TASK_PRIORITY.HIGH:
-        return (
-          <div className={`${baseClasses} bg-red-100 text-red-700`}>
-            <FaExclamationTriangle className="mr-1" />
-            High
-          </div>
-        );
-      case TASK_PRIORITY.MEDIUM:
-        return (
-          <div className={`${baseClasses} bg-yellow-100 text-yellow-700`}>
-            <FaFire className="mr-1" />
-            Medium
-          </div>
-        );
-      case TASK_PRIORITY.LOW:
-        return (
-          <div className={`${baseClasses} bg-green-100 text-green-700`}>
-            <FaLeaf className="mr-1" />
-            Low
-          </div>
-        );
-      default:
-        return (
-          <div className={`${baseClasses} bg-gray-100 text-gray-700`}>
-            <FaLeaf className="mr-1" />
-            Normal
-          </div>
-        );
-    }
-  };
-
   const getCategoryInfo = (category) => {
     return TASK_CATEGORIES[category] || TASK_CATEGORIES.GENERAL;
   };
@@ -306,38 +246,38 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden max-h-96">
-      {/* Simplified compact header */}
-      <div className="bg-green-50 border-b border-green-100 p-4">
+    <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden max-h-[550px] w-full max-w-full">
+      {/* Enhanced header with green colors and white background */}
+      <div className="bg-white border-b border-gray-200 p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-600 text-white mr-3">
-              <FaSeedling className="text-sm" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 mr-4">
+              <FaLeaf className="text-green-600 text-lg" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-800">Today's Tasks</h3>
-              <p className="text-green-600 text-xs">Farm recommendations</p>
+              <h3 className="text-xl font-bold text-gray-800">Today's Tasks</h3>
+              <p className="text-green-600 text-sm">Farm recommendations</p>
             </div>
           </div>
 
-          <div className="bg-green-600 text-white px-2 py-1 rounded-full text-xs font-medium">
+          <div className="bg-green-600 text-white px-3 py-1.5 rounded-full text-sm font-semibold">
             {todayTasks.length}
           </div>
         </div>
       </div>
 
-      {/* Scrollable content with max height */}
-      <div className="p-4 max-h-80 overflow-y-auto">
+      {/* Scrollable content with height to match weather widget */}
+      <div className="p-2 max-h-96 overflow-y-auto bg-white">
         {todayTasks.length === 0 ? (
-          <div className="text-center py-6">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 text-green-600 mx-auto mb-3">
-              <FaCheckCircle className="text-lg" />
+          <div className="text-center py-8">
+            <div className="flex items-center justify-center w-16 h-16 rounded-full text-green-600 mx-auto mb-4">
+              <MdCheckCircle  className="text-2xl" />
             </div>
-            <h4 className="text-md font-bold text-gray-800 mb-1">All Tasks Complete!</h4>
-            <p className="text-gray-600 text-sm">Your farm is up to date</p>
+            <h4 className="text-lg font-bold text-gray-800 mb-2">All Tasks Complete!</h4>
+            <p className="text-gray-600">Your farm is up to date</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {todayTasks.map((task, index) => {
               const categoryInfo = getCategoryInfo(task.category);
               const IconComponent = categoryInfo.icon;
@@ -345,51 +285,52 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
               return (
                 <div
                   key={task.id || index}
-                  className="bg-gray-50 rounded-lg border border-gray-100 p-3 hover:shadow-md transition-shadow duration-200"
+                  className="bg-white rounded-xl border border-gray-100 p-2 hover:shadow-lg hover:border-green-200 transition-all duration-300"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center flex-1">
-                      <div className={`flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 ${categoryInfo.color} mr-3`}>
-                        <IconComponent className="text-sm" />
+                  <div className="flex items-start justify-between gap-4">
+                    {/* Add crop element at top */}
+                    <div className="w-full">
+                      <div className="flex items-center justify-between pb-2">
+                        <div className="text-sm bg-green-100 text-green-700 px-3 rounded-lg font-semibold">
+
+                          {task.cropName}
+                        </div>
+
+
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="text-sm font-bold text-gray-800 truncate">
+                      <div className="flex items-start gap-4 flex-1">
+                        {/* Enhanced category icon */}
+                        <div className={`flex items-center justify-center w-12 h-12 rounded-xl bg-white border-2 border-green-100 ${categoryInfo.color} flex-shrink-0`}>
+                          <IconComponent className="text-lg" />
+
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          {/* Better typography hierarchy */}
+                          <h4 className="text-base font-bold text-gray-900 mb-2 leading-tight">
                             {task.title}
                           </h4>
-                          {getPriorityIcon(task.priority)}
-                        </div>
 
-                        <p className="text-xs text-gray-600 line-clamp-2 mb-1">
-                          {task.description}
-                        </p>
-
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center text-xs text-gray-500">
-                            <FaClock className="mr-1" />
-                            {task.estimatedTime}
-                          </div>
-                          <div className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                            {task.cropName}
-                          </div>
+                          <p className="text-sm text-gray-600 mb-3 leading-relaxed">
+                            {task.description}
+                          </p>
                         </div>
+                        {/* Enhanced action button with proper alignment */}
+                        <button
+                          onClick={() => handleMarkAsDone(task)}
+                          disabled={loading}
+                          className="bg-transparent text-white p-2.5 transition-all duration-200 disabled:opacity-50 hover:scale-105 flex-shrink-0 hover:shadow-md flex items-center justify-center"
+                          title="Mark as Complete"
+                        >
+                          {loading ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></div>
+                          ) : (<MdCheckCircle className="text-green-500 w-8 h-8" />
+
+                          )}
+                        </button>
                       </div>
                     </div>
-
-                    {/* Compact action button */}
-                    <button
-                      onClick={() => handleMarkAsDone(task)}
-                      disabled={loading}
-                      className="ml-3 bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg transition-colors duration-200 disabled:opacity-50"
-                      title="Mark as Complete"
-                    >
-                      {loading ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></div>
-                      ) : (
-                        <FaCheckCircle className="w-4 h-4" />
-                      )}
-                    </button>
                   </div>
                 </div>
               );
@@ -397,30 +338,29 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
           </div>
         )}
 
-        {/* Simplified completed tasks section */}
+        {/* Enhanced completed tasks section with green colors */}
         {completedTasks.length > 0 && (
-          <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-100">
-            <h4 className="text-sm font-bold text-gray-800 mb-2 flex items-center">
-              <FaCheckCircle className="text-green-600 mr-2 text-sm" />
+          <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-200">
+            <h4 className="text-base font-bold text-gray-800 mb-4 flex items-center">
               Completed Today ({completedTasks.length})
             </h4>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               {completedTasks.slice(0, 2).map((task, index) => (
                 <div
                   key={task.id || index}
-                  className="flex items-center justify-between bg-white p-2 rounded-lg text-sm"
+                  className="flex items-center justify-between bg-white p-3 rounded-lg border border-green-100 shadow-sm"
                 >
-                  <span className="text-gray-700 line-through truncate">{task.title}</span>
-                  <span className="text-green-600 text-xs ml-2">
+                  <span className="text-gray-600 line-through font-medium truncate">{task.title}</span>
+                  <span className="text-green-600 text-sm font-semibold ml-3 bg-green-100 px-2 py-1 rounded-lg">
                     {new Date(task.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               ))}
 
               {completedTasks.length > 2 && (
-                <div className="text-center">
-                  <span className="text-green-600 text-xs">
+                <div className="text-center pt-2">
+                  <span className="text-green-600 text-sm font-semibold bg-green-100 px-3 py-1 rounded-full">
                     +{completedTasks.length - 2} more completed
                   </span>
                 </div>
