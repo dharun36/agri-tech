@@ -7,9 +7,6 @@ import DetectDisease from './components/DetectDisease'
 import Home from './components/Home'
 import ModernHome from './components/ModernHome'
 import LightThemeHome from './components/home/LightThemeHome'
-import WeatherPage from './components/WeatherPage'
-import TomorrowWeatherPage from './components/TomorrowWeatherPage'
-import WeatherDemo from './components/weather/WeatherDemo'
 import CropRecommendation from './components/CropRecommendation'
 import MarketPrices from './components/MarketPrices'
 import DiseaseAlerts from './components/DiseaseAlerts'
@@ -66,11 +63,7 @@ function App() {
             <Routes>
               <Route path="/home" element={<LightThemeHome />} />
               <Route path="/dark-home" element={<ModernHome />} />
-              <Route path="/old-home" element={<Home />} />
               <Route path="/disease-detection" element={<DetectDisease />} />
-              <Route path="/weather" element={<TomorrowWeatherPage />} />
-              <Route path="/weather-old" element={<WeatherPage />} />
-              <Route path="/weather-demo" element={<WeatherDemo />} />
               <Route path="/merged-home" element={<MergedLightThemeHome />} />
               <Route path="/crop-recommendation" element={<CropRecommendation />} />
               <Route path="/market-prices" element={<MarketPrices />} />

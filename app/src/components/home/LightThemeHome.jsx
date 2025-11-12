@@ -724,7 +724,7 @@ const LightThemeHome = () => {
         {/* Hero Section with Weather and Tasks side by side */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Weather widget */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition cursor-pointer" onClick={() => navigate('/weather')}>
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition cursor-pointer" onClick={() => navigate('/weather-analysis')}>
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">

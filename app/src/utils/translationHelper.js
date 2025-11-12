@@ -47,8 +47,6 @@ export const urlPathToPageName = {
   '/crop-recommendation': 'cropRecommendation',
   '/market-prices': 'marketPrices',
   '/gov-schemes': 'governmentSchemes',
-  '/weather': 'weather',
-  '/weather/tomorrow': 'weather',
   '/profile': 'profile',
   '/alerts': 'alerts',
   '/tasks': 'tasks',
@@ -130,7 +128,6 @@ export const componentTranslationNamespaces = {
   'CropTaskSelector': ['translation', 'tasks'],
 
   // Weather Components
-  'TomorrowWeatherPage': ['translation'],
   'WeatherAnalysis': ['translation'],
 
   // Crop Components
