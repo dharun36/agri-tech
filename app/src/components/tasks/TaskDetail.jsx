@@ -356,8 +356,8 @@ const TaskDetail = () => {
                     </span>
                   )}
                   <h1 className={`text-2xl font-bold ${task?.status === 'done' ? 'text-green-700' :
-                      task?.status === 'skipped' ? 'text-gray-500 line-through' :
-                        isOverdue ? 'text-red-700' : 'text-gray-900'
+                    task?.status === 'skipped' ? 'text-gray-500 line-through' :
+                      isOverdue ? 'text-red-700' : 'text-gray-900'
                     }`}>
                     {task?.title}
                   </h1>
@@ -416,8 +416,8 @@ const TaskDetail = () => {
                     onClick={handleMarkDone}
                     disabled={isSubmitting}
                     className={`px-4 py-2 rounded-md flex-1 flex justify-center items-center ${isSubmitting
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-green-600 text-white hover:bg-green-700'
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-green-600 text-white hover:bg-green-700'
                       }`}
                   >
                     <FaCheck className="mr-2" />
@@ -428,8 +428,8 @@ const TaskDetail = () => {
                     onClick={handleMarkSkipped}
                     disabled={isSubmitting}
                     className={`px-4 py-2 rounded-md flex-1 flex justify-center items-center ${isSubmitting
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                   >
                     <FaTimes className="mr-2" />
@@ -577,8 +577,8 @@ const TaskDetail = () => {
                   type="submit"
                   disabled={isSubmitting}
                   className={`px-4 py-2 rounded-md flex-1 flex justify-center items-center ${isSubmitting
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-green-600 text-white hover:bg-green-700'
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
                     }`}
                 >
                   {isSubmitting ? t('saving', { ns: 'tasks' }) : t('save_changes', { ns: 'tasks' })}

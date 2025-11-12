@@ -69,7 +69,7 @@ const OptimizedTaskDashboard = () => {
         }
       });
 
-      if (!res.ok) {  
+      if (!res.ok) {
         throw new Error(`Failed to fetch crops: ${res.status}`);
       }
 

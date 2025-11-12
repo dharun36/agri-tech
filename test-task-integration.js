@@ -10,7 +10,7 @@ async function testTaskIntegration() {
     console.log('✅ MongoDB connection successful');
 
     const db = client.db();
-    
+
     // Test 1: Check if tasks collection exists and has some tasks
     const tasksCount = await db.collection('tasks').countDocuments();
     console.log(`📊 Total tasks in database: ${tasksCount}`);
@@ -20,9 +20,9 @@ async function testTaskIntegration() {
     const recentTasks = await db.collection('tasks').find({
       createdAt: { $gte: sevenDaysAgo }
     }).toArray();
-    
+
     console.log(`📈 Recent tasks (last 7 days): ${recentTasks.length}`);
-    
+
     if (recentTasks.length > 0) {
       console.log('📝 Recent task examples:');
       recentTasks.slice(0, 3).forEach((task, index) => {
@@ -34,7 +34,7 @@ async function testTaskIntegration() {
     const aiTasks = await db.collection('tasks').find({
       source: { $in: ['ai_generated', 'system_generated'] }
     }).toArray();
-    
+
     console.log(`🤖 AI-generated tasks: ${aiTasks.length}`);
 
     // Test 4: Check today's tasks
@@ -42,11 +42,11 @@ async function testTaskIntegration() {
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     const todayTasks = await db.collection('tasks').find({
       dueDate: { $gte: today, $lt: tomorrow }
     }).toArray();
-    
+
     console.log(`📅 Today's tasks: ${todayTasks.length}`);
 
     // Test 5: Check task categories
@@ -62,7 +62,7 @@ async function testTaskIntegration() {
         }
       }
     ]).toArray();
-    
+
     console.log(`👥 Users with tasks: ${userTaskCounts.length}`);
     if (userTaskCounts.length > 0) {
       console.log('   Task distribution:');

@@ -495,14 +495,14 @@ async function generateAllUserTaskRecommendations(userId, options = {}) {
 
       // Generate tasks using the enhanced system
       let tasks = [];
-      
+
       if (cropSpecificOptions.useAIGeneration && process.env.GEMINI_API_KEY) {
         try {
           // Try AI generation only for the first crop to manage rate limits
           const User = require('../models/User');
           const user = await User.findById(userId);
           const aiTasks = await generateAIRecommendations(crop, user);
-          
+
           // Convert AI tasks to proper format
           tasks = aiTasks.map(task => ({
             title: task.title,
@@ -515,7 +515,7 @@ async function generateAllUserTaskRecommendations(userId, options = {}) {
             source: 'ai_generated',
             isRecommendation: true
           }));
-          
+
           console.log(`Generated ${tasks.length} AI tasks for crop ${crop.name} (${crop._id})`);
         } catch (aiError) {
           console.warn(`AI generation failed for crop ${crop._id}, using rule-based generation:`, aiError.message);
@@ -539,9 +539,9 @@ async function generateAllUserTaskRecommendations(userId, options = {}) {
         taskCategories: savedTasks.map(t => t.category),
         generationMethod: cropSpecificOptions.useAIGeneration ? 'ai_with_fallback' : 'rule_based'
       });
-      
+
       console.log(`Successfully generated ${savedTasks.length} tasks for ${crop.name} (${crop._id})`);
-      
+
     } catch (error) {
       console.error(`Error generating tasks for crop ${crop._id} (${crop.name}):`, error.message);
       results.push({
@@ -556,7 +556,7 @@ async function generateAllUserTaskRecommendations(userId, options = {}) {
   // Log generation summary
   const successfulCrops = results.filter(r => !r.error).length;
   const failedCrops = results.filter(r => r.error).length;
-  
+
   console.log(`Task generation complete for user ${userId}: ${totalTasksGenerated} tasks across ${successfulCrops} crops (${failedCrops} failed)`);
 
   return {
@@ -630,15 +630,15 @@ async function generateAIRecommendations(crop, user) {
     const plantingDate = new Date(crop.plantingDate);
     const today = new Date();
     const cropAgeInDays = Math.floor((today - plantingDate) / (1000 * 60 * 60 * 24));
-    
+
     // Determine current season for seasonal recommendations
     const currentMonth = today.getMonth() + 1; // 1-12
     const currentSeason = getCurrentSeason(currentMonth);
-    
+
     // Get upcoming dates for task scheduling
     const oneWeekLater = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     const twoWeeksLater = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
-    
+
     // Create a comprehensive and enhanced prompt for better results
     const prompt = `
       You are an expert agricultural consultant with 20+ years of experience in crop management and sustainable farming practices. Generate 5-7 highly specific, actionable, and scientifically-backed agricultural tasks for a ${crop.name} crop.

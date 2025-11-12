@@ -35,7 +35,7 @@ const useTaskGeneration = () => {
       }
 
       setGenerationResult(result);
-      
+
       if (result.generated) {
         console.log(`✅ Task generation successful: ${result.data.taskCount} tasks generated`);
       } else {

@@ -50,7 +50,7 @@ async function triggerTaskGeneration() {
   try {
     console.log('🚀 Starting manual task generation...');
     console.log('📅 Current time:', new Date().toISOString());
-    
+
     // Get all active users
     const users = await User.find().select('_id location');
     console.log(`👥 Found ${users.length} users in the system`);
@@ -64,12 +64,12 @@ async function triggerTaskGeneration() {
     const results = [];
 
     console.log('\n🔧 Processing task generation for each user...');
-    
+
     // Generate recommendations for each user
     for (const user of users) {
       try {
         console.log(`\n📋 Generating tasks for user: ${user._id}`);
-        
+
         // Enhanced options for better task generation
         const enhancedOptions = {
           includeWeatherTasks: true,
@@ -84,15 +84,15 @@ async function triggerTaskGeneration() {
 
         const result = await generateAllUserTaskRecommendations(user._id, enhancedOptions);
         totalTasksGenerated += result.taskCount;
-        
+
         const successfulCrops = result.cropResults?.filter(r => !r.error).length || 0;
         const failedCrops = result.cropResults?.filter(r => r.error).length || 0;
-        
+
         console.log(`  ✅ Generated ${result.taskCount} tasks for ${successfulCrops} crops`);
         if (failedCrops > 0) {
           console.log(`  ⚠️  ${failedCrops} crops failed to generate tasks`);
         }
-        
+
         results.push({
           userId: user._id,
           taskCount: result.taskCount,
@@ -101,7 +101,7 @@ async function triggerTaskGeneration() {
           failedCrops,
           summary: result.summary
         });
-        
+
       } catch (error) {
         console.error(`❌ Error generating tasks for user ${user._id}:`, error.message);
         results.push({
@@ -118,11 +118,11 @@ async function triggerTaskGeneration() {
     console.log(`👥 Users processed: ${users.length}`);
     console.log(`✅ Successful generations: ${results.filter(r => !r.error).length}`);
     console.log(`❌ Failed generations: ${results.filter(r => r.error).length}`);
-    
+
     if (totalTasksGenerated > 0) {
       console.log(`📈 Average tasks per user: ${Math.round(totalTasksGenerated / users.length)}`);
     }
-    
+
     console.log('\n📋 Detailed Results:');
     results.forEach(result => {
       if (result.error) {
@@ -131,9 +131,9 @@ async function triggerTaskGeneration() {
         console.log(`  ✅ User ${result.userId}: ${result.taskCount} tasks for ${result.cropCount} crops`);
       }
     });
-    
+
     console.log('\n🎉 Manual task generation completed successfully!');
-    
+
   } catch (error) {
     console.error('💥 Error in manual task generation:', error);
   } finally {

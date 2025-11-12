@@ -63,7 +63,7 @@ if (process.env.USE_OPTIMIZED_ROUTES === 'true') {
 app.post('/api/tasks/generate-user', async (req, res) => {
   try {
     const { userId } = req.body;
-    
+
     if (!userId) {
       return res.status(400).json({
         success: false,
@@ -72,11 +72,11 @@ app.post('/api/tasks/generate-user', async (req, res) => {
     }
 
     console.log(`Task generation requested for user: ${userId}`);
-    
+
     // Check if user has tasks generated recently (within last 24 hours)
     const Task = require('./models/Task');
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    
+
     const recentTasks = await Task.find({
       user: userId,
       createdAt: { $gte: twentyFourHoursAgo },
@@ -131,7 +131,7 @@ app.post('/api/tasks/generate-user', async (req, res) => {
 app.post('/api/tasks/generate-all-users', async (req, res) => {
   try {
     console.log('Manual task generation triggered for all users');
-    
+
     // Get all active users
     const users = await User.find().select('_id location');
     let totalTasksGenerated = 0;
@@ -323,7 +323,7 @@ const User = require('./models/User');
 //     }
 
 //     console.log(`Daily task generation complete. Generated ${totalTasksGenerated} tasks across ${users.length} users.`);
-    
+
 //     // Log completion with timestamp for monitoring
 //     console.log(`Task generation completed at: ${new Date().toISOString()}`);
 //   } catch (error) {
