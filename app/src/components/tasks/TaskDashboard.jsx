@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -10,6 +10,9 @@ import {
   FaSpinner
 } from 'react-icons/fa';
 import TaskList from './TaskList';
+import useTaskGeneration from '../../hooks/useTaskGeneration';
+import { translateCropName } from '../../utils/dbTranslations';
+import i18n from '../../i18n';
 
 /**
  * Multi-crop task dashboard component
@@ -23,69 +26,91 @@ const TaskDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeCropIndex, setActiveCropIndex] = useState(0);
+  const [taskRefreshTrigger, setTaskRefreshTrigger] = useState(0);
 
-  // Fetch user's crops on mount
-  useEffect(() => {
-    const fetchCrops = async () => {
-      setLoading(true);
-      setError(null);
+  // Task generation hook to watch for new task generation
+  const { generationResult } = useTaskGeneration();
 
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
+  // Get active crop ID for task filtering
+  const activeCropId = useMemo(() => {
+    if (crops.length === 0) return null;
+    return crops[activeCropIndex]?._id;
+  }, [crops, activeCropIndex]);
 
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+  // Fetch user's crops on mount - using useCallback to prevent unnecessary recreation
+  const fetchCrops = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-        if (!res.ok) {
-          throw new Error(`Failed to fetch crops: ${res.status}`);
-        }
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
 
-        const cropData = await res.json();
-        setCrops(cropData);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
-        // If cropId is provided, set the active crop index accordingly
-        if (cropId) {
-          const cropIndex = cropData.findIndex(crop => crop._id === cropId);
+      if (!res.ok) {
+        throw new Error(`Failed to fetch crops: ${res.status}`);
+      }
+
+      const cropData = await res.json();
+      setCrops(cropData);
+
+      // If cropId is provided, set the active crop index accordingly
+      if (cropId) {
+        const cropIndex = cropData.findIndex(crop => crop._id === cropId);
           if (cropIndex >= 0) {
             setActiveCropIndex(cropIndex);
           }
         }
       } catch (err) {
         console.error('Error fetching crops:', err);
-        setError(t('failed_to_load_crops'));
+        setError(t('failed_to_fetch_crops', { ns: 'tasks' }));
       } finally {
         setLoading(false);
       }
+    }, [navigate, t, cropId]);
+
+    // Load crops on component mount
+    useEffect(() => {
+      fetchCrops();
+    }, [fetchCrops]);
+
+    // Watch for task generation results and refresh task list
+    useEffect(() => {
+      if (generationResult && generationResult.generated) {
+        console.log('New tasks generated in dashboard, refreshing task list');
+        setTaskRefreshTrigger(prev => prev + 1);
+      }
+    }, [generationResult]);
+
+    // Navigate to previous crop
+    const handlePrevCrop = () => {
+      if (activeCropIndex > 0) {
+        setActiveCropIndex(activeCropIndex - 1);
+        // Update the URL to reflect the new crop
+        navigate(`/tasks/${crops[activeCropIndex - 1]._id}`);
+      } else {
+        setActiveCropIndex(crops.length - 1); // Loop to last crop
+        navigate(`/tasks/${crops[crops.length - 1]._id}`);
+      }
     };
 
-    fetchCrops();
-  }, [t, cropId]);
-
-  // Handle next crop navigation
-  const handleNextCrop = () => {
-    if (activeCropIndex < crops.length - 1) {
-      setActiveCropIndex(activeCropIndex + 1);
-      // Update the URL to reflect the new crop
-      navigate(`/tasks/${crops[activeCropIndex + 1]._id}`);
-    } else {
-      setActiveCropIndex(0); // Loop back to first crop
-      navigate(`/tasks/${crops[0]._id}`);
-    }
-  };
-
-  // Handle previous crop navigation
-  const handlePrevCrop = () => {
-    if (activeCropIndex > 0) {
-      setActiveCropIndex(activeCropIndex - 1);
-      // Update the URL to reflect the new crop
-      navigate(`/tasks/${crops[activeCropIndex - 1]._id}`);
-    } else {
-      setActiveCropIndex(crops.length - 1); // Loop to last crop
-      navigate(`/tasks/${crops[crops.length - 1]._id}`);
-    }
-  };
+    // Navigate to next crop
+    const handleNextCrop = () => {
+      if (activeCropIndex < crops.length - 1) {
+        setActiveCropIndex(activeCropIndex + 1);
+        // Update the URL to reflect the new crop
+        navigate(`/tasks/${crops[activeCropIndex + 1]._id}`);
+      } else {
+        setActiveCropIndex(0); // Loop back to first crop
+        navigate(`/tasks/${crops[0]._id}`);
+      }
+    };
 
   // Define a consistent container style for all states
   const containerClass = "bg-white rounded-lg shadow-md min-h-[500px]";
@@ -216,7 +241,7 @@ const TaskDashboard = () => {
       )}
 
       {/* Task List for Active Crop */}
-      <TaskList cropId={activeCrop._id} />
+      <TaskList cropId={activeCropId} refreshTrigger={taskRefreshTrigger} />
     </div>
   );
 };

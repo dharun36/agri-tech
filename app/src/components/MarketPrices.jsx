@@ -33,7 +33,6 @@ const cropImages = {
   Sugarcane: "https://www.mahagro.com/cdn/shop/articles/iStock_000063947343_Medium_4e1c882b-faf0-4487-b45b-c2b557d32442.jpg?v=1541408129",
   Potato: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&h=300&fit=crop&auto=format",
   Onion: "https://images.unsplash.com/photo-1508747703725-719777637510?w=400&h=300&fit=crop&auto=format",
-  Tomato: "https://images.unsplash.com/photo-1553395572-0b8e5318e32b?w=400&h=300&fit=crop&auto=format",
   Apple: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400&h=300&fit=crop&auto=format",
   Banana: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=400&h=300&fit=crop&auto=format",
   Mango: "https://images.unsplash.com/photo-1553279768-865429fa0078?w=400&h=300&fit=crop&auto=format",
@@ -61,8 +60,7 @@ const MarketPrices = () => {
   const [allCrops, setAllCrops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDistrict, setSelectedDistrict] = useState('All');
-  const [selectedCropType, setSelectedCropType] = useState('All');
+  const [selectedDistrict, setSelectedDistrict] = useState('Erode');
   const [isSearching, setIsSearching] = useState(false);
   const [districts, setDistricts] = useState([
     'All',
@@ -276,9 +274,6 @@ const MarketPrices = () => {
 
     // Show user feedback
     toast.info(`Filtering prices for ${newDistrict === 'All' ? 'all districts' : newDistrict}`);
-  };  // Function to handle crop type selection
-  const handleCropTypeChange = (e) => {
-    setSelectedCropType(e.target.value);
   };
 
   // Function to toggle between user crops and searched crops
@@ -380,22 +375,6 @@ const MarketPrices = () => {
                     Filtered
                   </span>
                 )}
-              </div>
-
-              {/* Crop Type Filter */}
-              <div className="flex items-center gap-2">
-
-                <select
-                  value={selectedCropType}
-                  onChange={handleCropTypeChange}
-                  className="bg-white border border-gray-200 rounded-md py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                >
-                  <option value="All">{t('all_crop_types') || 'All Crop Types'}</option>
-                  <option value="Grain">{t('grains') || 'Grains'}</option>
-                  <option value="Vegetable">{t('vegetables') || 'Vegetables'}</option>
-                  <option value="Fruit">{t('fruits') || 'Fruits'}</option>
-                  <option value="Pulse">{t('pulses') || 'Pulses'}</option>
-                </select>
               </div>
 
               {/* View Toggle */}

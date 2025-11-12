@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import TaskItem from './TaskItem';
 import TaskSkeleton from './TaskSkeleton';
@@ -17,11 +17,14 @@ import {
 } from 'react-icons/fa';
 import { generateTaskRecommendations } from '../../utils/taskRecommendationGenerator';
 
+// Memoized task item component to prevent unnecessary re-renders
+const MemoizedTaskItem = memo(TaskItem);
+
 /**
  * Task list component that displays today's tasks, upcoming tasks, and task history
  * Now with AI-powered task recommendations using the Gemini API
  */
-const TaskList = ({ cropId = null }) => {
+const TaskList = ({ cropId = null, refreshTrigger = 0 }) => {
   const { t } = useTranslation(['translation', 'tasks']);
   const [activeTab, setActiveTab] = useState('today');
   const [tasks, setTasks] = useState([]);
@@ -36,77 +39,65 @@ const TaskList = ({ cropId = null }) => {
   const [prevTasks, setPrevTasks] = useState([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Fetch tasks based on active tab and filters
-  useEffect(() => {
-    const fetchTasks = async () => {
-      // Only show loading state on initial load, not on tab changes
-      if (isInitialLoad) {
-        setLoading(true);
-      } else {
-        // For subsequent loads, store current tasks as previous to maintain layout
-        setPrevTasks(tasks);
+  // Fetch tasks based on active tab and filters - using useCallback for performance
+  const fetchTasks = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      // Determine API endpoint based on active tab
+      let url = '';
+      switch (activeTab) {
+        case 'today':
+          url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks/today`;
+          break;
+        case 'upcoming':
+          url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks/upcoming`;
+          break;
+        case 'history':
+          url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks/history`;
+          break;
+        default:
+          url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks`;
       }
 
-      setError(null);
-
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
-        // Determine API endpoint based on active tab
-        let url = '';
-        switch (activeTab) {
-          case 'today':
-            url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks/today`;
-            break;
-          case 'upcoming':
-            url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks/upcoming`;
-            break;
-          case 'history':
-            url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks/history`;
-            break;
-          default:
-            url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks`;
-        }
-
-        // Add crop filter if provided
-        if (cropId) {
-          url += url.includes('?') ? `&cropId=${cropId}` : `?cropId=${cropId}`;
-        }
-
-        // Add category filter if selected
-        if (filterCategory !== 'all') {
-          url += url.includes('?') ? `&category=${filterCategory}` : `?category=${filterCategory}`;
-        }
-
-        const res = await fetch(url, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!res.ok) {
-          throw new Error(`Failed to fetch tasks: ${res.status}`);
-        }
-
-        const data = await res.json();
-        const newTasks = activeTab === 'history' || activeTab === 'all' ? data.tasks : data;
-
-        // Use a slight delay when updating tasks to ensure smooth transition
-        // This prevents layout shifts as the new content loads
-        setTimeout(() => {
-          setTasks(newTasks);
-          setIsInitialLoad(false);
-          setLoading(false);
-        }, 100);
-      } catch (err) {
-        console.error('Error fetching tasks:', err);
-        setError(t('failed_to_fetch_tasks', { ns: 'tasks' }));
-        setLoading(false);
-        setIsInitialLoad(false);
+      // Add crop filter if provided
+      if (cropId) {
+        url += url.includes('?') ? `&cropId=${cropId}` : `?cropId=${cropId}`;
       }
-    };
 
-    fetchTasks();
+      // Add category filter if selected
+      if (filterCategory !== 'all') {
+        url += url.includes('?') ? `&category=${filterCategory}` : `?category=${filterCategory}`;
+      }
+
+      const res = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to fetch tasks: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const newTasks = activeTab === 'history' || activeTab === 'all' ? data.tasks : data;
+
+      setTasks(newTasks);
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
+      setError(t('failed_to_fetch_tasks', { ns: 'tasks' }));
+    } finally {
+      setLoading(false);
+    }
   }, [activeTab, cropId, filterCategory, t]);
+
+  // Effect to fetch tasks when dependencies change
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks, refreshTrigger]);
 
   // Generate new task recommendations using Gemini API
   const handleGenerateRecommendations = async () => {
@@ -211,8 +202,8 @@ const TaskList = ({ cropId = null }) => {
     }
   };
 
-  // Mark task as done
-  const handleMarkDone = async (taskId) => {
+  // Mark task as done - using useCallback for performance
+  const handleMarkDone = useCallback(async (taskId) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -240,10 +231,10 @@ const TaskList = ({ cropId = null }) => {
       console.error('Error updating task status:', err);
       setError(t('failed_to_update_task'));
     }
-  };
+  }, [tasks, t]);
 
-  // Mark task as skipped
-  const handleMarkSkipped = async (taskId) => {
+  // Mark task as skipped - using useCallback for performance
+  const handleMarkSkipped = useCallback(async (taskId) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -271,10 +262,10 @@ const TaskList = ({ cropId = null }) => {
       console.error('Error updating task status:', err);
       setError(t('failed_to_update_task'));
     }
-  };
+  }, [tasks, t]);
 
-  // Handle task saved from recommendations modal
-  const handleTaskSaved = (newTask) => {
+  // Handle task saved from recommendations modal - using useCallback
+  const handleTaskSaved = useCallback((newTask) => {
     // If we're on the tab that should show this task, add it to the list
     const shouldAddToCurrentList =
       (activeTab === 'today' && new Date(newTask.dueDate).toDateString() === new Date().toDateString()) ||
@@ -285,17 +276,15 @@ const TaskList = ({ cropId = null }) => {
     }
 
     toast.success(t('task_saved_success', { ns: 'tasks' }));
-  };
+  }, [activeTab, t]);
 
-  // Get filtered tasks based on category
-  const getFilteredTasks = () => {
+  // Get filtered tasks based on category - using useMemo for performance
+  const filteredTasks = useMemo(() => {
     if (filterCategory === 'all') {
       return tasks;
     }
     return tasks.filter(task => task.category === filterCategory);
-  };
-
-  const filteredTasks = getFilteredTasks();
+  }, [tasks, filterCategory]);
 
   return (
     <div className="bg-white rounded-lg shadow p-4 min-h-[400px]">
@@ -449,7 +438,7 @@ const TaskList = ({ cropId = null }) => {
         {!loading && filteredTasks.length > 0 && (
           <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
             {filteredTasks.map(task => (
-              <TaskItem
+              <MemoizedTaskItem
                 key={task._id}
                 task={task}
                 onMarkDone={handleMarkDone}

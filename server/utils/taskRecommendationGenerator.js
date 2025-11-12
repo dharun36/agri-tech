@@ -451,53 +451,124 @@ async function saveRecommendations(tasks) {
  * @param {Object} options - Configuration options
  * @returns {Object} - Results of task generation
  */
+/**
+ * Enhanced function to generate user task recommendations with rate limiting
+ * @param {String} userId - User ID
+ * @param {Object} options - Enhanced configuration options
+ * @returns {Object} - Results of task generation
+ */
 async function generateAllUserTaskRecommendations(userId, options = {}) {
   const Crop = require('../models/Crop');
 
   // Find all active crops for the user
   const crops = await Crop.find({
     user: userId,
-    status: { $in: ['Growing', 'Planning'] }
+    status: { $in: ['Growing', 'Planning', 'Harvested'] } // Include recently harvested for post-harvest tasks
   });
 
   if (!crops.length) {
-    return { success: true, message: 'No active crops found', taskCount: 0 };
+    return { success: true, message: 'No active crops found', taskCount: 0, cropResults: [] };
   }
 
   let totalTasksGenerated = 0;
   const results = [];
 
-  // For each crop, generate recommendations
+  console.log(`Generating tasks for ${crops.length} crops for user ${userId}`);
+
+  // For each crop, generate recommendations with rate limiting
   for (const crop of crops) {
     try {
-      // Here you would normally fetch live weather and disease risk data
-      // For this example, we'll use placeholders
-      const weatherData = options.weatherData || { temp: 25, daily: [] };
-      const diseaseRisks = options.diseaseRisks || {};
+      // Enhanced options with crop-specific context
+      const cropSpecificOptions = {
+        ...options,
+        // Use AI generation only for the first crop to avoid rate limits
+        useAIGeneration: process.env.GEMINI_API_KEY && results.length === 0,
+        // Enhanced weather context
+        weatherData: options.weatherData || { temp: 25, daily: [] },
+        // Disease risk assessment (can be expanded with ML models)
+        diseaseRisks: options.diseaseRisks || {},
+        // Seasonal and location-based adjustments
+        includeSeasonalTasks: options.includeSeasonalTasks !== false,
+        // Prioritization based on crop value and urgency
+        prioritizeUrgentTasks: options.prioritizeUrgentTasks !== false
+      };
 
-      const tasks = await generateRecommendations(crop, weatherData, diseaseRisks, options);
+      // Generate tasks using the enhanced system
+      let tasks = [];
+      
+      if (cropSpecificOptions.useAIGeneration && process.env.GEMINI_API_KEY) {
+        try {
+          // Try AI generation only for the first crop to manage rate limits
+          const User = require('../models/User');
+          const user = await User.findById(userId);
+          const aiTasks = await generateAIRecommendations(crop, user);
+          
+          // Convert AI tasks to proper format
+          tasks = aiTasks.map(task => ({
+            title: task.title,
+            description: task.description,
+            category: task.category,
+            priority: task.priority || 'medium',
+            dueDate: task.dueDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+            user: userId,
+            crop: crop._id,
+            source: 'ai_generated',
+            isRecommendation: true
+          }));
+          
+          console.log(`Generated ${tasks.length} AI tasks for crop ${crop.name} (${crop._id})`);
+        } catch (aiError) {
+          console.warn(`AI generation failed for crop ${crop._id}, using rule-based generation:`, aiError.message);
+          // Fallback to rule-based generation
+          tasks = await generateRecommendations(crop, cropSpecificOptions.weatherData, cropSpecificOptions.diseaseRisks, cropSpecificOptions);
+        }
+      } else {
+        // Use rule-based generation for subsequent crops to avoid rate limits
+        tasks = await generateRecommendations(crop, cropSpecificOptions.weatherData, cropSpecificOptions.diseaseRisks, cropSpecificOptions);
+      }
+
+      // Save the generated tasks
       const savedTasks = await saveRecommendations(tasks);
 
       totalTasksGenerated += savedTasks.length;
       results.push({
         cropId: crop._id,
         cropName: crop.name,
-        tasksGenerated: savedTasks.length
+        cropVariety: crop.variety,
+        tasksGenerated: savedTasks.length,
+        taskCategories: savedTasks.map(t => t.category),
+        generationMethod: cropSpecificOptions.useAIGeneration ? 'ai_with_fallback' : 'rule_based'
       });
+      
+      console.log(`Successfully generated ${savedTasks.length} tasks for ${crop.name} (${crop._id})`);
+      
     } catch (error) {
-      console.error(`Error generating tasks for crop ${crop._id}:`, error);
+      console.error(`Error generating tasks for crop ${crop._id} (${crop.name}):`, error.message);
       results.push({
         cropId: crop._id,
         cropName: crop.name,
-        error: error.message
+        error: error.message,
+        tasksGenerated: 0
       });
     }
   }
 
+  // Log generation summary
+  const successfulCrops = results.filter(r => !r.error).length;
+  const failedCrops = results.filter(r => r.error).length;
+  
+  console.log(`Task generation complete for user ${userId}: ${totalTasksGenerated} tasks across ${successfulCrops} crops (${failedCrops} failed)`);
+
   return {
     success: true,
     taskCount: totalTasksGenerated,
-    cropResults: results
+    cropResults: results,
+    summary: {
+      totalCrops: crops.length,
+      successfulCrops,
+      failedCrops,
+      tasksPerCrop: Math.round(totalTasksGenerated / Math.max(successfulCrops, 1))
+    }
   };
 }
 
@@ -514,6 +585,18 @@ function clearCachedRecommendations(cropId) {
  */
 function clearAllCachedRecommendations() {
   recommendationsCache.clear();
+}
+
+/**
+ * Helper function to determine current season based on month
+ * @param {number} month - Month number (1-12)
+ * @returns {string} - Season name
+ */
+function getCurrentSeason(month) {
+  if (month >= 3 && month <= 5) return 'Spring';
+  if (month >= 6 && month <= 8) return 'Summer';
+  if (month >= 9 && month <= 11) return 'Autumn/Fall';
+  return 'Winter';
 }
 
 /**
@@ -543,27 +626,67 @@ async function generateAIRecommendations(crop, user) {
       model: "gemini-pro"
     });
 
-    // Create a structured prompt for better results
+    // Calculate crop age and growth stage for better task recommendations
+    const plantingDate = new Date(crop.plantingDate);
+    const today = new Date();
+    const cropAgeInDays = Math.floor((today - plantingDate) / (1000 * 60 * 60 * 24));
+    
+    // Determine current season for seasonal recommendations
+    const currentMonth = today.getMonth() + 1; // 1-12
+    const currentSeason = getCurrentSeason(currentMonth);
+    
+    // Get upcoming dates for task scheduling
+    const oneWeekLater = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const twoWeeksLater = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
+    
+    // Create a comprehensive and enhanced prompt for better results
     const prompt = `
-      Generate 5 agricultural tasks for a ${crop.name} crop that was planted on ${crop.plantingDate}.
+      You are an expert agricultural consultant with 20+ years of experience in crop management and sustainable farming practices. Generate 5-7 highly specific, actionable, and scientifically-backed agricultural tasks for a ${crop.name} crop.
+
+      === CROP ANALYSIS ===
+      Crop: ${crop.name} (${crop.variety || 'Standard variety'})
+      Planting Date: ${crop.plantingDate}
+      Crop Age: ${cropAgeInDays} days since planting
+      Current Growth Stage: ${crop.growthStage || 'Not specified'}
+      Farm Location: ${user.location || 'General region'}
+      Current Season: ${currentSeason}
+      Today's Date: ${today.toISOString().split('T')[0]}
+
+      === TASK GENERATION CRITERIA ===
+      1. **Priority-Based Recommendations**: Focus on time-sensitive, growth-stage appropriate tasks
+      2. **Scientific Rationale**: Each task should have agricultural science backing
+      3. **Seasonal Relevance**: Consider current season and upcoming weather patterns
+      4. **Preventive Care**: Include disease prevention, pest management, and soil health
+      5. **Resource Optimization**: Consider water conservation, nutrient efficiency
+      6. **Harvest Optimization**: If near harvest, include quality and yield optimization tasks
       
-      Crop Details:
-      - Name: ${crop.name}
-      - Variety: ${crop.variety || 'N/A'}
-      - Planting Date: ${crop.plantingDate}
-      - Growth Stage: ${crop.growthStage || 'Not specified'}
-      - Location: ${user.location || 'Not specified'}
-      
-      For each task, provide:
-      1. A clear, specific title (not generic)
-      2. A detailed description with actionable steps
-      3. A category from this list: irrigation, fertilization, pest_control, disease_treatment, harvesting, planting, pruning, soil_management, weather_response, general
-      4. An appropriate due date based on the crop's timeline
-      
-      Format the response as a JSON array of task objects with these properties: title, description, category, dueDate.
-      
-      Please avoid suggesting these existing tasks:
-      ${existingTaskTitles.join(', ')}
+      === TASK CATEGORIES TO PRIORITIZE ===
+      - **Critical/Urgent**: irrigation, disease_treatment, pest_control (if immediate action needed)
+      - **Important**: fertilization, soil_management, pruning (for optimal growth)
+      - **Preventive**: weather_response, general monitoring (for long-term health)
+      - **Harvest-Ready**: harvesting (only if crop is mature enough)
+
+      === EXISTING TASKS TO AVOID ===
+      Do not duplicate these existing pending tasks: ${existingTaskTitles.length > 0 ? existingTaskTitles.join(', ') : 'None'}
+
+      === OUTPUT REQUIREMENTS ===
+      Generate 5-7 tasks as a JSON array with these exact properties:
+      - title: Specific, actionable task title (avoid generic terms)
+      - description: Detailed scientific explanation with step-by-step instructions, benefits, and timing rationale
+      - category: One of [irrigation, fertilization, pest_control, disease_treatment, harvesting, planting, pruning, soil_management, weather_response, general]
+      - dueDate: ISO date string (YYYY-MM-DD) - consider urgency and crop growth cycle
+      - priority: One of [low, medium, high, urgent] based on impact on crop health and yield
+
+      === TASK FOCUS AREAS ===
+      1. **Growth Stage Specific**: Tasks appropriate for current ${cropAgeInDays}-day-old ${crop.name}
+      2. **Seasonal Activities**: ${currentSeason}-appropriate farming activities
+      3. **Preventive Measures**: Disease/pest prevention before problems occur
+      4. **Yield Optimization**: Tasks that maximize quality and quantity of harvest
+      5. **Resource Efficiency**: Water-smart and nutrient-efficient practices
+      6. **Soil Health**: Long-term soil fertility and structure improvement
+      7. **Weather Preparedness**: Tasks to prepare for seasonal weather changes
+
+      Return ONLY the JSON array, no additional text or explanations.
     `;
 
     // Generate content

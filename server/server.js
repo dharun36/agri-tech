@@ -59,7 +59,130 @@ if (process.env.USE_OPTIMIZED_ROUTES === 'true') {
   app.use('/api/tasks', require('./routes/tasks'));
 }
 
-// Weather Analysis Endpoint using Gemini AI
+// User-specific task generation (triggered when user visits site)
+app.post('/api/tasks/generate-user', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    console.log(`Task generation requested for user: ${userId}`);
+    
+    // Check if user has tasks generated recently (within last 24 hours)
+    const Task = require('./models/Task');
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    const recentTasks = await Task.find({
+      user: userId,
+      createdAt: { $gte: twentyFourHoursAgo },
+      source: { $in: ['ai_generated', 'system_generated'] }
+    });
+
+    // If user has recent tasks, don't generate new ones
+    if (recentTasks.length > 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'Recent tasks found, no generation needed',
+        existingTaskCount: recentTasks.length,
+        generated: false
+      });
+    }
+
+    // Enhanced options for single-user generation
+    const enhancedOptions = {
+      includeWeatherTasks: true,
+      includeGrowthStageTasks: true,
+      includeDiseaseTasks: true,
+      includeSeasonalTasks: true,
+      daysToLookAhead: 7,
+      prioritizeUrgentTasks: true,
+      weatherData: await getWeatherDataSafely(req.body.location),
+      diseaseRisks: req.body.diseaseRisks || {}
+    };
+
+    const result = await generateAllUserTaskRecommendations(userId, enhancedOptions);
+
+    console.log(`Generated ${result.taskCount} tasks for user ${userId}`);
+
+    res.status(200).json({
+      success: true,
+      message: `Generated ${result.taskCount} tasks for ${result.cropResults.length} crops`,
+      data: result,
+      generated: true
+    });
+
+  } catch (error) {
+    console.error('Error in user-specific task generation:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate tasks',
+      error: error.message,
+      generated: false
+    });
+  }
+});
+
+// Trigger task generation for all users (admin endpoint)
+app.post('/api/tasks/generate-all-users', async (req, res) => {
+  try {
+    console.log('Manual task generation triggered for all users');
+    
+    // Get all active users
+    const users = await User.find().select('_id location');
+    let totalTasksGenerated = 0;
+    const results = [];
+
+    for (const user of users) {
+      try {
+        const enhancedOptions = {
+          includeWeatherTasks: true,
+          includeGrowthStageTasks: true,
+          includeDiseaseTasks: true,
+          includeSeasonalTasks: true,
+          daysToLookAhead: 7,
+          prioritizeUrgentTasks: true,
+          weatherData: await getWeatherDataSafely(user.location),
+          diseaseRisks: {}
+        };
+
+        const result = await generateAllUserTaskRecommendations(user._id, enhancedOptions);
+        totalTasksGenerated += result.taskCount;
+        results.push({
+          userId: user._id,
+          taskCount: result.taskCount,
+          cropCount: result.cropResults.length
+        });
+      } catch (error) {
+        console.error(`Error generating tasks for user ${user._id}:`, error.message);
+        results.push({
+          userId: user._id,
+          error: error.message
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Generated ${totalTasksGenerated} tasks across ${users.length} users`,
+      totalTasks: totalTasksGenerated,
+      userResults: results
+    });
+
+  } catch (error) {
+    console.error('Error in bulk task generation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate tasks for all users',
+      error: error.message
+    });
+  }
+});
+
 app.post('/api/weather-analysis', async (req, res) => {
   try {
     const { weatherData } = req.body;
@@ -164,32 +287,75 @@ process.on('unhandledRejection', (reason, promise) => {
 const { generateAllUserTaskRecommendations } = require('./utils/taskRecommendationGenerator');
 const User = require('./models/User');
 
-// Schedule daily task recommendation generation for all users at 5:00 AM
-schedule.scheduleJob('0 5 * * *', async function () {
-  console.log('Running scheduled task recommendation generation...');
+// DISABLED: Schedule daily task recommendation generation to prevent rate limits
+// Only generate tasks when users actually visit the site
+// 
+// schedule.scheduleJob('0 5 * * *', async function () {
+//   console.log('Running scheduled daily task recommendation generation...');
 
+//   try {
+//     // Get all active users
+//     const users = await User.find().select('_id location');
+
+//     let totalTasksGenerated = 0;
+
+//     // Generate recommendations for each user
+//     for (const user of users) {
+//       try {
+//         // Enhanced options for better task generation
+//         const enhancedOptions = {
+//           includeWeatherTasks: true,
+//           includeGrowthStageTasks: true,
+//           includeDiseaseTasks: true,
+//           includeSeasonalTasks: true,
+//           daysToLookAhead: 7,
+//           prioritizeUrgentTasks: true,
+//           weatherData: await getWeatherDataSafely(user.location), // Safely get weather data
+//           diseaseRisks: {} // Could be enhanced with disease detection API
+//         };
+
+//         const result = await generateAllUserTaskRecommendations(user._id, enhancedOptions);
+//         totalTasksGenerated += result.taskCount;
+//         console.log(`Generated ${result.taskCount} tasks for user ${user._id} (${result.cropResults.length} crops)`);
+//       } catch (error) {
+//         console.error(`Error generating tasks for user ${user._id}:`, error.message);
+//       }
+//     }
+
+//     console.log(`Daily task generation complete. Generated ${totalTasksGenerated} tasks across ${users.length} users.`);
+    
+//     // Log completion with timestamp for monitoring
+//     console.log(`Task generation completed at: ${new Date().toISOString()}`);
+//   } catch (error) {
+//     console.error('Error in scheduled task generation:', error);
+//   }
+// });
+
+// Helper function to safely get weather data (with fallback)
+async function getWeatherDataSafely(location) {
   try {
-    // Get all active users
-    const users = await User.find().select('_id');
-
-    let totalTasksGenerated = 0;
-
-    // Generate recommendations for each user
-    for (const user of users) {
-      try {
-        const result = await generateAllUserTaskRecommendations(user._id);
-        totalTasksGenerated += result.taskCount;
-        console.log(`Generated ${result.taskCount} tasks for user ${user._id}`);
-      } catch (error) {
-        console.error(`Error generating tasks for user ${user._id}:`, error);
-      }
-    }
-
-    console.log(`Daily task generation complete. Generated ${totalTasksGenerated} tasks across ${users.length} users.`);
+    // If you have a weather API, implement it here
+    // For now, return a basic structure that won't break the system
+    return {
+      temp: 25, // Default temperature
+      humidity: 60,
+      daily: [
+        {
+          time: new Date().toISOString(),
+          values: {
+            temperatureMax: 28,
+            temperatureMin: 18,
+            precipitation: 0,
+            precipitationProbability: 10
+          }
+        }
+      ]
+    };
   } catch (error) {
-    console.error('Error in scheduled task generation:', error);
+    console.warn('Weather data not available, using defaults:', error.message);
+    return { temp: 25, daily: [] };
   }
-});
+}
 
 const PORT = process.env.PORT || 5000;
 // Bind host explicitly so PaaS port scans detect the listening socket

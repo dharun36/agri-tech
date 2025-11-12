@@ -46,12 +46,13 @@ router.post('/report', async (req, res) => {
     for (const user of usersNearby) {
       const alertData = {
         user: user._id,
-        disease,
+        // Use English disease name if available, otherwise use the provided disease name
+        disease: bilingualData && bilingualData.english && bilingualData.english.disease
+          ? bilingualData.english.disease
+          : disease,
         description,
         location
-      };
-
-      // Add bilingual data if available
+      };      // Add bilingual data if available
       if (bilingualData && bilingualData.english && bilingualData.tamil) {
         alertData.bilingualData = bilingualData;
       }

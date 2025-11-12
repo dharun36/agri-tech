@@ -439,6 +439,38 @@ router.put('/:id/status', async (req, res) => {
 });
 
 /**
+ * @route   PATCH /api/tasks/:id/complete
+ * @desc    Mark task as completed
+ * @access  Private
+ */
+router.patch('/:id/complete', async (req, res) => {
+  try {
+    const task = await Task.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found or access denied' });
+    }
+
+    // Update status to done
+    task.status = 'done';
+    task.completedDate = new Date();
+
+    await task.save();
+
+    // Populate the crop reference in the response
+    await task.populate('crop', 'name variety status');
+
+    res.json(task);
+  } catch (error) {
+    console.error(`Error marking task as complete for ${req.params.id}:`, error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
  * @route   PUT /api/tasks/:id
  * @desc    Update a task
  * @access  Private

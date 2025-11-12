@@ -44,9 +44,9 @@ const TaskDetailSkeleton = () => (
 );
 
 /**
- * Optimized Task Detail component for displaying and managing individual tasks
+ * Task Detail component for displaying and managing individual tasks
  */
-const OptimizedTaskDetail = () => {
+const TaskDetail = () => {
   const { id } = useParams();
   const { t } = useTranslation(['translation', 'tasks']);
   const navigate = useNavigate();
@@ -600,4 +600,4 @@ const OptimizedTaskDetail = () => {
   );
 };
 
-export default OptimizedTaskDetail;
+export default TaskDetail;

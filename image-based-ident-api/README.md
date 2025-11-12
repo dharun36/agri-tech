@@ -18,7 +18,7 @@ pip install -r requirements.txt
 
 1) To start the server with the uvicorn command, run the following command in your terminal:
 ```python
-uvicorn main:app --host=localhost --port=10000
+uvicorn main:app --host=0.0.0.0 --port=8000
 ```
 This command will start the server on http://localhost:10000. You can change the host and port values according to your requirements.
 

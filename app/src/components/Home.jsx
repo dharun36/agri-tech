@@ -46,6 +46,7 @@ import ModernCropCard from './crops/ModernCropCard';
 import QuickActionButton from './ui/QuickActionButton';
 import CropFilter from './ui/CropFilter';
 import QuickEventForm from './ui/QuickEventForm';
+import TodayTasksWidget from './TodayTasksWidget';
 
 
 // Format date helper
@@ -684,10 +685,10 @@ const MergedLightThemeHome = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-6 sm:px-1 md:px-4 mx:px-6">
       <div className="max-w-7xl mx-auto w-full">
-        {/* Weather and Crop Management Widgets */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* Weather and Task Recommendations Widget */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Weather Widget */}
-          <div className={`${card} w-full`}>
+          <div className={`${card} w-full lg:col-span-2`}>
             <div className="flex items-center gap-4 mb-4">
               <div className={iconBox}>
                 <FaCloudSun />
@@ -757,7 +758,23 @@ const MergedLightThemeHome = () => {
             </div>
           </div>
 
-          {/* Crop Management */}
+          {/* Today's Tasks Widget */}
+          <div className={`${card} w-full`}>
+            <div className="flex items-center gap-4 mb-4">
+              <div className={iconBox}>
+                <FontAwesomeIcon icon={faClipboardList} />
+              </div>
+              <div>
+                <h2 className={sectionTitle}>{t('todays_tasks')}</h2>
+                <p className="text-gray-500 text-sm">{t('recommended_for_today')}</p>
+              </div>
+            </div>
+            <TodayTasksWidget crops={filteredCrops} />
+          </div>
+        </div>
+
+        {/* Crop Management Widget */}
+        <div className="grid grid-cols-1 gap-6 mb-6">
           <div className={`${card} w-full`}>
             <div className="flex items-center gap-4 mb-4">
               <div className={iconBox}>
@@ -806,7 +823,7 @@ const MergedLightThemeHome = () => {
             </div>
 
             {/* Quick Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
                 <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
                   <FontAwesomeIcon icon={faSeedling} className="text-green-600" />
@@ -819,7 +836,7 @@ const MergedLightThemeHome = () => {
                 </div>
               </div>
 
-              {/* <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
+              <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
                   <FontAwesomeIcon icon={faDroplet} className="text-blue-600" />
                 </div>
@@ -836,7 +853,35 @@ const MergedLightThemeHome = () => {
                     }).length}
                   </div>
                 </div>
-              </div> */}
+              </div>
+
+              <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
+                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faCalendarAlt} className="text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <div className="text-sm text-gray-500">{t('days_to_harvest') || 'Days to Harvest'}</div>
+                  <div className="text-xl font-bold">
+                    {(() => {
+                      const harvestableCrops = crops.filter(crop =>
+                        crop.status === 'Growing' &&
+                        crop.plantingDate &&
+                        crop.expectedHarvestDate
+                      );
+                      if (harvestableCrops.length === 0) return '--';
+
+                      const earliestHarvest = harvestableCrops.reduce((earliest, crop) => {
+                        const harvestDate = new Date(crop.expectedHarvestDate);
+                        const earliestDate = new Date(earliest.expectedHarvestDate);
+                        return harvestDate < earliestDate ? crop : earliest;
+                      });
+
+                      const daysToHarvest = Math.ceil((new Date(earliestHarvest.expectedHarvestDate) - new Date()) / (1000 * 60 * 60 * 24));
+                      return daysToHarvest > 0 ? daysToHarvest : 0;
+                    })()}
+                  </div>
+                </div>
+              </div>
 
               <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
                 <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
@@ -848,6 +893,98 @@ const MergedLightThemeHome = () => {
                     ₹{crops.reduce((total, crop) => {
                       return total + (crop.costs ? crop.costs.reduce((cropTotal, cost) => cropTotal + (cost.amount || 0), 0) : 0);
                     }, 0).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-600" />
+                </div>
+                <div className="ml-4">
+                  <div className="text-sm text-gray-500">{t('tasks_pending') || 'Tasks Pending'}</div>
+                  <div className="text-xl font-bold">
+                    {(() => {
+                      let pendingTasks = 0;
+                      crops.forEach(crop => {
+                        if (crop.status !== 'Growing' && crop.status !== 'Planning') return;
+
+                        // Count irrigation needs
+                        if (crop.status === 'Growing') {
+                          const lastIrrigation = crop.lastIrrigation ? new Date(crop.lastIrrigation) : null;
+                          const daysSinceIrrigation = lastIrrigation ? Math.floor((new Date() - lastIrrigation) / (1000 * 60 * 60 * 24)) : null;
+                          if (!lastIrrigation || daysSinceIrrigation >= 2) pendingTasks++;
+
+                          // Count fertilization needs
+                          const lastFertilization = crop.lastFertilization ? new Date(crop.lastFertilization) : null;
+                          const daysSinceFertilization = lastFertilization ? Math.floor((new Date() - lastFertilization) / (1000 * 60 * 60 * 24)) : null;
+                          if (!lastFertilization || daysSinceFertilization >= 14) pendingTasks++;
+
+                          // Count pest check needs
+                          const lastPestCheck = crop.lastPestCheck ? new Date(crop.lastPestCheck) : null;
+                          const daysSincePestCheck = lastPestCheck ? Math.floor((new Date() - lastPestCheck) / (1000 * 60 * 60 * 24)) : null;
+                          if (!lastPestCheck || daysSincePestCheck >= 7) pendingTasks++;
+                        }
+
+                        if (crop.status === 'Planning') pendingTasks++;
+                      });
+                      return pendingTasks;
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faChartLine} className="text-emerald-600" />
+                </div>
+                <div className="ml-4">
+                  <div className="text-sm text-gray-500">{t('crop_varieties') || 'Crop Varieties'}</div>
+                  <div className="text-xl font-bold">
+                    {new Set(crops.map(crop => crop.name)).size}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
+                <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faLeaf} className="text-teal-600" />
+                </div>
+                <div className="ml-4">
+                  <div className="text-sm text-gray-500">{t('growth_stages') || 'Growth Stages'}</div>
+                  <div className="text-xl font-bold">
+                    {(() => {
+                      const stages = ['Seedling', 'Vegetative', 'Reproductive', 'Maturity'];
+                      const activeCrops = crops.filter(crop => crop.status === 'Growing');
+                      const stagesPresent = new Set(activeCrops.map(crop => crop.growthStage).filter(stage => stage && stages.includes(stage)));
+                      return stagesPresent.size || '--';
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-white rounded-xl shadow-sm flex items-center">
+                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faClipboardList} className="text-indigo-600" />
+                </div>
+                <div className="ml-4">
+                  <div className="text-sm text-gray-500">{t('avg_crop_age') || 'Avg Crop Age'}</div>
+                  <div className="text-xl font-bold">
+                    {(() => {
+                      const activeCrops = crops.filter(crop =>
+                        crop.status === 'Growing' && crop.plantingDate
+                      );
+                      if (activeCrops.length === 0) return '--';
+
+                      const totalDays = activeCrops.reduce((sum, crop) => {
+                        const plantDate = new Date(crop.plantingDate);
+                        const daysSincePlanting = Math.floor((new Date() - plantDate) / (1000 * 60 * 60 * 24));
+                        return sum + daysSincePlanting;
+                      }, 0);
+
+                      const avgDays = Math.floor(totalDays / activeCrops.length);
+                      return `${avgDays}d`;
+                    })()}
                   </div>
                 </div>
               </div>

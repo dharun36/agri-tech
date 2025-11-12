@@ -24,9 +24,8 @@ import CropDetails from './components/crops/CropDetails'
 import CropRouter from './components/crops/CropRouter'
 import CropTaskSelector from './components/tasks/CropTaskSelector'
 import TaskDashboard from './components/tasks/TaskDashboard'
-// Import optimized task components
-import OptimizedTaskDashboard from './components/tasks/OptimizedTaskDashboard'
-import OptimizedTaskDetail from './components/tasks/OptimizedTaskDetail'
+// Import task detail component  
+import TaskDetail from './components/tasks/TaskDetail'
 import AppLayout from './components/AppLayout'
 import ErrorBoundary from './components/ErrorBoundary'
 // Import hooks and utilities
@@ -87,9 +86,9 @@ function App() {
 
               {/* Task management routes */}
               <Route path="/tasks" element={<div className="p-4"><CropTaskSelector /></div>} />
-              {/* Using optimized components for better performance */}
-              <Route path="/tasks/:cropId" element={<div className="p-4"><OptimizedTaskDashboard /></div>} />
-              <Route path="/tasks/detail/:id" element={<div className="p-4"><OptimizedTaskDetail /></div>} />
+              {/* Individual crop task management */}
+              <Route path="/tasks/:cropId" element={<div className="p-4"><TaskDashboard /></div>} />
+              <Route path="/tasks/detail/:id" element={<div className="p-4"><TaskDetail /></div>} />
 
               {/* Crop routes */}
               <Route path="/crops/:id" element={<CropDetails />} />

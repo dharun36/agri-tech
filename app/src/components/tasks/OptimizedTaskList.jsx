@@ -22,7 +22,7 @@ const MemoizedTaskItem = memo(TaskItem);
 /**
  * Optimized Task List component with performance improvements
  */
-const OptimizedTaskList = ({ cropId = null }) => {
+const OptimizedTaskList = ({ cropId = null, refreshTrigger = 0 }) => {
   const { t } = useTranslation(['translation', 'tasks']);
   const [activeTab, setActiveTab] = useState('today');
   const [tasks, setTasks] = useState([]);
@@ -91,7 +91,7 @@ const OptimizedTaskList = ({ cropId = null }) => {
   // Effect to fetch tasks when dependencies change
   useEffect(() => {
     fetchTasks();
-  }, [fetchTasks]);
+  }, [fetchTasks, refreshTrigger]);
 
   // Handle marking task as done
   const handleMarkDone = useCallback(async (taskId) => {
