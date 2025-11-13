@@ -61,6 +61,16 @@
     "enable": "सक्षम करें",
     "later": "शायद बाद में"
   },
+  "ai_powered_farming_assistant": "एआई-संचालित खेती सहायक",
+  "auto_crop_assistant_description": "उत्तम वृद्धि की स्थितियाँ, लागत और समयरेखा प्राप्त करें",
+  "ai_will_generate_details": "हमारा AI आपके लिए फसल विवरण तैयार करेगा",
+  "ai_suggestion_prompt": "हमारा AI विश्लेषण करेगा और सुझाव देगा:",
+  "optimal_growing_conditions": "उत्तम वृद्धि की स्थितियाँ",
+  "estimated_costs_and_timeline": "अनुमानित लागत और समयरेखा",
+  "appropriate_soil_and_irrigation": "उपयुक्त मिट्टी और सिंचाई प्रकार",
+  "crop_rotation_recommendations": "फसल चक्र की सिफारिशें",
+  "generate_farming_details": "खेती के विवरण उत्पन्न करें",
+  "analyzing_crop_data": "फसल डेटा का विश्लेषण हो रहा है...",
   "tasks": {
     "crop_tasks": "फसल कार्य",
     "crop_tasks_and_recommendations": "फसल कार्य और सिफारिशें",

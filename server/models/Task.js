@@ -1,13 +1,6 @@
 const mongoose = require('mongoose');
 
-/**
- * Task Schema - Represents a recommendation or action item for a specific crop
- * 
- * Tasks are generated based on crop data, weather conditions, disease detections, etc.
- * Users can mark tasks as Done or Skipped, with a complete history maintained
- */
 const taskSchema = new mongoose.Schema({
-  // References
   crop: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Crop',
@@ -52,6 +45,11 @@ const taskSchema = new mongoose.Schema({
   recommendedTimeframe: {
     start: Date,
     end: Date
+  },
+  // Optional images related to the task (e.g., reference images, attachments)
+  images: {
+    type: [String],
+    default: []
   },
 
   // Status tracking
@@ -163,13 +161,19 @@ const taskSchema = new mongoose.Schema({
 
   // Feedback for completed tasks
   feedback: {
-    notes: String,
-    effectiveness: {
-      type: Number,
-      min: 1,
-      max: 5
-    },
-    images: [String] // URLs to result images
+    type: new mongoose.Schema({
+      notes: String,
+      effectiveness: {
+        type: Number,
+        min: 1,
+        max: 5
+      },
+      images: {
+        type: [String], // URLs to result images
+        default: []
+      }
+    }, { _id: false, versionKey: false }),
+    default: {}
   }
 }, { timestamps: true });
 

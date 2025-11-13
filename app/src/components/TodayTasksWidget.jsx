@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { translateTasksBatch } from '@/utils/dynamicTranslator';
 import {
   FaCheckCircle,
   FaTimes,
@@ -56,6 +57,8 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
   // Fetch daily tasks from API - generated only once per day
   useEffect(() => {
     const fetchDailyTasks = async () => {
@@ -73,7 +76,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
           return;
         }
 
-        const response = await fetch('http://localhost:5000/api/tasks/daily', {
+        const response = await fetch(`${API_BASE}/api/tasks/daily`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -93,7 +96,20 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
 
         if (data.success) {
           console.log(`📋 Retrieved ${data.tasks.length} daily tasks`, data);
-          setTodayTasks(data.tasks || []);
+          let tasks = data.tasks || [];
+
+          // Runtime translation for AI-generated content using Lingo.dev SDK via backend
+          // Only translate when user's language is not English
+          const lng = localStorage.getItem('i18nextLng') || 'en';
+          if (lng && lng !== 'en') {
+            try {
+              tasks = await translateTasksBatch(tasks, lng, 'en');
+            } catch (e) {
+              // fail silently, keep English
+            }
+          }
+
+          setTodayTasks(tasks);
 
           // Show generation status in console
           if (data.generated) {
@@ -135,7 +151,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
         requestBody.feedback = { notes: reason.trim() };
       }
 
-      const response = await fetch(`http://localhost:5000/api/tasks/${task._id}/status`, {
+      const response = await fetch(`${API_BASE}/api/tasks/${task._id}/status`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -193,7 +209,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
         requestBody.notes = notes.trim();
       }
 
-      const response = await fetch(`http://localhost:5000/api/tasks/${task._id}/complete`, {
+      const response = await fetch(`${API_BASE}/api/tasks/${task._id}/complete`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -381,12 +397,12 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                         <div className="flex-1 min-w-0">
                           {/* Better typography hierarchy */}
                           <h4 className="text-base font-bold text-gray-900 mb-2 leading-tight">
-                            {task.title}
+                            {task.displayTitle || task.title}
                           </h4>
 
                           {/* Enhanced description with better formatting */}
                           <div className="text-sm text-gray-600 mb-3 leading-relaxed">
-                            {task.description.split('\n').map((line, lineIndex) => {
+                            {(task.displayDescription || task.description).split('\n').map((line, lineIndex) => {
                               // Handle emoji-based sections
                               if (line.trim().startsWith('🚿') || line.trim().startsWith('🌱') ||
                                 line.trim().startsWith('🔍') || line.trim().startsWith('🌾') ||
@@ -495,12 +511,12 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                     )}
                     <span className={`font-medium truncate ${task.status === 'skipped' ? 'text-gray-500 line-through' : 'text-gray-600 line-through'
                       }`}>
-                      {task.title}
+                      {task.displayTitle || task.title}
                     </span>
                   </div>
                   <span className={`text-sm font-semibold ml-3 px-2 py-1 rounded-lg ${task.status === 'skipped'
-                      ? 'text-gray-600 bg-gray-100'
-                      : 'text-green-600 bg-green-100'
+                    ? 'text-gray-600 bg-gray-100'
+                    : 'text-green-600 bg-green-100'
                     }`}>
                     {new Date(task.completedAt || task.skippedAt).toLocaleTimeString([], {
                       hour: '2-digit',
@@ -580,8 +596,8 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                   }}
                   disabled={loading}
                   className={`px-6 py-2 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 ${completionModal.type === 'complete'
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-gray-600 hover:bg-gray-700'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-gray-600 hover:bg-gray-700'
                     }`}
                 >
                   {loading ? (

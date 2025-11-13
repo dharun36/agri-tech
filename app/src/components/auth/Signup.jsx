@@ -115,7 +115,7 @@ const Signup = () => {
             </p>
           </div>
           <img
-            src="https://source.unsplash.com/f-UM_CX_fhI"
+            src="https://media.istockphoto.com/id/503646746/photo/farmer-spreading-fertilizer-in-the-field-wheat.jpg?s=612x612&w=0&k=20&c=Lgxsjbz0jaYyQrvfzhyAsW2zELtshRP4AtLzkpmcLiE="
             alt="Smart Farming"
             className="w-full max-w-md rounded-lg shadow-xl hidden md:block"
           />

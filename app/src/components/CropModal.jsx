@@ -602,8 +602,8 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
   const renderStep1 = () => (
     <div className="p-6">
       <div className="text-center mb-6">
-        <h3 className="text-lg font-medium text-gray-900">{t('enter_crop_name') || 'Enter Crop Name'}</h3>
-        <p className="mt-2 text-sm text-gray-500">{t('ai_will_generate_details') || 'Our AI will generate the crop details for you'}</p>
+  <h3 className="text-lg font-medium text-gray-900">{t('enter_crop_name', { defaultValue: 'Enter Crop Name' })}</h3>
+  <p className="mt-2 text-sm text-gray-500">{t('ai_will_generate_details', { defaultValue: 'Our AI will generate the crop details for you' })}</p>
       </div>
 
       <div className="p-4 mb-6 bg-gradient-to-br from-green-50 to-blue-50 border border-green-200 rounded-xl">
@@ -612,8 +612,8 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
             <FontAwesomeIcon icon={faMagic} className="text-white" />
           </div>
           <div className="ml-3">
-            <h4 className="font-medium text-gray-800">{t('ai_powered_farming_assistant') || 'AI-Powered Farming Assistant'}</h4>
-            <p className="text-sm text-gray-600">{t('auto_crop_assistant_description') || 'Get optimal growing conditions, costs, and timelines'}</p>
+            <h4 className="font-medium text-gray-800">{t('ai_powered_farming_assistant', { defaultValue: 'AI-Powered Farming Assistant' })}</h4>
+            <p className="text-sm text-gray-600">{t('auto_crop_assistant_description', { defaultValue: 'Get optimal growing conditions, costs, and timelines' })}</p>
           </div>
         </div>
 
@@ -627,7 +627,7 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
                 setErrors({ ...errors, cropName: '' });
               }
             }}
-            placeholder={t('enter_crop_name') || 'Enter crop name (e.g., Tomato, Rice, Wheat)'}
+            placeholder={t('enter_crop_name', { defaultValue: 'Enter crop name (e.g., Tomato, Rice, Wheat)' })}
             className={`pr-12 ${errors.cropName ? 'border-red-500' : 'border-green-300 focus:border-green-500 focus:ring-green-500'}`}
           />
           {cropName && (
@@ -647,7 +647,7 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
             <div className="flex items-start">
               <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-600 mt-0.5 mr-2" />
               <div>
-                <p className="text-red-700 font-medium text-sm">{t('ai_error') || 'AI Error'}</p>
+                <p className="text-red-700 font-medium text-sm">{t('ai_error', { defaultValue: 'AI Error' })}</p>
                 <p className="text-red-600 text-sm">{errors.external}</p>
               </div>
             </div>
@@ -658,12 +658,12 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
           <div className="flex items-start">
             <FontAwesomeIcon icon={faInfoCircle} className="text-green-600 mt-0.5 mr-2" />
             <div className="text-sm text-gray-700">
-              <p className="mb-1">{t('ai_suggestion_prompt') || 'Our AI will analyze and suggest:'}</p>
+              <p className="mb-1">{t('ai_suggestion_prompt', { defaultValue: 'Our AI will analyze and suggest:' })}</p>
               <ul className="list-disc pl-5 space-y-1">
-                <li>{t('optimal_growing_conditions') || 'Optimal growing conditions'}</li>
-                <li>{t('estimated_costs_and_timeline') || 'Estimated costs and timeline'}</li>
-                <li>{t('appropriate_soil_and_irrigation') || 'Appropriate soil and irrigation types'}</li>
-                <li>{t('crop_rotation_recommendations') || 'Crop rotation recommendations'}</li>
+                <li>{t('optimal_growing_conditions', { defaultValue: 'Optimal growing conditions' })}</li>
+                <li>{t('estimated_costs_and_timeline', { defaultValue: 'Estimated costs and timeline' })}</li>
+                <li>{t('appropriate_soil_and_irrigation', { defaultValue: 'Appropriate soil and irrigation types' })}</li>
+                <li>{t('crop_rotation_recommendations', { defaultValue: 'Crop rotation recommendations' })}</li>
               </ul>
             </div>
           </div>
@@ -677,12 +677,12 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
           {generatingData ? (
             <>
               <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
-              <span className="font-medium">{t('analyzing_crop_data') || 'Analyzing Crop Data...'}</span>
+              <span className="font-medium">{t('analyzing_crop_data', { defaultValue: 'Analyzing Crop Data...' })}</span>
             </>
           ) : (
             <>
               <FontAwesomeIcon icon={faMagic} className="mr-2" />
-              <span className="font-medium">{t('generate_farming_details') || 'Generate Farming Details'}</span>
+              <span className="font-medium">{t('generate_farming_details', { defaultValue: 'Generate Farming Details' })}</span>
             </>
           )}
         </Button>

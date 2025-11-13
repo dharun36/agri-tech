@@ -5,10 +5,10 @@ import {
   FaHome,
   FaSearch,
   FaRupeeSign,
-  FaHandHoldingUsd,
   FaLeaf,
   FaBell,
-  FaTasks
+  FaTasks,
+  FaCalendarAlt
 } from 'react-icons/fa';
 
 const MobileBottomNav = ({ userId }) => {
@@ -57,15 +57,15 @@ const MobileBottomNav = ({ userId }) => {
           <span className="text-xs font-medium">{t('market')}</span>
         </Link>
 
-        {/* Government Schemes */}
+        {/* Calendar */}
         <Link
-          to="/government-schemes"
-          className={`flex flex-col items-center justify-center ${isActive('/government-schemes')
+          to="/calendar"
+          className={`flex flex-col items-center justify-center ${isActive('/calendar')
             ? 'text-green-600 border-t-2 border-green-600 -mt-[2px]'
             : 'text-gray-600'}`}
         >
-          <FaHandHoldingUsd className={`${isActive('/government-schemes') ? 'text-xl scale-110' : 'text-lg'} mb-1 transition-transform`} />
-          <span className="text-xs font-medium">{t('schemes')}</span>
+          <FaCalendarAlt className={`${isActive('/calendar') ? 'text-xl scale-110' : 'text-lg'} mb-1 transition-transform`} />
+          <span className="text-xs font-medium">Calendar</span>
         </Link>
 
         {/* Tasks Link */}

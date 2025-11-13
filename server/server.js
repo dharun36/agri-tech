@@ -51,6 +51,8 @@ app.use('/api/disease', require('./routes/disease'));
 app.use('/api/activities', require('./routes/activities'));
 // Market prices proxy
 app.use('/api/market', require('./routes/market'));
+// Dynamic translations for AI-generated content
+app.use('/api/translate', require('./routes/translate'));
 // Use optimized task routes when specified in environment, otherwise use regular routes
 if (process.env.USE_OPTIMIZED_ROUTES === 'true') {
   console.log('Using optimized task routes');
@@ -126,6 +128,35 @@ app.post('/api/tasks/generate-user', async (req, res) => {
     });
   }
 });
+
+// Dev-only: trigger today's daily tasks for a specific user without auth
+if (process.env.NODE_ENV !== 'production') {
+  // List a few users to help pick a userId for testing
+  app.get('/api/testing/users', async (req, res) => {
+    try {
+      const User = require('./models/User');
+      const users = await User.find({}, { _id: 1, email: 1, name: 1 }).limit(10);
+      res.json({ success: true, users });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to fetch users', error: error.message });
+    }
+  });
+
+  app.post('/api/testing/tasks/daily', async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ success: false, message: 'userId is required' });
+      }
+      const { ensureDailyTasksForUser } = require('./services/dailyGeneration');
+      const result = await ensureDailyTasksForUser(userId);
+      res.json(result);
+    } catch (error) {
+      console.error('Testing daily generation error:', error);
+      res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    }
+  });
+}
 
 // Trigger task generation for all users (admin endpoint)
 app.post('/api/tasks/generate-all-users', async (req, res) => {

@@ -23,6 +23,7 @@ import CropTaskSelector from './components/tasks/CropTaskSelector'
 import TaskDashboard from './components/tasks/TaskDashboard'
 // Import task detail component  
 import TaskDetail from './components/tasks/TaskDetail'
+import Calendar from './components/tasks/Calendar'
 import AppLayout from './components/AppLayout'
 import ErrorBoundary from './components/ErrorBoundary'
 // Import hooks and utilities
@@ -82,6 +83,9 @@ function App() {
               {/* Individual crop task management */}
               <Route path="/tasks/:cropId" element={<div className="p-4"><TaskDashboard /></div>} />
               <Route path="/tasks/detail/:id" element={<div className="p-4"><TaskDetail /></div>} />
+
+              {/* Calendar view */}
+              <Route path="/calendar" element={<div className="p-4"><Calendar /></div>} />
 
               {/* Crop routes */}
               <Route path="/crops/:id" element={<CropDetails />} />
