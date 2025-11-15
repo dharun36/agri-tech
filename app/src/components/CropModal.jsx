@@ -602,8 +602,8 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
   const renderStep1 = () => (
     <div className="p-6">
       <div className="text-center mb-6">
-  <h3 className="text-lg font-medium text-gray-900">{t('enter_crop_name', { defaultValue: 'Enter Crop Name' })}</h3>
-  <p className="mt-2 text-sm text-gray-500">{t('ai_will_generate_details', { defaultValue: 'Our AI will generate the crop details for you' })}</p>
+        <h3 className="text-lg font-medium text-gray-900">{t('enter_crop_name', { defaultValue: 'Enter Crop Name' })}</h3>
+        <p className="mt-2 text-sm text-gray-500">{t('ai_will_generate_details', { defaultValue: 'Our AI will generate the crop details for you' })}</p>
       </div>
 
       <div className="p-4 mb-6 bg-gradient-to-br from-green-50 to-blue-50 border border-green-200 rounded-xl">
