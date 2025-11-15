@@ -21,6 +21,19 @@ const io = new Server(server, {
 });
 
 app.use(cors());
+
+// Configure headers for OAuth compatibility
+app.use((req, res, next) => {
+  // Set OAuth-compatible Cross-Origin-Opener-Policy
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+
+  // Remove problematic headers that interfere with OAuth flows
+  res.removeHeader('Cross-Origin-Embedder-Policy');
+  res.removeHeader('Cross-Origin-Resource-Policy');
+
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
