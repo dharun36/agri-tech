@@ -64,8 +64,6 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
     if (isOpen) {
       // Check if we have preloaded crop details
       if (preloadedCropDetails) {
-        console.log("Using preloaded crop details:", preloadedCropDetails);
-
         // Set crop name for first step
         setCropName(preloadedCropDetails.name || '');
 
@@ -181,9 +179,6 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
       }
       
       Return ONLY valid JSON with no formatting issues, no extra text, markdown or code blocks.`;
-
-      console.log("Generating crop data for:", cropName);
-
       // Add timeout for API request
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30-second timeout
@@ -214,27 +209,20 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
         }
 
         const data = await response.json();
-        console.log(data);
         const geminiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
         if (!geminiText) {
           throw new Error("Empty response from AI service");
         }
-
-        console.log("AI response received, extracting JSON");
-
         try {
           // First try direct JSON parsing
           cropData = JSON.parse(geminiText);
-          console.log("Successfully parsed JSON directly");
         } catch (err) {
-          console.log("Direct parsing failed, attempting to extract JSON pattern");
           // Try to extract JSON from response if it contains additional text
           const match = geminiText.match(/\{[\s\S]*\}/);
           if (match) {
             try {
               cropData = JSON.parse(match[0]);
-              console.log("Successfully extracted and parsed JSON from response");
             } catch (innerErr) {
               console.error("JSON extraction failed:", innerErr);
               throw new Error("Failed to parse AI response");
@@ -403,7 +391,6 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
           // Generate crop data using AI
           const cropDataResult = await generateCropData(cropName);
           if (cropDataResult && Object.keys(cropDataResult).length > 0) {
-            console.log("Successfully generated crop data:", cropDataResult);
             setCurrentStep(2);
           } else {
             throw new Error("No valid crop data returned");
@@ -438,14 +425,9 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    console.log("Submit button clicked, validating step", currentStep);
-
     if (validateStep(currentStep)) {
       // Process form data
       let cropData = { ...formData };
-      console.log("Form data validated, processing:", cropData);
-
       // Make sure harvest date is calculated if needed
       if (formData.plantingDate && formData.growthDays && !formData.harvestDate) {
         const plantingDate = new Date(formData.plantingDate);
@@ -468,9 +450,6 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
           amount: parseFloat(initialCost.amount)
         };
       }
-
-      console.log("Calling onAddCrop with finalCropData:", finalCropData);
-
       try {
         // Check if onAddCrop exists
         if (typeof onAddCrop !== 'function') {
@@ -486,7 +465,6 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
         setErrors({ submit: "Failed to add crop. Error: " + (error.message || 'Unknown error') });
       }
     } else {
-      console.log("Validation failed for step", currentStep);
     }
   };
 
@@ -583,7 +561,6 @@ const CropModal = ({ isOpen, onClose, onAddCrop, loading, preloadedCropDetails, 
           <Button
             type="button"
             onClick={(e) => {
-              console.log('Save button clicked');
               if (typeof onAddCrop !== 'function') {
                 console.error('onAddCrop is not a function:', onAddCrop);
                 setErrors({ submit: 'Configuration error: Add crop function is not available' });

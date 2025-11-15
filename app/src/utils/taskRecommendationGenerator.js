@@ -167,7 +167,6 @@ function parseTaskRecommendations(geminiText) {
     try {
       return JSON.parse(geminiText);
     } catch (e) {
-      console.log("Direct parsing failed, trying to extract JSON");
     }
 
     // Second attempt: extract JSON from text
@@ -213,7 +212,7 @@ export async function saveTask(cropId, task) {
       user: userId // Ensure user ID is included
     };
 
-    const res = await fetch('http://localhost:5000/api/tasks', {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

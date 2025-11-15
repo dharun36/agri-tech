@@ -9,7 +9,6 @@ function NotificationPermission() {
   useEffect(() => {
     // Check if browser supports notifications
     if (!('Notification' in window)) {
-      console.log('This browser does not support notifications');
       return;
     }
 

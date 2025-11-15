@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
+import { API_BASE_URL } from '../config/api';
 
 // Helper function to request notification permissions
 const requestNotificationPermission = async () => {
   if (!('Notification' in window)) {
-    console.log('This browser does not support notifications');
     return false;
   }
 
@@ -20,7 +20,7 @@ const requestNotificationPermission = async () => {
   return false;
 };
 
-const useSocket = (userId, baseUrl = 'http://localhost:5000') => {
+const useSocket = (userId, baseUrl = API_BASE_URL) => {
   const socketRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
   const [newAlerts, setNewAlerts] = useState([]);
@@ -69,26 +69,23 @@ const useSocket = (userId, baseUrl = 'http://localhost:5000') => {
       socket.on('connect', () => {
         setIsConnected(true);
         socket.emit('join-user-room', userId);
-        console.log('Connected to socket server');
 
         // Request notification permission when socket connects
         requestNotificationPermission()
           .then(granted => {
             if (granted) {
-              console.log('Notification permission granted');
+              // Notification permission granted
             } else {
-              console.log('Notification permission not granted');
+              // Notification permission not granted
             }
           });
       });
 
       socket.on('disconnect', () => {
         setIsConnected(false);
-        console.log('Disconnected from socket server');
       });
 
       socket.on('new-disease-alert', (data) => {
-        console.log('New disease alert received:', data);
         setNewAlerts(prev => [...prev, data.alert]);
 
         // Show browser notification if permission granted
@@ -127,7 +124,7 @@ const useSocket = (userId, baseUrl = 'http://localhost:5000') => {
       });
 
       socket.on('reconnect_attempt', (attemptNumber) => {
-        console.log(`Socket reconnection attempt ${attemptNumber}`);
+        // Reconnection attempt
       });
     };
 

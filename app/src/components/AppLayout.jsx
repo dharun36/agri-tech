@@ -107,11 +107,11 @@ const AppLayout = ({ children, pageTitle }) => {
         onClick={() => mobileMenuOpen && setMobileMenuOpen(false)}
       >
         {/* Page title for non-excluded paths */}
-        {!isExcludedPath && (
+        {/* {!isExcludedPath && (
           <div className="page-title-container px-4 py-2 bg-white/90 backdrop-blur-sm sticky top-0 z-10">
             <PageTitle pageName={pageName} className="text-xl md:text-2xl font-bold text-primary-600" />
           </div>
-        )}
+        )} */}
 
         {children}
       </div>

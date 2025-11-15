@@ -32,8 +32,8 @@ const keysToCheck = [
   'view_details'
 ];
 
-console.log('Checking Tamil translations for keys:');
-console.log('-----------------------------------');
+// console.log('Checking Tamil translations for keys:');
+// console.log('-----------------------------------');
 
 // Deep get function to safely access nested properties
 const deepGet = (obj, path) => {
@@ -47,17 +47,17 @@ keysToCheck.forEach(key => {
   const value = taTranslations[key];
 
   if (value) {
-    console.log(`✅ ${key}: ${value}`);
+    // console.log(`✅ ${key}: ${value}`);
   } else {
     // Try nested key access for cases like "tasks.completed"
     const nestedValue = deepGet(taTranslations, key);
 
     if (nestedValue) {
-      console.log(`✅ ${key}: ${nestedValue} (nested)`);
+      // console.log(`✅ ${key}: ${nestedValue} (nested)`);
     } else {
-      console.log(`❌ ${key}: MISSING`);
+      // console.log(`❌ ${key}: MISSING`);
     }
   }
 });
 
-console.log('\nTranslation check complete!');
+// console.log('\nTranslation check complete!');

@@ -10,6 +10,8 @@ import QuickActionButton from '../ui/QuickActionButton';
 import CropFilter from '../ui/CropFilter';
 import QuickEventForm from '../ui/QuickEventForm';
 import CropDetails from '../crops/CropDetails';
+import TodayTasksWidget from '../TodayTasksWidget';
+import useTaskGeneration from '../../hooks/useTaskGeneration';
 
 // Get API key from environment variables
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + import.meta.env.VITE_GEMINI_API_KEY;
@@ -90,6 +92,10 @@ const LightThemeHome = () => {
     navigate('/login');
   }
 
+  // Task generation hook for automatic task generation on site visit
+  const { autoGenerateOnVisit, isGenerating, generationResult } = useTaskGeneration();
+  const [taskRefreshKey, setTaskRefreshKey] = useState(0);
+
   // Crop management state
   const [crops, setCrops] = useState([]);
   const [filteredCrops, setFilteredCrops] = useState([]);
@@ -122,9 +128,8 @@ const LightThemeHome = () => {
   // Crop modal state
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
-  const [isCropDetailsModalOpen, setIsCropDetailsModalOpen] = useState(false);
+  // Removed: isCropDetailsModalOpen, selectedCropData - now using page navigation instead
   const [currentCropId, setCurrentCropId] = useState(null);
-  const [selectedCropData, setSelectedCropData] = useState(null);
   const [expense, setExpense] = useState({ description: '', category: 'Fertilizer', amount: 0 });
   const [cropLoading, setCropLoading] = useState(false);
   const [cropError, setCropError] = useState('');
@@ -141,7 +146,7 @@ const LightThemeHome = () => {
           return;
         }
 
-        const res = await fetch('http://localhost:5000/api/crops', {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -164,6 +169,22 @@ const LightThemeHome = () => {
 
     fetchCrops();
   }, []);
+
+  // Auto-generate tasks when user visits the site
+  useEffect(() => {
+    if (userId && crops.length > 0) {
+      // Trigger auto task generation after crops are loaded
+      autoGenerateOnVisit();
+    }
+  }, [userId, crops.length, autoGenerateOnVisit]);
+
+  // Refresh tasks when generation completes
+  useEffect(() => {
+    if (generationResult && generationResult.generated) {
+      console.log('Tasks generated successfully, refreshing task display');
+      setTaskRefreshKey(prev => prev + 1);
+    }
+  }, [generationResult]);
 
   // Fetch weather on mount
   useEffect(() => {
@@ -450,7 +471,7 @@ const LightThemeHome = () => {
         return;
       }
 
-      const res = await fetch('http://localhost:5000/api/crops', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -505,7 +526,7 @@ const LightThemeHome = () => {
         return;
       }
 
-      const res = await fetch('http://localhost:5000/api/crops', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -556,7 +577,7 @@ const LightThemeHome = () => {
         return;
       }
 
-      const res = await fetch(`http://localhost:5000/api/crops/${currentCropId}/costs`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops/${currentCropId}/costs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -588,44 +609,14 @@ const LightThemeHome = () => {
     }
   };
 
-  // Open crop details modal
-  const openCropDetailsModal = async (cropId) => {
-    setCurrentCropId(cropId);
-    setCropLoading(true);
-    setIsCropDetailsModalOpen(true);
-
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      // Fetch the crop details
-      const res = await fetch(`http://localhost:5000/api/crops/${cropId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!res.ok) throw new Error('Failed to fetch crop details');
-
-      const cropData = await res.json();
-      setSelectedCropData(cropData);
-    } catch (err) {
-      console.error('Error fetching crop details:', err);
-      setCropError('Failed to fetch crop details');
-    } finally {
-      setCropLoading(false);
-    }
+  // Navigate to crop details page
+  const openCropDetailsModal = (cropId) => {
+    navigate(`/crops/${cropId}`);
   };
 
-  // Close crop details modal
+  // Close crop details modal (kept for backward compatibility, but not used)
   const closeCropDetailsModal = () => {
-    setIsCropDetailsModalOpen(false);
-    setCurrentCropId(null);
-    setSelectedCropData(null);
-    setCropError('');
+    // No longer needed since we navigate to a page
   };
 
   // Remove crop from backend
@@ -644,7 +635,7 @@ const LightThemeHome = () => {
         return;
       }
 
-      const res = await fetch(`http://localhost:5000/api/crops/${cropId}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops/${cropId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -676,7 +667,7 @@ const LightThemeHome = () => {
         return;
       }
 
-      const res = await fetch(`http://localhost:5000/api/crops/${cropId}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops/${cropId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -730,96 +721,122 @@ const LightThemeHome = () => {
       <div className="max-w-6xl mx-auto px-4 py-6">
         <h1 className="text-2xl font-bold text-gray-800 mb-6">{t('welcome_to_agritech') || 'Welcome to AgriTech'}</h1>
 
-        {/* Weather widget */}
-        <div className="mb-6 bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition cursor-pointer" onClick={() => navigate('/weather')}>
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <FontAwesomeIcon icon={faCloudSun} className="text-blue-600" />
+        {/* Hero Section with Weather and Tasks side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Weather widget */}
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition cursor-pointer" onClick={() => navigate('/weather')}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faCloudSun} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-medium text-gray-800">{t('weather') || 'Weather'}</h2>
+                    <p className="text-gray-500 text-sm">{t('local_forecast') || 'Local Forecast'}</p>
+                  </div>
                 </div>
+              </div>
+
+              {weatherLoading && (
+                <div className="flex justify-center items-center py-8">
+                  <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                  <span className="text-gray-600">{t('loading_weather') || 'Loading weather...'}</span>
+                </div>
+              )}
+
+              {weatherError && (
+                <div className="bg-red-50 text-red-600 p-4 rounded-lg">
+                  <div className="flex items-start">
+                    <FontAwesomeIcon icon={faExclamationTriangle} className="mt-1 mr-2" />
+                    <div>
+                      <p className="font-medium">{weatherError}</p>
+                      <p className="text-sm mt-1">{t('check_location_settings') || 'Check your location settings'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Current Weather */}
+              {!weatherLoading && !weatherError && weather && (
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <div className="text-3xl font-bold">{Math.round(weather.temp)}°C</div>
+                      <div className="text-gray-600">{weather.desc}</div>
+                    </div>
+                    <div>
+                      <img src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`} alt={weather.desc} className="w-16 h-16" />
+                    </div>
+                  </div>
+                  {weather.humidity !== null && (
+                    <div className="text-gray-500 text-sm">
+                      {t('humidity') || 'Humidity'}: {weather.humidity}%
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Hourly Forecast */}
+              {!weatherLoading && !weatherError && hourly && hourly.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-gray-700 text-sm font-medium mb-2">{t('next_hours') || 'Next Hours'}</div>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {hourly.map((h, idx) => (
+                      <div key={idx} className="flex flex-col items-center bg-gray-50 rounded-lg p-2 shadow-sm min-w-[64px]">
+                        <span className="font-semibold text-gray-700">{formatHour(h.time)}</span>
+                        <img src={`https://openweathermap.org/img/wn/${getWeatherIcon(h.values.weatherCode)}.png`} alt="" className="w-8 h-8" />
+                        <span className="text-base font-bold text-gray-800">{Math.round(h.values.temperature)}°C</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Daily Forecast */}
+              {!weatherLoading && !weatherError && daily && daily.length > 0 && (
                 <div>
-                  <h2 className="text-lg font-medium text-gray-800">{t('weather') || 'Weather'}</h2>
-                  <p className="text-gray-500 text-sm">{t('local_forecast') || 'Local Forecast'}</p>
+                  <div className="text-gray-700 text-sm font-medium mb-2">{t('next_7_days') || 'Next 7 Days'}</div>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {daily.map((d, idx) => (
+                      <div key={idx} className="flex flex-col items-center bg-gray-50 rounded-lg p-2 shadow-sm min-w-[64px]">
+                        <span className="font-semibold text-gray-700">{formatDay(d.time)}</span>
+                        <img src={`https://openweathermap.org/img/wn/${getWeatherIcon(d.values.weatherCodeMax)}.png`} alt="" className="w-8 h-8" />
+                        <span className="text-base font-bold text-gray-800">{Math.round(d.values.temperatureMax)}°C</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              {/* <div className="text-blue-600 font-medium text-sm flex items-center">
-                <span>{t('view_details') || 'View Details'}</span>
-                <FontAwesomeIcon icon={faArrowRight} className="ml-1" />
-              </div> */}
+              )}
             </div>
-
-            {weatherLoading && (
-              <div className="flex justify-center items-center py-8">
-                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
-                <span className="text-gray-600">{t('loading_weather') || 'Loading weather...'}</span>
-              </div>
-            )}
-
-            {weatherError && (
-              <div className="bg-red-50 text-red-600 p-4 rounded-lg">
-                <div className="flex items-start">
-                  <FontAwesomeIcon icon={faExclamationTriangle} className="mt-1 mr-2" />
-                  <div>
-                    <p className="font-medium">{weatherError}</p>
-                    <p className="text-sm mt-1">{t('check_location_settings') || 'Check your location settings'}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Current Weather */}
-            {!weatherLoading && !weatherError && weather && (
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <div className="text-3xl font-bold">{Math.round(weather.temp)}°C</div>
-                    <div className="text-gray-600">{weather.desc}</div>
-                  </div>
-                  <div>
-                    <img src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`} alt={weather.desc} className="w-16 h-16" />
-                  </div>
-                </div>
-                {weather.humidity !== null && (
-                  <div className="text-gray-500 text-sm">
-                    {t('humidity') || 'Humidity'}: {weather.humidity}%
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Hourly Forecast */}
-            {!weatherLoading && !weatherError && hourly && hourly.length > 0 && (
-              <div className="mb-4">
-                <div className="text-gray-700 text-sm font-medium mb-2">{t('next_hours') || 'Next Hours'}</div>
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {hourly.map((h, idx) => (
-                    <div key={idx} className="flex flex-col items-center bg-gray-50 rounded-lg p-2 shadow-sm min-w-[64px]">
-                      <span className="font-semibold text-gray-700">{formatHour(h.time)}</span>
-                      <img src={`https://openweathermap.org/img/wn/${getWeatherIcon(h.values.weatherCode)}.png`} alt="" className="w-8 h-8" />
-                      <span className="text-base font-bold text-gray-800">{Math.round(h.values.temperature)}°C</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Daily Forecast */}
-            {!weatherLoading && !weatherError && daily && daily.length > 0 && (
-              <div>
-                <div className="text-gray-700 text-sm font-medium mb-2">{t('next_7_days') || 'Next 7 Days'}</div>
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {daily.map((d, idx) => (
-                    <div key={idx} className="flex flex-col items-center bg-gray-50 rounded-lg p-2 shadow-sm min-w-[64px]">
-                      <span className="font-semibold text-gray-700">{formatDay(d.time)}</span>
-                      <img src={`https://openweathermap.org/img/wn/${getWeatherIcon(d.values.weatherCodeMax)}.png`} alt="" className="w-8 h-8" />
-                      <span className="text-base font-bold text-gray-800">{Math.round(d.values.temperatureMax)}°C</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
+
+          {/* Today's Tasks Widget */}
+          {crops.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition h-fit">
+
+              <TodayTasksWidget crops={crops} refreshKey={taskRefreshKey} />
+            </div>
+          )}
+
+          {/* Placeholder for when no crops */}
+          {crops.length === 0 && (
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition">
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faSeedling} className="text-2xl text-green-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Ready to Start Farming?</h3>
+                <p className="text-gray-600 mb-4">Add your first crop to see personalized task recommendations</p>
+                <button
+                  onClick={openCropModal}
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold py-2 px-4 rounded-xl shadow-lg shadow-green-200 transition-all duration-300 hover:scale-105"
+                >
+                  Add Your First Crop
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Stats section */}
@@ -1002,30 +1019,7 @@ const LightThemeHome = () => {
           />
         )}
 
-        {/* Crop Details Modal */}
-        {isCropDetailsModalOpen && selectedCropData && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-            <div className="bg-white rounded-lg w-full max-w-4xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-semibold">{selectedCropData.name}</h2>
-                <button
-                  onClick={closeCropDetailsModal}
-                  className="text-gray-500 hover:text-gray-700 focus:outline-none"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </button>
-              </div>
-
-              {/* Render the CropDetails component inline */}
-              <CropDetails
-                initialCropData={selectedCropData}
-                cropId={currentCropId}
-              />
-            </div>
-          </div>
-        )}
+        {/* Crop Details Modal - Removed: Now navigates to /crops/:id page instead */}
       </div>
     </div>
   );

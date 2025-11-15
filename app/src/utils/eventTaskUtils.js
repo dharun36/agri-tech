@@ -12,8 +12,6 @@ export const saveEventAsTask = async (cropId, userId, eventType, eventData) => {
 
     // Validate and sanitize event data
     const sanitizedEventData = sanitizeEventData(eventType, eventData);
-    console.log(`Sanitized ${eventType} event data:`, sanitizedEventData);
-
     // Create a standardized task object from the event data
     const task = {
       // userId is not needed as it's extracted from the auth token on the server
@@ -29,7 +27,7 @@ export const saveEventAsTask = async (cropId, userId, eventType, eventData) => {
     };
 
     // Send the task to the server
-    const response = await axios.post('http://localhost:5000/api/tasks', task, {
+    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks`, task, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -67,7 +65,7 @@ const saveEventToCrop = async (cropId, eventType, eventData, token) => {
         tags: eventData.tags || []
       };
 
-      await axios.post(`http://localhost:5000/api/activities`, activityData, {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/activities`, activityData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -119,18 +117,13 @@ const saveEventToCrop = async (cropId, eventType, eventData, token) => {
         date: eventData.date || new Date().toISOString().split('T')[0]
       };
     }
-
-    console.log(`Sending ${eventType} event to endpoint: http://localhost:5000/api/crops/${cropId}/${endpoint}`);
-    console.log('Event data:', event);
-
     try {
-      await axios.post(`http://localhost:5000/api/crops/${cropId}/${endpoint}`, event, {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops/${cropId}/${endpoint}`, event, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-      console.log(`Successfully saved ${eventType} event to crop ${cropId}`);
     } catch (axiosError) {
       console.error(`Error saving ${eventType} event to crop:`, axiosError);
       if (axiosError.response) {

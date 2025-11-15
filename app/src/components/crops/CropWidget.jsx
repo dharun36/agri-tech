@@ -39,7 +39,7 @@ const CropWidget = ({ cropId, onClose }) => {
           return;
         }
 
-        const response = await fetch(`http://localhost:5000/api/crops/${cropId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops/${cropId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -128,8 +128,6 @@ const CropWidget = ({ cropId, onClose }) => {
         } else {
           processedData.amount = 0;
         }
-
-        console.log('Processed cost data:', processedData);
       }
 
       await saveEventAsTask(cropId, userId, eventType, processedData);

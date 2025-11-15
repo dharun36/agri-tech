@@ -56,20 +56,14 @@ const Signup = () => {
       }
 
       // Log the payload for debugging
-      console.log('Sending payload:', payload);
-
-      const res = await fetch('http://localhost:5000/api/auth/register', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       // Log the response status
-      console.log('Response status:', res.status);
-
       const data = await res.json();
-      console.log('Response data:', data);
-
       if (!res.ok) {
         throw new Error(data.message || data.error || 'Signup failed');
       }

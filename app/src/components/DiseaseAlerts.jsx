@@ -57,13 +57,11 @@ const groupAlerts = (alerts) => {
 
 function DiseaseAlerts({
   userId,
-  baseUrl = 'http://localhost:5000',
+  baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000',
   showGrouped = true,
   maxItems = 10,
   showBadge = true
 }) {
-  console.log('🎯 DiseaseAlerts - Component initialized with userId:', userId);
-
   const { t } = useTranslation();
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -95,28 +93,18 @@ function DiseaseAlerts({
 
   async function loadAlerts() {
     if (!userId) {
-      console.log('❌ DiseaseAlerts - No userId provided');
       return;
     }
-
-    console.log('🔍 DiseaseAlerts - Loading alerts for userId:', userId);
     setLoading(true);
     setError(null);
 
     try {
       const url = `${baseUrl}/api/disease/alerts?userId=${userId}`;
-      console.log('📡 DiseaseAlerts - Fetching from:', url);
-
       const res = await fetch(url);
-      console.log('📡 DiseaseAlerts - Response status:', res.status);
-
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
       const data = await res.json();
-      console.log('📊 DiseaseAlerts - Received data:', data);
-      console.log('📊 DiseaseAlerts - Alerts count:', data.alerts?.length || 0);
-
       setAlerts(data.alerts || []);
     } catch (err) {
       console.error('❌ DiseaseAlerts - Failed loading alerts:', err);
@@ -213,7 +201,6 @@ function DiseaseAlerts({
   const hasMore = showGrouped
     ? groupAlerts(alerts).length > maxItems * currentPage
     : alerts.length > maxItems * currentPage;
-
 
   if (loading && alerts.length === 0) {
     return (

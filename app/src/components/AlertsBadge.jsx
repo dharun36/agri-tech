@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSocket from '../hooks/useSocket';
 
 function AlertsBadge({
   userId,
-  baseUrl = 'http://localhost:5000',
+  baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000',
   onClick,
   className = '',
   showCount = true
@@ -12,6 +12,7 @@ function AlertsBadge({
   const { t } = useTranslation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const controllerRef = useRef(null);
 
   // Real-time socket connection
   const { newAlerts = [], clearNewAlerts } = useSocket(userId, baseUrl) || {};
@@ -36,6 +37,8 @@ function AlertsBadge({
     try {
       // Set a timeout to prevent long waiting times if server is down
       const controller = new AbortController();
+      // store controller so we can abort on unmount
+      controllerRef.current = controller;
       const timeoutId = setTimeout(() => controller.abort(), 3000);
 
       const url = `${baseUrl}/api/disease/alerts?userId=${userId}`;
@@ -52,24 +55,42 @@ function AlertsBadge({
         localStorage.setItem(`alerts-count-${userId}`, count);
       }
     } catch (err) {
-      console.error('Failed to fetch alert count:', err);
-
-      // Use cached count from localStorage if available
-      const cachedCount = localStorage.getItem(`alerts-count-${userId}`);
-      if (cachedCount !== null) {
-        setUnreadCount(parseInt(cachedCount, 10));
+      // If the fetch was aborted (timeout or component unmount), don't treat as an error
+      if (err && err.name === 'AbortError') {
+        // Use cached count if available, but don't spam console with expected aborts
+        const cachedCount = localStorage.getItem(`alerts-count-${userId}`);
+        if (cachedCount !== null) {
+          setUnreadCount(parseInt(cachedCount, 10));
+        }
+      } else {
+        console.error('Failed to fetch alert count:', err);
+        // Use cached count from localStorage if available
+        const cachedCount = localStorage.getItem(`alerts-count-${userId}`);
+        if (cachedCount !== null) {
+          setUnreadCount(parseInt(cachedCount, 10));
+        }
       }
     } finally {
+      // clear current controller ref
+      controllerRef.current = null;
       setLoading(false);
     }
   }
 
   useEffect(() => {
+    // ref to abort in-flight requests
     fetchUnreadCount();
 
     // Poll for new alerts every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      // Abort any in-flight fetch when unmounting
+      if (controllerRef.current) {
+        try { controllerRef.current.abort(); } catch (_) { }
+        controllerRef.current = null;
+      }
+    };
   }, [userId]);
 
   if (loading && unreadCount === 0) {

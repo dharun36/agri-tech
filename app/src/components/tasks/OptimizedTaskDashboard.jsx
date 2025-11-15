@@ -4,6 +4,7 @@ import { useNavigate, useLocation, Link, useParams } from 'react-router-dom';
 import { FaPlus, FaSeedling, FaChevronLeft, FaChevronRight, FaInfoCircle } from 'react-icons/fa';
 import OptimizedTaskList from './OptimizedTaskList';
 import { translateCropName } from '../../utils/dbTranslations';
+import useTaskGeneration from '../../hooks/useTaskGeneration';
 import i18n from '../../i18n';
 /**
  * Skeleton loader for crops section
@@ -36,6 +37,10 @@ const OptimizedTaskDashboard = () => {
   const [activeCropIndex, setActiveCropIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [taskRefreshTrigger, setTaskRefreshTrigger] = useState(0);
+
+  // Task generation hook to watch for new task generation
+  const { generationResult } = useTaskGeneration();
 
   // Get the cropId from URL params
   const cropIdFromUrl = params.cropId;
@@ -58,7 +63,7 @@ const OptimizedTaskDashboard = () => {
         return;
       }
 
-      const res = await fetch('http://localhost:5000/api/crops', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -90,6 +95,14 @@ const OptimizedTaskDashboard = () => {
   useEffect(() => {
     fetchCrops();
   }, [fetchCrops]);
+
+  // Watch for task generation results and refresh task list
+  useEffect(() => {
+    if (generationResult && generationResult.generated) {
+      console.log('New tasks generated in dashboard, refreshing task list');
+      setTaskRefreshTrigger(prev => prev + 1);
+    }
+  }, [generationResult]);
 
   // Navigate to previous crop
   const handlePrevCrop = () => {
@@ -190,9 +203,7 @@ const OptimizedTaskDashboard = () => {
           <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar flex-grow">
             {crops.map((crop, index) => {
               // Log crop information for debugging
-              console.log(`Crop name from DB: "${crop.name}", Language: ${i18n.language}`);
               const translatedName = translateCropName(crop.name, 'translation');
-              console.log(`Translated name: "${translatedName}"`);
 
               return (
                 <button
@@ -248,7 +259,7 @@ const OptimizedTaskDashboard = () => {
 
       {/* Only render TaskList if we have crops and the loading/error states are handled */}
       {crops.length > 0 && !error && (
-        <OptimizedTaskList cropId={activeCropId} />
+        <OptimizedTaskList cropId={activeCropId} refreshTrigger={taskRefreshTrigger} />
       )}
     </div>
   );

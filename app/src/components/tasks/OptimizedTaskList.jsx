@@ -22,7 +22,7 @@ const MemoizedTaskItem = memo(TaskItem);
 /**
  * Optimized Task List component with performance improvements
  */
-const OptimizedTaskList = ({ cropId = null }) => {
+const OptimizedTaskList = ({ cropId = null, refreshTrigger = 0 }) => {
   const { t } = useTranslation(['translation', 'tasks']);
   const [activeTab, setActiveTab] = useState('today');
   const [tasks, setTasks] = useState([]);
@@ -46,16 +46,16 @@ const OptimizedTaskList = ({ cropId = null }) => {
       let url = '';
       switch (activeTab) {
         case 'today':
-          url = 'http://localhost:5000/api/tasks/today';
+          url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks/today`;
           break;
         case 'upcoming':
-          url = 'http://localhost:5000/api/tasks/upcoming';
+          url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks/upcoming`;
           break;
         case 'history':
-          url = 'http://localhost:5000/api/tasks/history';
+          url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks/history`;
           break;
         default:
-          url = 'http://localhost:5000/api/tasks';
+          url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks`;
       }
 
       // Add crop filter if provided
@@ -91,7 +91,7 @@ const OptimizedTaskList = ({ cropId = null }) => {
   // Effect to fetch tasks when dependencies change
   useEffect(() => {
     fetchTasks();
-  }, [fetchTasks]);
+  }, [fetchTasks, refreshTrigger]);
 
   // Handle marking task as done
   const handleMarkDone = useCallback(async (taskId) => {
@@ -99,7 +99,7 @@ const OptimizedTaskList = ({ cropId = null }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/status`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'}/api/tasks/${taskId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ const OptimizedTaskList = ({ cropId = null }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/status`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'}/api/tasks/${taskId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -237,7 +237,7 @@ const OptimizedTaskList = ({ cropId = null }) => {
       toast.info(t('generating_ai_recommendations', { ns: 'tasks' }));
 
       // Get crop details to use in the prompt
-      const cropRes = await fetch(`http://localhost:5000/api/crops/${cropId}`, {
+      const cropRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops/${cropId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -248,7 +248,7 @@ const OptimizedTaskList = ({ cropId = null }) => {
       const crop = await cropRes.json();
 
       // Get existing tasks to avoid duplication
-      const tasksRes = await fetch(`http://localhost:5000/api/tasks?cropId=${cropId}`, {
+      const tasksRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/tasks?cropId=${cropId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

@@ -219,7 +219,7 @@ const Profile = () => {
             <div className="relative">
               <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-md">
                 <img
-                  src={profileImage || 'https://via.placeholder.com/150?text=Profile'}
+                  src={profileImage || `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150'><rect width='100%' height='100%' fill='%23e5e7eb'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='18' fill='%23333'>Profile</text></svg>`}
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />
@@ -389,7 +389,7 @@ const Profile = () => {
           <div className="flex flex-col items-center justify-center mb-8">
             <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-md">
               <img
-                src={profileImage || 'https://via.placeholder.com/150?text=Profile'}
+                src={profileImage || `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150'><rect width='100%' height='100%' fill='%23e5e7eb'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='18' fill='%23333'>Profile</text></svg>`}
                 alt="Profile"
                 className="w-full h-full object-cover"
               />

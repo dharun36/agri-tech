@@ -19,7 +19,8 @@ const DiseaseAlertSchema = new mongoose.Schema({
     coordinates: { type: [Number], default: [0, 0] }
   },
   createdAt: { type: Date, default: Date.now },
-  read: { type: Boolean, default: false }
+  read: { type: Boolean, default: false },
+  readAt: { type: Date }
 });
 
 module.exports = mongoose.model('DiseaseAlert', DiseaseAlertSchema);

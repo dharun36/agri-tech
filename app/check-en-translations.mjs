@@ -47,19 +47,19 @@ function getNestedValue(obj, path) {
 try {
   const enTranslations = JSON.parse(fs.readFileSync('./src/locales/en/translation.json', 'utf8'));
 
-  console.log('Checking English translations for keys:');
-  console.log('-----------------------------------');
+  // console.log('Checking English translations for keys:');
+  // console.log('-----------------------------------');
 
   for (const key of keysToCheck) {
     const value = getNestedValue(enTranslations, key);
     if (value !== undefined) {
-      console.log(`✅ ${key}: ${value}`);
+      // console.log(`✅ ${key}: ${value}`);
     } else {
-      console.log(`❌ ${key}: Missing`);
+      // console.log(`❌ ${key}: Missing`);
     }
   }
 
-  console.log('\nTranslation check complete!');
+  // console.log('\nTranslation check complete!');
 } catch (error) {
-  console.error('Error reading translation file:', error);
+  // console.error('Error reading translation file:', error);
 }

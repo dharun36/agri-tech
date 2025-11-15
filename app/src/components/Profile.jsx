@@ -70,7 +70,7 @@ const Profile = () => {
 
         try {
           // Using the correct endpoint from auth.js: /api/auth/user/:id
-          const response = await fetch(`http://localhost:5000/api/auth/user/${userId}`, {
+          const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/user/${userId}`, {
             headers: {
               Authorization: `Bearer ${token}`
             },
@@ -91,7 +91,6 @@ const Profile = () => {
           }
 
           const userData = data.user; // Extract user data from the response
-
 
           setFormData({
             name: userData.name || localStorage.getItem('userName') || '',
@@ -251,7 +250,7 @@ const Profile = () => {
       imageFormData.append('profileImage', blob, 'profile-image.jpg');
 
       // Upload the image to the server
-      const uploadResponse = await fetch(`http://localhost:5000/api/auth/user/${userId}/profile-image`, {
+      const uploadResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/user/${userId}/profile-image`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`
@@ -326,7 +325,7 @@ const Profile = () => {
         }
 
         // Use the correct endpoint from your auth.js file
-        const response = await fetch(`http://localhost:5000/api/auth/user/${userId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/user/${userId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -344,8 +343,6 @@ const Profile = () => {
         }
 
         const data = await response.json();
-        console.log('Profile updated successfully:', data);
-
         setMessage('Profile updated successfully!');
       } catch (serverError) {
         // Handle offline mode or server error
@@ -384,8 +381,6 @@ const Profile = () => {
                       if (e.target.hasAttribute('data-error-handled')) {
                         return;
                       }
-
-                      console.log('Profile image failed to load in edit mode');
                       e.target.setAttribute('data-error-handled', 'true');
                       e.target.style.display = 'none';
 
@@ -588,8 +583,6 @@ const Profile = () => {
                     if (e.target.hasAttribute('data-error-handled')) {
                       return;
                     }
-
-                    console.log('Profile image failed to load');
                     e.target.setAttribute('data-error-handled', 'true');
                     e.target.style.display = 'none';
 

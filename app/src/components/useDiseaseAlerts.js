@@ -29,7 +29,7 @@ export default function useDiseaseAlerts(userId) {
       try {
         // Only attempt fetch if online
         if (!isOnline) {
-          console.log('Network offline, skipping alert fetch');
+
           return;
         }
 
@@ -37,7 +37,7 @@ export default function useDiseaseAlerts(userId) {
         const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         try {
-          const res = await fetch(`http://localhost:5000/api/disease/alerts?userId=${userId}`, {
+          const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/disease/alerts?userId=${userId}`, {
             signal: controller.signal
           });
           clearTimeout(timeoutId);
@@ -85,7 +85,7 @@ export default function useDiseaseAlerts(userId) {
             // Mark alerts as read
             if (isOnline) {
               try {
-                await fetch('http://localhost:5000/api/disease/alerts/read', {
+                await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/disease/alerts/read`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ userId }),
@@ -116,7 +116,7 @@ export default function useDiseaseAlerts(userId) {
 
     // Also fetch when coming back online
     const handleOnlineCallback = () => {
-      console.log('Back online, fetching alerts...');
+
       fetchAlerts();
     };
 

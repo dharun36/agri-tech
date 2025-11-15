@@ -22,7 +22,61 @@ function DetectDisease() {
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [analysisData, setAnalysisData] = useState(null); // Store bilingual data
   const [locationType, setLocationType] = useState('current'); // 'current' or 'field'
+  const [crops, setCrops] = useState([]); // Store user's crops
+  const [selectedCropId, setSelectedCropId] = useState(''); // Selected crop for disease reporting
+  const [cropsLoading, setCropsLoading] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Fetch user's crops for disease reporting
+  const fetchUserCrops = async () => {
+    setCropsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const userCrops = await response.json();
+        // Filter to only growing crops where disease can be reported
+        const activeCrops = userCrops.filter(crop =>
+          crop.status === 'Growing' || crop.status === 'Planning'
+        );
+        setCrops(activeCrops);
+      }
+    } catch (error) {
+      console.error('Error fetching crops:', error);
+    } finally {
+      setCropsLoading(false);
+    }
+  };
+
+  // Function to store disease in crop's pest/disease history
+  const storeDiseaseInCrop = async (cropId, diseaseData) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return false;
+
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops/${cropId}/pest-disease`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(diseaseData)
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('Error storing disease in crop:', error);
+      return false;
+    }
+  };
 
   const handleRetake = () => {
     setImage("")
@@ -56,6 +110,7 @@ function DetectDisease() {
   // Update display when component mounts or language changes
   React.useEffect(() => {
     updateDisplayLanguage();
+    fetchUserCrops(); // Fetch crops when component mounts
     // Using localStorage directly in the dependency array is incorrect
     // Instead, we should set up an event listener for storage changes
     const handleStorageChange = () => {
@@ -79,23 +134,18 @@ function DetectDisease() {
         // Get user's field location from localStorage
         try {
           const userLocationStr = localStorage.getItem('userLocation');
-          console.log('UserLocation from localStorage:', userLocationStr);
 
           if (userLocationStr) {
             const storedLocation = JSON.parse(userLocationStr);
-            console.log('Parsed location:', storedLocation);
 
             if (storedLocation && storedLocation.type === 'Point' && Array.isArray(storedLocation.coordinates)) {
               userLocation = storedLocation;
-              console.log('Field location found:', userLocation);
             } else {
-              console.log('Invalid location format:', storedLocation);
               toast.error(t('field_location_not_set') || 'Field location not set in your profile. Please update your profile first.');
               setReportLoading(false);
               return;
             }
           } else {
-            console.log('No field location found in localStorage');
             toast.error(t('field_location_not_set') || 'Field location not set in your profile. Please update your profile first.');
             setReportLoading(false);
             return;
@@ -125,14 +175,50 @@ function DetectDisease() {
       }
 
       if (userLocation) {
-        const response = await fetch('http://localhost:5000/api/disease/report', {
+        // Store disease in selected crop's history if a crop is selected
+        if (selectedCropId) {
+          const diseaseData = {
+            date: new Date().toISOString(),
+            type: 'disease',
+            name: analysis.englishName || analysis.detected,
+            severity: 5, // Default severity, could be made configurable
+            affectedArea: 'Detected via AI analysis',
+            treatment: analysis.treatment ? {
+              product: '',
+              applicationDate: null,
+              amount: 0,
+              method: analysis.treatment
+            } : null,
+            effectiveness: null,
+            notes: `AI-detected disease: ${analysis.description}. Treatment: ${analysis.treatment}. Advice: ${analysis.advice}`
+          };
+
+          const cropStoreSuccess = await storeDiseaseInCrop(selectedCropId, diseaseData);
+          if (cropStoreSuccess) {
+            console.log('Disease successfully stored in crop history');
+          } else {
+            console.error('Failed to store disease in crop history');
+          }
+        }
+
+        console.log('Reporting disease to:', `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/disease/report`);
+        console.log('Report data:', {
+          disease: analysis.detected,
+          description: analysis.description,
+          location: userLocation,
+          locationType: locationType,
+          selectedCropId: selectedCropId
+        });
+
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/disease/report`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            disease: analysis.detected,
+            disease: analysis.englishName || analysis.detected, // Always use English name for storage
             description: analysis.description,
             location: userLocation,
             locationType: locationType,
+            selectedCropId: selectedCropId,
             // Include bilingual data if available
             bilingualData: analysisData ? {
               english: analysisData.english,
@@ -141,19 +227,33 @@ function DetectDisease() {
           })
         });
 
+        console.log('Report response status:', response.status);
+        const responseText = await response.text();
+        console.log('Report response:', responseText);
+
         if (response.ok) {
-          toast.success(t('disease_reported_successfully') || 'Disease reported successfully! Nearby farmers will be notified.');
+          const successMessage = selectedCropId
+            ? t('disease_recorded_and_reported') || 'Disease recorded in your crop history and nearby farmers notified!'
+            : t('disease_reported_successfully') || 'Disease reported successfully! Nearby farmers will be notified.';
+          toast.success(successMessage);
           setReportSubmitted(true); // Mark report as submitted
         } else {
-          toast.error(t('report_failed') || 'Failed to report disease. Please try again.');
+          console.error('Report failed:', responseText);
+          toast.error(t('report_failed') || `Failed to report disease: ${responseText}`);
         }
       } else {
         toast.error(t('location_required') || 'Location access required to report disease outbreak.');
       }
     } catch (error) {
       console.error('Report error:', error);
-      toast.error(t('report_error') || 'Error reporting disease. Please try again.');
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      toast.error(t('report_error') || `Error reporting disease: ${error.message}. Please check console for details.`);
     } finally {
+      console.log('Setting report loading to false');
       setReportLoading(false);
     }
   }
@@ -188,12 +288,10 @@ function DetectDisease() {
 
           const pred = await res.json();
           // The prediction result from your FastAPI model
-          console.log("Disease prediction results:", pred);
 
           // Extract the prediction results from your model
           const predictedClass = pred.class_name || "Unknown";
           const confidence = pred.confidence || 0;
-          console.log("Predicted disease:", predictedClass, "with confidence:", confidence);
 
           // show immediate minimal prediction
           setAnalysis({
@@ -500,14 +598,52 @@ Ensure all Tamil text is properly written in Tamil script. No extra text, just v
                   )}
                 </div>
 
+                {/* Crop Selection */}
+                <div className="space-y-3 mt-4">
+                  <p className="text-orange-800 font-medium">
+                    {t('select_affected_crop') || 'Which crop is affected? (Optional)'}
+                  </p>
+                  {cropsLoading ? (
+                    <div className="flex items-center gap-2 p-3 bg-orange-100 rounded-lg">
+                      <div className="w-4 h-4 border-2 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-orange-700">{t('loading_crops') || 'Loading your crops...'}</span>
+                    </div>
+                  ) : crops.length > 0 ? (
+                    <select
+                      value={selectedCropId}
+                      onChange={(e) => setSelectedCropId(e.target.value)}
+                      className="w-full p-3 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
+                    >
+                      <option value="">{t('no_specific_crop') || 'No specific crop (general area)'}</option>
+                      {crops.map(crop => (
+                        <option key={crop._id} value={crop._id}>
+                          {crop.name} {crop.variety ? `(${crop.variety})` : ''} - {crop.status}
+                          {crop.location && ` • ${crop.location}`}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="bg-gray-100 p-3 rounded-lg">
+                      <p className="text-gray-600">
+                        {t('no_active_crops') || 'No active crops found. The disease will be reported as a general area issue.'}
+                      </p>
+                    </div>
+                  )}
+                  {selectedCropId && (
+                    <p className="text-orange-600 bg-orange-100 p-3 rounded-lg text-sm">
+                      <strong>{t('note') || 'Note'}:</strong> {t('crop_disease_record_note') || 'This disease will be recorded in your crop history for tracking and management purposes.'}
+                    </p>
+                  )}
+                </div>
+
                 <button
                   onClick={handleReportIssue}
                   disabled={reportLoading || reportSubmitted}
                   className={`w-full mt-4 font-medium py-2 px-4 rounded-lg shadow transition-colors ${reportSubmitted
-                      ? 'bg-green-600 text-white cursor-not-allowed'
-                      : reportLoading
-                        ? 'bg-orange-400 text-white cursor-not-allowed'
-                        : 'bg-orange-600 hover:bg-orange-700 text-white'
+                    ? 'bg-green-600 text-white cursor-not-allowed'
+                    : reportLoading
+                      ? 'bg-orange-400 text-white cursor-not-allowed'
+                      : 'bg-orange-600 hover:bg-orange-700 text-white'
                     }`}
                 >
                   {reportSubmitted ? (

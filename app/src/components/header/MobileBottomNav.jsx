@@ -76,7 +76,7 @@ const MobileBottomNav = ({ userId }) => {
             : 'text-gray-600'}`}
         >
           <FaTasks className={`${isActive('/tasks') ? 'text-xl scale-110' : 'text-lg'} mb-1 transition-transform`} />
-          <span className="text-xs font-medium">{t('tasks')}</span>
+          <span className="text-xs font-medium">{t('tasks.tasks')}</span>
         </Link>
       </div>
     </div>

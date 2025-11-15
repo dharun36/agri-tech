@@ -133,8 +133,6 @@ const QuickEventForm = ({ crop, eventType, onClose, onSuccess }) => {
         date: format(new Date(), 'yyyy-MM-dd'),
         time: format(new Date(), 'HH:mm')
       };
-
-      console.log(`Submitting ${eventType} event:`, eventData);
       await saveEventAsTask(crop._id, userId, eventType, eventData);
 
       // Notify parent of success

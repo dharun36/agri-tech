@@ -150,7 +150,6 @@ const ModernCropCard = ({ crop, onAddEvent, onViewDetails, onDeleteCrop, onUpdat
             setShowStatusMenu(false);
 
             // Log to help debug
-            console.log("Three dots clicked, showActions:", !showActions);
           }}
           className={`${commonButtonClasses} ${showActions ? 'bg-gray-700' : 'bg-gray-500 hover:bg-gray-600'}`}
           title={t('more_actions') || 'More Actions'}

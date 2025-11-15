@@ -66,6 +66,4 @@ function getNestedValue(obj, path) {
 }
 
 // Run the inspector and log the results
-const results = inspectTranslations();
-console.log("Missing Keys in Tamil:", results.missingKeysInTamil);
-console.log("Missing Keys in Hindi:", results.missingKeysInHindi);
+const results = inspectTranslations();
