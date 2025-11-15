@@ -17,6 +17,7 @@
     "form-data": "^4.0.4",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.16.4",
+    "lingo.dev": "^0.114.5",
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
     "node-schedule": "^2.1.1",

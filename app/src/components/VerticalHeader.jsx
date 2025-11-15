@@ -18,7 +18,8 @@ import {
   FaBell,
   FaUser,
   FaCog,
-  FaTasks
+  FaTasks,
+  FaCalendarAlt
 } from 'react-icons/fa';
 
 const VerticalHeader = ({ collapsed: propCollapsed }) => {
@@ -52,6 +53,16 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
     localStorage.removeItem('userName');
     setLoggedIn(false);
     navigate('/login');
+  };
+
+  // Keep Lingo.dev locale cookie in sync with i18next language
+  const setLingoLocale = (locale) => {
+    try {
+      const maxAge = 60 * 60 * 24 * 365; // 1 year
+      document.cookie = `lingo-locale=${locale}; path=/; max-age=${maxAge}`;
+    } catch (e) {
+      // no-op
+    }
   };
 
   // Function to check if a path is active
@@ -153,11 +164,11 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
           </li>
           <li>
             <Link
-              to="/government-schemes"
-              className={`flex items-center ${collapsed ? 'justify-center' : 'px-4'} py-3 ${isActive('/government-schemes') ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'}`}
+              to="/calendar"
+              className={`flex items-center ${collapsed ? 'justify-center' : 'px-4'} py-3 ${isActive('/calendar') ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'}`}
             >
-              <FaHandHoldingUsd className={`${collapsed ? 'text-xl' : 'text-lg mr-3'}`} />
-              {!collapsed && <span>{t('government_schemes')}</span>}
+              <FaCalendarAlt className={`${collapsed ? 'text-xl' : 'text-lg mr-3'}`} />
+              {!collapsed && <span>Calendar</span>}
             </Link>
           </li>
           <li>
@@ -210,14 +221,14 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
             {collapsed ? (
               <div className="flex flex-col items-center space-y-2">
                 <button
-                  onClick={() => i18n.changeLanguage('en')}
+                  onClick={() => { i18n.changeLanguage('en'); setLingoLocale('en'); }}
                   className={`w-8 h-8 text-xs font-medium rounded-full flex items-center justify-center transition-colors ${i18n.language === 'en' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                   title="English"
                 >
                   EN
                 </button>
                 <button
-                  onClick={() => i18n.changeLanguage('ta')}
+                  onClick={() => { i18n.changeLanguage('ta'); setLingoLocale('ta'); }}
                   className={`w-8 h-8 text-xs font-medium rounded-full flex items-center justify-center transition-colors ${i18n.language === 'ta' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                   title="Tamil"
                 >
@@ -227,14 +238,14 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
             ) : (
               <div className="flex items-center rounded-md bg-gray-100 p-1">
                 <button
-                  onClick={() => i18n.changeLanguage('en')}
+                  onClick={() => { i18n.changeLanguage('en'); setLingoLocale('en'); }}
                   className={`px-2 py-1 text-xs font-medium rounded transition-colors ${i18n.language === 'en' ? 'bg-green-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
                   title="English"
                 >
                   EN
                 </button>
                 <button
-                  onClick={() => i18n.changeLanguage('ta')}
+                  onClick={() => { i18n.changeLanguage('ta'); setLingoLocale('ta'); }}
                   className={`px-2 py-1 text-xs font-medium rounded transition-colors ${i18n.language === 'ta' ? 'bg-green-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
                   title="Tamil"
                 >

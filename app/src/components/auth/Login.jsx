@@ -80,11 +80,11 @@ const Login = () => {
               Login to access your personalized farming solutions and continue your journey to sustainable agriculture.
             </p>
           </div>
-          <img
-            src="https://source.unsplash.com/IZ01rjX0XQA"
+          {/* <img
+            src="https://media.istockphoto.com/id/503646746/photo/farmer-spreading-fertilizer-in-the-field-wheat.jpg?s=612x612&w=0&k=20&c=Lgxsjbz0jaYyQrvfzhyAsW2zELtshRP4AtLzkpmcLiE="
             alt="Farming Community"
             className="w-full max-w-md rounded-lg shadow-xl hidden md:block"
-          />
+          /> */}
         </div>
 
         {/* Right Column with Login Form */}

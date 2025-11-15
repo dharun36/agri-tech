@@ -8,6 +8,16 @@ import { useTranslation } from 'react-i18next'
 const LanguageSwitcher = () => {
   const { i18n, t } = useTranslation();
 
+  // Keep Lingo.dev locale cookie in sync so build-time dictionaries load correctly
+  const setLingoLocale = (locale) => {
+    try {
+      const maxAge = 60 * 60 * 24 * 365; // 1 year
+      document.cookie = `lingo-locale=${locale}; path=/; max-age=${maxAge}`;
+    } catch {
+      // ignore cookie errors
+    }
+  };
+
   // Handle language with region codes (en-US, etc)
   const currentLang = i18n.language.startsWith('en')
     ? 'en'
@@ -22,6 +32,8 @@ const LanguageSwitcher = () => {
     i18n.changeLanguage(lng);
     try { localStorage.setItem('i18nextLng', lng); } catch { }
     if (typeof document !== 'undefined') document.documentElement.lang = lng;
+    // Sync with Lingo.dev so compiler-provided dictionaries switch too
+    setLingoLocale(lng);
   }
 
   return (
@@ -29,8 +41,8 @@ const LanguageSwitcher = () => {
       <button
         onClick={() => changeLang('en')}
         className={`px-2 py-1 rounded transition-colors duration-200 ${currentLang === 'en'
-            ? 'bg-green-600 text-white font-medium ring-2 ring-green-400'
-            : 'text-white hover:bg-gray-700'
+          ? 'bg-green-600 text-white font-medium ring-2 ring-green-400'
+          : 'text-white hover:bg-gray-700'
           }`}
         aria-label="Switch to English"
         title={t('switch_to_english', 'Switch to English')}
@@ -41,8 +53,8 @@ const LanguageSwitcher = () => {
       <button
         onClick={() => changeLang('hi')}
         className={`px-2 py-1 rounded transition-colors duration-200 ${currentLang === 'hi'
-            ? 'bg-green-600 text-white font-medium ring-2 ring-green-400'
-            : 'text-white hover:bg-gray-700'
+          ? 'bg-green-600 text-white font-medium ring-2 ring-green-400'
+          : 'text-white hover:bg-gray-700'
           }`}
         aria-label="हिंदी में बदलें"
         title={t('switch_to_hindi', 'Switch to Hindi')}
@@ -53,8 +65,8 @@ const LanguageSwitcher = () => {
       <button
         onClick={() => changeLang('ta')}
         className={`px-2 py-1 rounded transition-colors duration-200 ${currentLang === 'ta'
-            ? 'bg-green-600 text-white font-medium ring-2 ring-green-400'
-            : 'text-white hover:bg-gray-700'
+          ? 'bg-green-600 text-white font-medium ring-2 ring-green-400'
+          : 'text-white hover:bg-gray-700'
           }`}
         aria-label="தமிழுக்கு மாறவும்"
         title={t('switch_to_tamil', 'Switch to Tamil')}

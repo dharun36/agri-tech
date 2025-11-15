@@ -11,7 +11,7 @@ import CropFilter from '../ui/CropFilter';
 import QuickEventForm from '../ui/QuickEventForm';
 import CropDetails from '../crops/CropDetails';
 import TodayTasksWidget from '../TodayTasksWidget';
-import useTaskGeneration from '../../hooks/useTaskGeneration';
+import { toast } from 'react-toastify';
 
 // Get API key from environment variables
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + import.meta.env.VITE_GEMINI_API_KEY;
@@ -92,8 +92,7 @@ const LightThemeHome = () => {
     navigate('/login');
   }
 
-  // Task generation hook for automatic task generation on site visit
-  const { autoGenerateOnVisit, isGenerating, generationResult } = useTaskGeneration();
+  // Refresh key to prompt TodayTasksWidget to refetch
   const [taskRefreshKey, setTaskRefreshKey] = useState(0);
 
   // Crop management state
@@ -170,21 +169,47 @@ const LightThemeHome = () => {
     fetchCrops();
   }, []);
 
-  // Auto-generate tasks when user visits the site
+  // Ensure today's tasks are generated and fetched only once per day when visiting Home
   useEffect(() => {
-    if (userId && crops.length > 0) {
-      // Trigger auto task generation after crops are loaded
-      autoGenerateOnVisit();
-    }
-  }, [userId, crops.length, autoGenerateOnVisit]);
+    const ensureDailyTasksOnce = async () => {
+      if (!userId || crops.length === 0) return;
 
-  // Refresh tasks when generation completes
-  useEffect(() => {
-    if (generationResult && generationResult.generated) {
-      console.log('Tasks generated successfully, refreshing task display');
-      setTaskRefreshKey(prev => prev + 1);
-    }
-  }, [generationResult]);
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const todayKeyDate = new Date();
+      todayKeyDate.setHours(0, 0, 0, 0);
+      const dayKey = todayKeyDate.toISOString().slice(0, 10); // YYYY-MM-DD
+      const lsKey = `dailyTasksEnsured_${userId}_${dayKey}`;
+      if (localStorage.getItem(lsKey)) return;
+
+      try {
+        const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+        const res = await fetch(`${base}/api/tasks/daily`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        // Even if generation already happened, endpoint returns tasks
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem(lsKey, '1');
+          setTaskRefreshKey(prev => prev + 1);
+          if (data?.generated) {
+            toast.success('✨ AI tasks generated for today', { autoClose: 2500 });
+          }
+        }
+      } catch (e) {
+        // Non-blocking
+        console.warn('Failed to ensure daily tasks:', e.message);
+      }
+    };
+
+    ensureDailyTasksOnce();
+  }, [userId, crops.length]);
 
   // Fetch weather on mount
   useEffect(() => {
@@ -724,7 +749,7 @@ const LightThemeHome = () => {
         {/* Hero Section with Weather and Tasks side by side */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Weather widget */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition cursor-pointer" onClick={() => navigate('/weather')}>
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition cursor-pointer" onClick={() => navigate('/weather-analysis')}>
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
