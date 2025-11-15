@@ -6,8 +6,16 @@ const auth = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { OAuth2Client } = require('google-auth-library');
 
 const router = express.Router();
+
+// Google OAuth client (optional)
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+let googleClient = null;
+if (googleClientId) {
+  googleClient = new OAuth2Client(googleClientId);
+}
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -131,3 +139,89 @@ router.post('/user/:id/profile-image', auth, upload.single('profileImage'), asyn
 });
 
 module.exports = router;
+// --------------------
+// OAuth endpoints
+// --------------------
+
+// Google Sign-In (Token-based from frontend)
+// Frontend sends: { id_token: string }
+router.post('/google', async (req, res) => {
+  try {
+    if (!googleClient) {
+      return res.status(400).json({ message: 'Google OAuth not configured' });
+    }
+    const { id_token } = req.body || {};
+    if (!id_token) return res.status(400).json({ message: 'Missing id_token' });
+
+    const ticket = await googleClient.verifyIdToken({ idToken: id_token, audience: googleClientId });
+    const payload = ticket.getPayload();
+    const email = payload?.email;
+    const emailVerified = payload?.email_verified;
+    const name = payload?.name || 'User';
+    const picture = payload?.picture || '';
+
+    if (!email || !emailVerified) {
+      return res.status(400).json({ message: 'Google email not verified' });
+    }
+
+    let user = await User.findOne({ email });
+    if (!user) {
+      // Ask client to complete minimal profile (e.g., phone) via /oauth/register
+      return res.status(409).json({
+        needsRegistration: true,
+        suggested: { name, email, profile_img: picture }
+      });
+    }
+
+    // Optionally update profile image if empty
+    if (!user.profile_img && picture) {
+      user.profile_img = picture;
+      await user.save();
+    }
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'supersecretkey', { expiresIn: '7d' });
+    return res.json({ token, user: { id: user._id, name: user.name, email: user.email, phone: user.phone, location: user.location, profile_img: user.profile_img } });
+  } catch (err) {
+    console.error('Google OAuth error:', err.message);
+    return res.status(500).json({ message: 'OAuth error' });
+  }
+});
+
+// Complete registration for OAuth users (collect required fields like phone)
+// Body: { name, email, phone, profile_img }
+router.post('/oauth/register', async (req, res) => {
+  try {
+    const { name, email, phone, profile_img } = req.body || {};
+    if (!name || !email || !phone) {
+      return res.status(400).json({ message: 'name, email, phone are required' });
+    }
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ message: 'User already exists. Please sign in.' });
+    }
+
+    // Generate a random password (not used, but required by schema)
+    const randomPass = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
+    const hash = await bcrypt.hash(randomPass, 10);
+
+    const user = await User.create({
+      name,
+      email,
+      password: hash,
+      phone,
+      profile_img: profile_img || '',
+      preferred_language: 'en',
+      notifications_enabled: true,
+      farm_size: 0,
+      soilType: 'Loam',
+      primaryCrop: 'Corn',
+      farmingExperience: 'Beginner'
+    });
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'supersecretkey', { expiresIn: '7d' });
+    return res.json({ token, user: { id: user._id, name: user.name, email: user.email, phone: user.phone, location: user.location, profile_img: user.profile_img } });
+  } catch (err) {
+    console.error('OAuth register error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
