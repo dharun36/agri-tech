@@ -64,6 +64,8 @@ app.use('/api/disease', require('./routes/disease'));
 app.use('/api/activities', require('./routes/activities'));
 // Market prices proxy
 app.use('/api/market', require('./routes/market'));
+// Government API crop prices
+app.use('/api/prices', require('./routes/prices'));
 // Dynamic translations for AI-generated content
 app.use('/api/translate', require('./routes/translate'));
 // Use optimized task routes when specified in environment, otherwise use regular routes
@@ -288,7 +290,28 @@ app.post('/api/weather-analysis', async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => res.send('AgriTech Simple API Running'));
+// If a frontend build exists in ../app/dist or ../app/build, serve it (SPA fallback)
+const fs = require('fs');
+const pathStatic = require('path');
+const possibleBuildDirs = [pathStatic.join(__dirname, '..', 'app', 'dist'), pathStatic.join(__dirname, '..', 'app', 'build')];
+const existing = possibleBuildDirs.find(d => fs.existsSync(d));
+
+if (existing) {
+  console.log('Serving frontend from', existing);
+  app.use(express.static(existing));
+
+  // SPA fallback: return index.html for any unknown GET route (must be after API routes)
+  app.get('*', (req, res) => {
+    const indexPath = pathStatic.join(existing, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      return res.sendFile(indexPath);
+    }
+    return res.status(404).send('Frontend build not found');
+  });
+} else {
+  // Fallback route when no frontend build is found
+  app.get('/', (req, res) => res.send('AgriTech Simple API Running'));
+}
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
@@ -405,19 +428,4 @@ const PORT = process.env.PORT || 5000;
 // Bind host explicitly so PaaS port scans detect the listening socket
 const HOST = process.env.HOST || '0.0.0.0';
 server.listen(PORT, HOST, () => console.log(`Server running on ${HOST}:${PORT}`));
-// If a frontend build exists in ../app/dist or ../app/dist, serve it (SPA fallback)
-const fs = require('fs');
-const pathStatic = require('path');
-const possibleBuildDirs = [pathStatic.join(__dirname, '..', 'app', 'dist'), pathStatic.join(__dirname, '..', 'app', 'build'), pathStatic.join(__dirname, '..', 'app', 'dist')];
-const existing = possibleBuildDirs.find(d => fs.existsSync(d));
-if (existing) {
-  console.log('Serving frontend from', existing);
-  app.use(express.static(existing));
-  // SPA fallback: return index.html for any unknown GET route
-  app.get('*', (req, res) => {
-    const indexPath = pathStatic.join(existing, 'index.html');
-    if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
-    return res.status(404).send('Not found');
-  });
-}
 

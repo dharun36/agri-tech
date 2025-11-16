@@ -141,7 +141,12 @@ const MarketPrices = () => {
               marketLocation: found.marketLocation || 'Unknown',
               img: cropImages[name] || cropImages.Default,
               alt: name,
-              date: new Date().toLocaleDateString()
+              date: found.lastUpdated || new Date().toLocaleDateString(),
+              trend: found.trend || 'stable',
+              change: found.change || 0,
+              isOldData: found.isOldData || false,
+              daysAgo: found.daysAgo || 0,
+              note: found.note || found.error || null
             };
           }
           return {
@@ -150,7 +155,10 @@ const MarketPrices = () => {
             marketLocation: 'Data unavailable',
             img: cropImages[name] || cropImages.Default,
             alt: name,
-            date: new Date().toLocaleDateString()
+            date: new Date().toLocaleDateString(),
+            trend: 'stable',
+            change: 0,
+            isOldData: false
           };
         });
 
@@ -164,7 +172,10 @@ const MarketPrices = () => {
           marketLocation: 'Data unavailable',
           img: cropImages[name] || cropImages.Default,
           alt: name,
-          date: new Date().toLocaleDateString()
+          date: new Date().toLocaleDateString(),
+          trend: 'stable',
+          change: 0,
+          isOldData: false
         }));
         setProducts(fallback);
       }
@@ -202,8 +213,13 @@ const MarketPrices = () => {
             marketLocation: found.marketLocation || 'Unknown',
             img: cropImages[cropName] || cropImages.Default,
             alt: cropName,
-            date: new Date().toLocaleDateString(),
-            isSearchResult: true
+            date: found.lastUpdated || new Date().toLocaleDateString(),
+            isSearchResult: true,
+            trend: found.trend || 'stable',
+            change: found.change || 0,
+            isOldData: found.isOldData || false,
+            daysAgo: found.daysAgo || 0,
+            note: found.note || found.error || null
           };
 
           setProducts(prev => {
@@ -225,7 +241,10 @@ const MarketPrices = () => {
             img: cropImages.Default,
             alt: cropName,
             date: new Date().toLocaleDateString(),
-            isSearchResult: true
+            isSearchResult: true,
+            trend: 'stable',
+            change: 0,
+            isOldData: false
           };
 
           setProducts(prev => {
@@ -457,16 +476,58 @@ const MarketPrices = () => {
                   </div>
 
                   <div className="p-2 sm:p-4 space-y-2">
+                    {/* Old data warning */}
+                    {item.isOldData && (
+                      <div className="bg-orange-50 border border-orange-200 rounded-md p-2 mb-2">
+                        <div className="flex items-center gap-1 text-orange-700 text-xs">
+                          <span className="font-medium">⚠️ Previous Data</span>
+                          <span>({item.daysAgo} {item.daysAgo === 1 ? 'day' : 'days'} ago)</span>
+                        </div>
+                        {item.note && (
+                          <div className="text-orange-600 text-xs mt-1">{item.note}</div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-green-600 text-lg flex items-center gap-2">
-                        {item.price}
-                        {/* Add a small indicator arrow based on trending price */}
-                        {index % 2 === 0 ?
-                          <span className="text-green-500 text-xs">↑</span> :
-                          <span className="text-red-500 text-xs">↓</span>
-                        }
-                      </span>
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{item.date}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-green-600 text-lg">
+                          {item.price}
+                        </span>
+                        
+                        {/* Price trend indicator */}
+                        {item.trend && item.trend !== 'stable' && (
+                          <div className="flex items-center gap-1">
+                            {item.trend === 'up' ? (
+                              <span className="text-green-500 text-sm font-bold">↗</span>
+                            ) : (
+                              <span className="text-red-500 text-sm font-bold">↘</span>
+                            )}
+                            {item.change > 0 && (
+                              <span className={`text-xs font-medium ${
+                                item.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {item.change}%
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Stable price indicator */}
+                        {item.trend === 'stable' && item.price !== 'N/A' && (
+                          <span className="text-gray-500 text-sm">→</span>
+                        )}
+                      </div>
+                      
+                      <div className="text-right">
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          item.isOldData 
+                            ? 'text-orange-600 bg-orange-100' 
+                            : 'text-gray-500 bg-gray-100'
+                        }`}>
+                          {item.date}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="text-xs text-gray-600 flex items-start gap-1 border-t border-gray-100 pt-2">
