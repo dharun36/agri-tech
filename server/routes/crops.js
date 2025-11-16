@@ -447,17 +447,41 @@ router.delete('/:id/irrigation/:eventId', async (req, res) => {
 // Add fertilization event
 router.post('/:id/fertilization', async (req, res) => {
   try {
+    console.log('🌱 Fertilization endpoint hit with params:', req.params);
+    console.log('🌱 Request body:', req.body);
+    console.log('🌱 User ID:', req.user?._id);
+
+    if (!req.user || !req.user._id) {
+      console.error('❌ Missing or invalid user ID');
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+      console.error('❌ Invalid crop ID:', req.params.id);
+      return res.status(400).json({ message: 'Invalid crop ID format' });
+    }
+
     const crop = await Crop.findOne({ _id: req.params.id, user: req.user._id });
-    if (!crop) return res.status(404).json({ message: 'Crop not found' });
+    if (!crop) {
+      console.error('❌ Crop not found for ID:', req.params.id, 'User:', req.user._id);
+      return res.status(404).json({ message: 'Crop not found' });
+    }
+
+    console.log('✅ Crop found:', crop.name);
 
     const {
       date, type, product, npkRatio, amount,
       applicationMethod, coverage, notes
     } = req.body;
 
-    if (!date || !type) return res.status(400).json({ message: 'Date and type required' });
+    console.log('🌱 Extracted data:', { date, type, product, npkRatio, amount, applicationMethod, coverage, notes });
 
-    crop.fertilizationHistory.push({
+    if (!date || !type) {
+      console.error('❌ Missing required fields - Date:', date, 'Type:', type);
+      return res.status(400).json({ message: 'Date and type are required' });
+    }
+
+    const fertilizationEvent = {
       date: new Date(date),
       type,
       product,
@@ -466,13 +490,36 @@ router.post('/:id/fertilization', async (req, res) => {
       applicationMethod,
       coverage,
       notes
-    });
+    };
 
+    console.log('🌱 Creating fertilization event:', fertilizationEvent);
+
+    crop.fertilizationHistory.push(fertilizationEvent);
+
+    console.log('🌱 Saving crop with fertilization history...');
     await crop.save();
+
+    console.log('✅ Fertilization event added successfully');
     res.json(crop);
   } catch (error) {
-    console.error('Error adding fertilization event:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Error adding fertilization event:', error);
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
+
+    // Provide more detailed error information
+    if (error.name === 'ValidationError') {
+      console.error('❌ Validation errors:', error.errors);
+      return res.status(400).json({
+        message: 'Validation error',
+        errors: error.errors
+      });
+    }
+
+    res.status(500).json({
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 

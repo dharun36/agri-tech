@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import ActivityForm from './ActivityForm';
 
-// Base form component for all event types
-const EventFormBase = ({ title, children, onSubmit, onCancel }) => {
+// Base form component for all event types - memoized for performance
+const EventFormBase = React.memo(({ title, children, onSubmit, onCancel }) => {
   const { t } = useTranslation();
 
   return (
@@ -26,10 +26,10 @@ const EventFormBase = ({ title, children, onSubmit, onCancel }) => {
       </form>
     </Card>
   );
-};
+});
 
-// Common form fields
-const DateField = ({ value, onChange }) => {
+// Common form fields - memoized for performance
+const DateField = React.memo(({ value, onChange }) => {
   const { t } = useTranslation();
   return (
     <div className="mb-3">
@@ -42,9 +42,9 @@ const DateField = ({ value, onChange }) => {
       />
     </div>
   );
-};
+});
 
-const NotesField = ({ value, onChange }) => {
+const NotesField = React.memo(({ value, onChange }) => {
   const { t } = useTranslation();
   return (
     <div className="mb-3">
@@ -57,7 +57,7 @@ const NotesField = ({ value, onChange }) => {
       />
     </div>
   );
-};
+});
 
 // Irrigation Form
 export const IrrigationForm = ({ onSubmit, onCancel }) => {
@@ -251,7 +251,7 @@ export const FertilizationForm = ({ onSubmit, onCancel }) => {
             <option value="Organic">{t('organic')}</option>
             <option value="Foliar">{t('foliar')}</option>
             <option value="Compost">{t('compost')}</option>
-            <option value="Other">{t('other')}</option>
+            <option value="other">{t('other')}</option>
           </select>
         </div>
 

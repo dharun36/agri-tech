@@ -314,17 +314,30 @@ if (existing) {
 }
 
 // Socket.io connection handling
+let connectionCount = 0;
+const isDev = process.env.NODE_ENV === 'development';
+
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  connectionCount++;
+
+  // Only log every 10th connection in production, all in development
+  if (isDev || connectionCount % 10 === 0) {
+    console.log(`🔗 User connected: ${socket.id} (Total: ${connectionCount})`);
+  }
 
   // Join user to their personal room for targeted alerts
   socket.on('join-user-room', (userId) => {
     socket.join(`user-${userId}`);
-    console.log(`User ${userId} joined their room`);
+    if (isDev && Math.random() < 0.2) {
+      console.log(`👤 User ${userId} joined room`);
+    }
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    connectionCount = Math.max(0, connectionCount - 1);
+    if (isDev || connectionCount % 10 === 0) {
+      console.log(`🔌 User disconnected: ${socket.id} (Active: ${connectionCount})`);
+    }
   });
 });
 
@@ -427,5 +440,45 @@ async function getWeatherDataSafely(location) {
 const PORT = process.env.PORT || 5000;
 // Bind host explicitly so PaaS port scans detect the listening socket
 const HOST = process.env.HOST || '0.0.0.0';
-server.listen(PORT, HOST, () => console.log(`Server running on ${HOST}:${PORT}`));
+
+// Global error handler middleware - must be after all routes
+app.use((err, req, res, next) => {
+  console.error('❌ Unhandled error:', err);
+  console.error('❌ Error stack:', err.stack);
+  console.error('❌ Request URL:', req.url);
+  console.error('❌ Request method:', req.method);
+  console.error('❌ Request body:', req.body);
+
+  res.status(500).json({
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
+});
+
+// Process-level error handling
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  console.error(error.stack);
+  // In production, you might want to restart the server or perform cleanup here
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // Application specific logging, throwing an error, or other logic here
+});
+
+server.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on ${HOST}:${PORT}`);
+
+  // Check critical environment variables
+  const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET'];
+  const missing = requiredEnvVars.filter(env => !process.env[env]);
+
+  if (missing.length > 0) {
+    console.error('❌ Missing required environment variables:', missing);
+    console.error('❌ Server may not function properly!');
+  } else {
+    console.log('✅ All required environment variables are set');
+  }
+});
 

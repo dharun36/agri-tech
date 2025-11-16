@@ -2,6 +2,7 @@ const express = require('express');
 const Task = require('../models/Task');
 const Crop = require('../models/Crop');
 const Activity = require('../models/Activity');
+const UserAnalytics = require('../models/UserAnalytics');
 const auth = require('../middleware/auth');
 const mongoose = require('mongoose');
 const { generateRecommendations, saveRecommendations, generateAllUserTaskRecommendations } = require('../utils/taskRecommendationGenerator');
@@ -9,14 +10,250 @@ const { ensureDailyTasksForUser } = require('../services/dailyGeneration');
 
 const router = express.Router();
 
+// Helper function to update user completion patterns for AI learning
+async function updateUserCompletionPatterns(userId, patternData) {
+  try {
+    const analytics = await UserAnalytics.getOrCreateForUser(userId);
+    await analytics.updateCompletionPattern(patternData);
+    console.log(`📊 Updated completion patterns for user ${userId}: ${patternData.category} (${patternData.timing})`);
+  } catch (error) {
+    console.error('Error updating user completion patterns:', error);
+  }
+}
+
+
 // All routes below require authentication
 router.use(auth);
 
 /**
- * @route   GET /api/tasks
- * @desc    Get all tasks for the authenticated user
+ * @route   GET /api/tasks/analytics
+ * @desc    Get AI learning analytics for the user
  * @access  Private
  */
+router.get('/analytics', async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Get user analytics
+    const analytics = await UserAnalytics.getOrCreateForUser(userId);
+
+    // Calculate additional insights
+    const totalTasks = analytics.engagementMetrics.totalTasksCompleted;
+    const insights = {
+      summary: {
+        totalTasksCompleted: totalTasks,
+        completionRate: analytics.engagementMetrics.completionRate,
+        streakDays: analytics.engagementMetrics.streakDays,
+        lastActive: analytics.engagementMetrics.lastActiveDate
+      },
+
+      categoryPerformance: Object.keys(analytics.completionPatterns.categoryStats).map(category => {
+        const stats = analytics.completionPatterns.categoryStats[category];
+        const total = stats.total;
+        return {
+          category,
+          total,
+          onTimeRate: total > 0 ? ((stats.onTime + stats.early) / total * 100).toFixed(1) : 0,
+          avgCompletionTime: stats.avgCompletionTime,
+          performance: total > 0 ? (stats.onTime + stats.early > stats.late ? 'Good' : 'Needs Improvement') : 'No Data'
+        };
+      }).filter(item => item.total > 0),
+
+      timePreferences: {
+        bestDay: analytics.completionPatterns.temporalPatterns.dayOfWeekStats
+          .reduce((best, current) => current.completions > best.completions ? current : best, { day: 0, completions: 0 }),
+        monthlyDistribution: analytics.completionPatterns.temporalPatterns.monthlyStats
+          .filter(m => m.completions > 0)
+          .map(m => ({ month: m.month, completions: m.completions }))
+      },
+
+      aiRecommendations: {
+        preferredCategories: Object.keys(analytics.completionPatterns.categoryStats)
+          .filter(cat => analytics.completionPatterns.categoryStats[cat].total > 0)
+          .sort((a, b) => analytics.completionPatterns.categoryStats[b].total - analytics.completionPatterns.categoryStats[a].total)
+          .slice(0, 3),
+
+        improvementAreas: Object.keys(analytics.completionPatterns.categoryStats)
+          .filter(cat => {
+            const stats = analytics.completionPatterns.categoryStats[cat];
+            return stats.total > 0 && (stats.late / stats.total) > 0.3;
+          }),
+
+        recommendedSchedule: generateScheduleRecommendations(analytics)
+      }
+    };
+
+    res.json({
+      success: true,
+      analytics: insights,
+      lastUpdated: analytics.updatedAt
+    });
+
+  } catch (error) {
+    console.error('Error fetching analytics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch analytics',
+      error: error.message
+    });
+  }
+});
+
+// Helper function to generate schedule recommendations
+function generateScheduleRecommendations(analytics) {
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  // Find the best performing days
+  const bestDays = analytics.completionPatterns.temporalPatterns.dayOfWeekStats
+    .sort((a, b) => b.completions - a.completions)
+    .slice(0, 3)
+    .map(d => dayNames[d.day]);
+
+  return {
+    bestDaysForTasks: bestDays,
+    suggestion: bestDays.length > 0
+      ? `You perform best on ${bestDays.join(', ')}. Consider scheduling important tasks on these days.`
+      : 'Complete more tasks to get personalized scheduling recommendations.'
+  };
+}
+
+/**
+ * @route   GET /api/tasks/insights
+ * @desc    Get personalized task insights for AI learning
+ * @access  Private
+ */
+router.get('/insights', async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Get recent completed tasks for pattern analysis
+    const recentTasks = await Task.find({
+      user: userId,
+      status: 'done',
+      generationType: 'individual_task',
+      completedDate: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
+    }).populate('crop', 'name variety').sort({ completedDate: -1 });
+
+    // Get corresponding activities
+    const activities = await Activity.find({
+      user: userId,
+      tags: 'task-completion',
+      createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+    }).sort({ createdAt: -1 });
+
+    // Analyze patterns
+    const patterns = analyzeTaskPatterns(recentTasks, activities);
+
+    res.json({
+      success: true,
+      insights: {
+        recentActivity: {
+          tasksCompleted: recentTasks.length,
+          activitiesRecorded: activities.length,
+          averageCompletionTime: patterns.avgCompletionTime
+        },
+        patterns,
+        recommendations: generateAIRecommendations(patterns)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error generating insights:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate insights',
+      error: error.message
+    });
+  }
+});
+
+// Helper function to analyze task patterns
+function analyzeTaskPatterns(tasks, activities) {
+  if (tasks.length === 0) {
+    return {
+      avgCompletionTime: 0,
+      categoryDistribution: {},
+      timingPerformance: {},
+      engagement: 'low'
+    };
+  }
+
+  const categoryCount = {};
+  const timingCount = { early: 0, onTime: 0, late: 0 };
+  let totalCompletionTime = 0;
+
+  tasks.forEach(task => {
+    // Category distribution
+    categoryCount[task.category] = (categoryCount[task.category] || 0) + 1;
+
+    // Timing analysis
+    const dueDate = new Date(task.dueDate);
+    const completedDate = new Date(task.completedDate);
+    const diff = Math.floor((completedDate - dueDate) / (1000 * 60 * 60 * 24));
+
+    if (diff < 0) timingCount.early++;
+    else if (diff === 0) timingCount.onTime++;
+    else timingCount.late++;
+
+    // Completion time
+    const createdDate = new Date(task.createdAt);
+    totalCompletionTime += Math.floor((completedDate - createdDate) / (1000 * 60 * 60 * 24));
+  });
+
+  return {
+    avgCompletionTime: totalCompletionTime / tasks.length,
+    categoryDistribution: categoryCount,
+    timingPerformance: timingCount,
+    engagement: tasks.length > 10 ? 'high' : tasks.length > 5 ? 'medium' : 'low'
+  };
+}
+
+// Helper function to generate AI recommendations
+function generateAIRecommendations(patterns) {
+  const recommendations = [];
+
+  // Timing recommendations
+  const totalTiming = patterns.timingPerformance.early + patterns.timingPerformance.onTime + patterns.timingPerformance.late;
+  if (totalTiming > 0) {
+    const lateRate = patterns.timingPerformance.late / totalTiming;
+    if (lateRate > 0.3) {
+      recommendations.push({
+        type: 'timing',
+        message: 'Consider setting earlier due dates or reminders to improve task completion timing.',
+        priority: 'medium'
+      });
+    } else if (patterns.timingPerformance.early / totalTiming > 0.5) {
+      recommendations.push({
+        type: 'timing',
+        message: 'Great job completing tasks early! You might be able to handle more challenging tasks.',
+        priority: 'low'
+      });
+    }
+  }
+
+  // Category recommendations
+  const topCategory = Object.keys(patterns.categoryDistribution).reduce((a, b) =>
+    patterns.categoryDistribution[a] > patterns.categoryDistribution[b] ? a : b, '');
+
+  if (topCategory) {
+    recommendations.push({
+      type: 'category',
+      message: `You excel at ${topCategory} tasks. Consider taking on more complex ${topCategory} activities.`,
+      priority: 'low'
+    });
+  }
+
+  // Engagement recommendations
+  if (patterns.engagement === 'low') {
+    recommendations.push({
+      type: 'engagement',
+      message: 'Try setting smaller, more achievable daily goals to build momentum.',
+      priority: 'high'
+    });
+  }
+
+  return recommendations;
+}
 router.get('/', async (req, res) => {
   try {
     const {
@@ -158,7 +395,7 @@ router.post('/:id/complete', async (req, res) => {
       });
     }
 
-    // Create corresponding activity record for learning
+    // Create comprehensive activity record for AI learning
     try {
       let activityType = 'general';
 
@@ -179,27 +416,59 @@ router.post('/:id/complete', async (req, res) => {
         case 'harvesting':
           activityType = 'harvesting';
           break;
+        case 'pruning':
+          activityType = 'pruning';
+          break;
         default:
           activityType = 'general';
       }
 
-      // Create activity record
+      // Calculate completion timing analysis
+      const dueDate = new Date(task.dueDate);
+      const completionDate = new Date();
+      const timingDifference = Math.floor((completionDate - dueDate) / (1000 * 60 * 60 * 24)); // Days difference
+      const timingStatus = timingDifference < 0 ? 'early' : timingDifference === 0 ? 'onTime' : 'late';
+
+      // Calculate task duration (time from creation to completion)
+      const taskDuration = Math.floor((completionDate - task.createdAt) / (1000 * 60 * 60 * 24));
+
+      // Enhanced activity record with AI learning data
       const activity = new Activity({
         crop: task.crop._id,
         user: userId,
         title: `Completed: ${task.title}`,
-        description: `✅ Task completed via AgriTech system\n\nOriginal task: ${task.description}${notes ? `\n\nUser notes: ${notes}` : ''}`,
+        description: `✅ Task completed via AgriTech system\n\nOriginal task: ${task.description}${notes ? `\n\nUser notes: ${notes}` : ''}\n\n📊 Completion Analysis:\n• Timing: ${timingStatus} (${Math.abs(timingDifference)} days ${timingDifference < 0 ? 'early' : timingDifference > 0 ? 'late' : 'on time'})\n• Priority: ${task.priority}\n• Category: ${task.category}\n• Duration in system: ${taskDuration} days`,
         activityType: activityType,
-        date: new Date(),
-        tags: ['system-generated', 'task-completion', task.category]
+        date: completionDate,
+        duration: taskDuration * 1440, // Convert to minutes for consistency
+        images: images || [],
+        tags: [
+          'system-generated',
+          'task-completion',
+          task.category,
+          task.priority,
+          timingStatus,
+          `source-${task.source}`,
+          `completion-day-${new Date().getDay()}`, // Track completion day patterns
+          `season-${Math.floor((new Date().getMonth() + 1) / 3) + 1}` // Track seasonal patterns
+        ]
       });
 
       await activity.save();
 
-      console.log(`📝 Created activity record for task completion: ${task.title}`);
+      // Track user completion patterns for AI learning
+      await updateUserCompletionPatterns(userId, {
+        category: task.category,
+        priority: task.priority,
+        timing: timingStatus,
+        dayOfWeek: new Date().getDay(),
+        month: new Date().getMonth()
+      });
+
+      console.log(`📝 Enhanced activity record created for AI learning: ${task.title} (${timingStatus})`);
     } catch (activityError) {
       // Don't fail the task completion if activity creation fails
-      console.error('Error creating activity record:', activityError);
+      console.error('Error creating enhanced activity record:', activityError);
     }
 
     // Update the daily generation tracker record

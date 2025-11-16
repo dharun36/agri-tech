@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { fetchWeatherData, getWeatherDesc, getWeatherIcon, formatDay } from '../../utils/weatherUtils';
@@ -45,50 +45,6 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
   const [success, setSuccess] = useState(null);
   const [activeEventForm, setActiveEventForm] = useState(null);
 
-  // Fetch crop data if not provided in location state
-  useEffect(() => {
-    const fetchCropData = async () => {
-      if (!initialCropData && id) {
-        setLoading(true);
-        setError(null);
-
-        try {
-          const token = localStorage.getItem('token');
-          if (!token) {
-            navigate('/login');
-            return;
-          }
-
-          const response = await fetch(`${API_BASE_URL}/api/crops/${id}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-
-          if (!response.ok) {
-            throw new Error(`Failed to fetch crop: ${response.status}`);
-          }
-
-          const cropData = await response.json();
-          // Debug the notes format
-          // Make sure notes is properly formatted before setting state
-          if (cropData.notes && typeof cropData.notes === 'object' && !Array.isArray(cropData.notes)) {
-            // If it's a single object, convert it to an array for consistency
-            cropData.notes = [cropData.notes];
-          }
-          setCrop(cropData);
-        } catch (err) {
-          console.error('Error fetching crop:', err);
-          setError(`Failed to load crop details: ${err.message}`);
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchCropData();
-  }, [id, initialCropData, navigate]);
-
   // Weather state
   const [weather, setWeather] = useState(null);
   const [hourly, setHourly] = useState([]);
@@ -96,90 +52,131 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [weatherError, setWeatherError] = useState(null);
 
-  // Fetch weather data for the crop location
-  useEffect(() => {
-    if (crop && crop.fieldLocation && crop.fieldLocation.latitude && crop.fieldLocation.longitude) {
-      setWeatherLoading(true);
-      setWeatherError(null);
+  // Memoize expensive operations - moved to top to avoid conditional hook calls
+  const formatDate = useCallback((dateString) => {
+    if (!dateString) return 'N/A';
+    return format(new Date(dateString), 'MMM d, yyyy');
+  }, []);
 
-      const { latitude, longitude } = crop.fieldLocation;
+  // Memoized message handlers to prevent unnecessary rerenders
+  const handleClearSuccess = useCallback(() => setSuccess(null), []);
+  const handleClearError = useCallback(() => setError(null), []);
 
-      fetchWeatherData(latitude, longitude, import.meta.env.VITE_WEATHER_API_KEY)
-        .then(({ weather, hourly, daily }) => {
-          setWeather(weather);
-          setHourly(hourly);
-          setDaily(daily);
-          setWeatherLoading(false);
-        })
-        .catch(error => {
-          console.error("Weather fetch error:", error);
-          setWeatherError("Failed to load weather data");
-          setWeatherLoading(false);
-        });
-    }
-  }, [crop]);
+  // Memoized navigation handlers
+  const handleBackToDashboard = useCallback(() => navigate('/home'), [navigate]);
+  const handleGoToTasks = useCallback(() => navigate(`/tasks/${id}`), [navigate, id]);
 
-  // Fetch crop details and activities
-  useEffect(() => {
-    // Skip fetch if we already have data from the router
-    if (initialCropData && !loading) return;
+  // Cancel form handler
+  const handleCancelForm = useCallback(() => setActiveEventForm(null), []);
 
-    const fetchCropDetails = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
+  // Memoize the fetch function to prevent unnecessary recreations
+  const fetchCropData = useCallback(async () => {
+    if (initialCropData || !id) return;
 
-        // Fetch crop details
-        // Fetch crop details and activities
-        const cropResponse = await axios.get(`${API_BASE_URL}/api/crops/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        // Initially set the crop data for immediate display
-        setCrop(cropResponse.data);
+    setLoading(true);
+    setError(null);
 
-        try {
-          // Fetch activities for this crop
-          const activitiesResponse = await axios.get(`${API_BASE_URL}/api/activities/crop/${id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          // Assign activities to the crop object to be used by CropStatusHistory
-          const cropWithActivities = {
-            ...cropResponse.data,
-            activities: activitiesResponse.data.activities || []
-          };
-
-          // Debug the notes format
-          // Make sure notes is properly formatted 
-          if (cropWithActivities.notes && typeof cropWithActivities.notes === 'object' && !Array.isArray(cropWithActivities.notes)) {
-            // If it's a single object, convert it to an array for consistency
-            cropWithActivities.notes = [cropWithActivities.notes];
-          }
-
-          setCrop(cropWithActivities);
-        } catch (activitiesError) {
-          console.error('Error fetching activities:', activitiesError);
-          // Still keep the crop data we successfully fetched
-        }
-      } catch (err) {
-        console.error('Error fetching crop details:', err);
-        setError('Failed to load crop data');
-      } finally {
-        setLoading(false);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
       }
-    };
 
-    fetchCropDetails();
-  }, [id, navigate, initialCropData, loading]);
+      const response = await fetch(`${API_BASE_URL}/api/crops/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-  const handleAddEvent = (eventType) => {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch crop: ${response.status}`);
+      }
+
+      const cropData = await response.json();
+      // Properly format notes without mutating the original data
+      const formattedCropData = {
+        ...cropData,
+        notes: cropData.notes && typeof cropData.notes === 'object' && !Array.isArray(cropData.notes)
+          ? [cropData.notes]
+          : cropData.notes
+      };
+      setCrop(formattedCropData);
+    } catch (err) {
+      console.error('Error fetching crop:', err);
+      setError(`Failed to load crop details: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [id, initialCropData, navigate]);
+
+  // Single useEffect for initial data fetching
+  useEffect(() => {
+    fetchCropData();
+  }, [fetchCropData]);
+
+  // Memoize weather fetch to prevent unnecessary API calls
+  const fetchWeatherDataLocal = useCallback(async (latitude, longitude) => {
+    if (!latitude || !longitude) return;
+
+    setWeatherLoading(true);
+    setWeatherError(null);
+
+    try {
+      const { weather, hourly, daily } = await fetchWeatherData(latitude, longitude, import.meta.env.VITE_WEATHER_API_KEY);
+      setWeather(weather);
+      setHourly(hourly);
+      setDaily(daily);
+    } catch (error) {
+      console.error("Weather fetch error:", error);
+      setWeatherError("Failed to load weather data");
+    } finally {
+      setWeatherLoading(false);
+    }
+  }, []);
+
+  // Fetch weather data for the crop location - optimized with useMemo
+  const shouldFetchWeather = useMemo(() => {
+    return crop?.fieldLocation?.latitude && crop?.fieldLocation?.longitude;
+  }, [crop?.fieldLocation?.latitude, crop?.fieldLocation?.longitude]);
+
+  useEffect(() => {
+    if (shouldFetchWeather) {
+      fetchWeatherDataLocal(crop.fieldLocation.latitude, crop.fieldLocation.longitude);
+    }
+  }, [shouldFetchWeather, fetchWeatherDataLocal, crop?.fieldLocation?.latitude, crop?.fieldLocation?.longitude]);
+
+  // Fetch activities separately to avoid race conditions
+  const fetchActivities = useCallback(async () => {
+    if (!crop || !id) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const activitiesResponse = await axios.get(`${API_BASE_URL}/api/activities/crop/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      setCrop(prevCrop => ({
+        ...prevCrop,
+        activities: activitiesResponse.data.activities || []
+      }));
+    } catch (activitiesError) {
+      console.warn('Error fetching activities:', activitiesError);
+    }
+  }, [crop?.id, id]);
+
+  // Fetch activities after crop data is loaded
+  useEffect(() => {
+    if (crop && !crop.activities) {
+      fetchActivities();
+    }
+  }, [crop, fetchActivities]);
+
+  const handleAddEvent = useCallback((eventType) => {
     setActiveEventForm(eventType);
-  };
+  }, []);
 
-  const handleSubmitEvent = async (eventType, formData) => {
+  const handleSubmitEvent = useCallback(async (eventType, formData) => {
     try {
       setLoading(true);
       // Clear any existing messages
@@ -307,7 +304,7 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   // All activities are now handled through the standard event system
   // No separate activity handling functions needed
@@ -324,7 +321,7 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
     return (
       <div className="text-center p-8">
         <div className="text-red-500 mb-4">{error}</div>
-        <Button onClick={() => navigate('/home')} variant="primary">
+        <Button onClick={handleBackToDashboard} variant="primary">
           {t('back_to_dashboard')}
         </Button>
       </div>
@@ -339,26 +336,19 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
           Crop ID: {id}<br />
           This crop might not exist or there might be a connection issue to the API.
         </p>
-        <Button onClick={() => navigate('/home')} variant="primary">
+        <Button onClick={handleBackToDashboard} variant="primary">
           {t('back_to_dashboard')}
         </Button>
       </div>
     );
   }
 
-  //hi
-  // Helper function to format dates
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return format(new Date(dateString), 'MMM d, yyyy');
-  };
-
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       {/* Back button */}
       <div className="flex justify-between items-center mb-4">
         <Button
-          onClick={() => navigate('/home')}
+          onClick={handleBackToDashboard}
           variant="secondary"
         >
           <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
@@ -366,7 +356,7 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
         </Button>
 
         <Button
-          onClick={() => navigate(`/tasks/${id}`)}
+          onClick={handleGoToTasks}
           variant="primary"
           className="bg-green-600 hover:bg-green-700"
         >
@@ -379,7 +369,7 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
       {success && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 flex justify-between items-center">
           <span>{success}</span>
-          <button onClick={() => setSuccess(null)} className="text-green-700">
+          <button onClick={handleClearSuccess} className="text-green-700">
             <span className="text-xl">&times;</span>
           </button>
         </div>
@@ -389,7 +379,7 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex justify-between items-center">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-700">
+          <button onClick={handleClearError} className="text-red-700">
             <span className="text-xl">&times;</span>
           </button>
         </div>
@@ -644,7 +634,7 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
         <EventFormSelector
           eventType={activeEventForm}
           onSubmit={(formData) => handleSubmitEvent(activeEventForm, formData)}
-          onCancel={() => setActiveEventForm(null)}
+          onCancel={handleCancelForm}
         />
       )}
     </div>
