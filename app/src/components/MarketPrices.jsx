@@ -494,7 +494,7 @@ const MarketPrices = () => {
                         <span className="font-bold text-green-600 text-lg">
                           {item.price}
                         </span>
-                        
+
                         {/* Price trend indicator */}
                         {item.trend && item.trend !== 'stable' && (
                           <div className="flex items-center gap-1">
@@ -504,9 +504,8 @@ const MarketPrices = () => {
                               <span className="text-red-500 text-sm font-bold">↘</span>
                             )}
                             {item.change > 0 && (
-                              <span className={`text-xs font-medium ${
-                                item.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                              }`}>
+                              <span className={`text-xs font-medium ${item.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                                }`}>
                                 {item.change}%
                               </span>
                             )}
@@ -518,13 +517,12 @@ const MarketPrices = () => {
                           <span className="text-gray-500 text-sm">→</span>
                         )}
                       </div>
-                      
+
                       <div className="text-right">
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          item.isOldData 
-                            ? 'text-orange-600 bg-orange-100' 
+                        <span className={`text-xs px-2 py-1 rounded-full ${item.isOldData
+                            ? 'text-orange-600 bg-orange-100'
                             : 'text-gray-500 bg-gray-100'
-                        }`}>
+                          }`}>
                           {item.date}
                         </span>
                       </div>

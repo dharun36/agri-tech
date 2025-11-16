@@ -130,7 +130,7 @@ router.get('/prices', async (req, res) => {
           if (recentPrice) {
             const trend = await getPriceTrend(commodity, recentPrice.price, district);
             const daysAgo = Math.floor((new Date() - recentPrice.date) / (1000 * 60 * 60 * 24));
-            
+
             return {
               commodity,
               price: `₹${recentPrice.price} per quintal`,
@@ -149,18 +149,18 @@ router.get('/prices', async (req, res) => {
             };
           }
 
-          return { 
-            commodity, 
-            price: 'N/A', 
+          return {
+            commodity,
+            price: 'N/A',
             marketLocation: 'No data available',
             trend: 'stable',
             isOldData: false
           };
         } catch (error) {
           console.error(`Error fetching ${commodity} from database:`, error);
-          return { 
-            commodity, 
-            price: 'N/A', 
+          return {
+            commodity,
+            price: 'N/A',
             marketLocation: 'Data unavailable',
             trend: 'stable',
             isOldData: false
@@ -198,7 +198,7 @@ router.get('/prices', async (req, res) => {
           if (recentPrice) {
             const trend = await getPriceTrend(commodity, recentPrice.price, district);
             const daysAgo = Math.floor((new Date() - recentPrice.date) / (1000 * 60 * 60 * 24));
-            
+
             return {
               commodity,
               price: `₹${recentPrice.price} per quintal`,
@@ -213,13 +213,13 @@ router.get('/prices', async (req, res) => {
           }
           return { commodity, error: `Status ${r.status}`, price: 'N/A', marketLocation: 'No data available' };
         }
-        
+
         const j = await r.json();
         if (j.records && j.records.length > 0) {
           const rec = j.records[0];
           const currentPriceValue = parseFloat(rec.modal_price || 0);
           const trend = await getPriceTrend(commodity, currentPriceValue, district);
-          
+
           const result = {
             commodity,
             price: rec.modal_price ? `₹${parseInt(rec.modal_price, 10) / 100} per kg` : 'N/A',
@@ -232,7 +232,7 @@ router.get('/prices', async (req, res) => {
           };
 
           // Save to database in the background
-          savePriceToDatabase(result).catch(err => 
+          savePriceToDatabase(result).catch(err =>
             console.error('Background save error:', err)
           );
 
@@ -243,7 +243,7 @@ router.get('/prices', async (req, res) => {
           if (recentPrice) {
             const trend = await getPriceTrend(commodity, recentPrice.price, district);
             const daysAgo = Math.floor((new Date() - recentPrice.date) / (1000 * 60 * 60 * 24));
-            
+
             return {
               commodity,
               price: `₹${recentPrice.price} per quintal`,
@@ -264,7 +264,7 @@ router.get('/prices', async (req, res) => {
         if (recentPrice) {
           const trend = await getPriceTrend(commodity, recentPrice.price, district);
           const daysAgo = Math.floor((new Date() - recentPrice.date) / (1000 * 60 * 60 * 24));
-          
+
           return {
             commodity,
             price: `₹${recentPrice.price} per quintal`,
@@ -279,7 +279,7 @@ router.get('/prices', async (req, res) => {
         }
         return { commodity, price: 'N/A', marketLocation: 'Data unavailable', error: err.message, trend: 'stable' };
       }
-    }));    res.json({ results, source: 'government_api' });
+    })); res.json({ results, source: 'government_api' });
   } catch (error) {
     console.error('Market proxy error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
