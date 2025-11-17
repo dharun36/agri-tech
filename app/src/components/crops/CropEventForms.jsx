@@ -859,97 +859,7 @@ export const HarvestForm = ({ onSubmit, onCancel }) => {
   );
 };
 
-// Weather Form
-export const WeatherForm = ({ onSubmit, onCancel }) => {
-  const { t } = useTranslation();
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    eventType: 'rain',
-    severity: '3',
-    impact: '',
-    notes: ''
-  });
 
-  const handleChange = (field, value) => {
-    setFormData({ ...formData, [field]: value });
-  };
-
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    // Convert severity to number
-    const submissionData = {
-      ...formData,
-      severity: parseInt(formData.severity) || 1
-    };
-    onSubmit(submissionData);
-  };
-
-  return (
-    <EventFormBase title={t('record_weather_event')} onSubmit={handleFormSubmit} onCancel={onCancel}>
-      <div className="mb-3">
-        <label className="block mb-1 text-sm font-medium">{t('date')}</label>
-        <Input
-          type="date"
-          value={formData.date}
-          onChange={(e) => handleChange('date', e.target.value)}
-          required
-        />
-      </div>
-
-      <div className="mb-3">
-        <label className="block mb-1 text-sm font-medium">{t('event_type')}</label>
-        <select
-          value={formData.eventType}
-          onChange={(e) => handleChange('eventType', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 bg-white rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
-          required
-        >
-          <option value="rain">{t('rain')}</option>
-          <option value="drought">{t('drought')}</option>
-          <option value="frost">{t('frost')}</option>
-          <option value="hail">{t('hail')}</option>
-          <option value="wind">{t('strong_winds')}</option>
-          <option value="flood">{t('flood')}</option>
-          <option value="extreme_heat">{t('extreme_heat')}</option>
-          <option value="extreme_cold">{t('extreme_cold')}</option>
-          <option value="other">{t('other')}</option>
-        </select>
-      </div>
-
-      <div className="mb-3">
-        <label className="block mb-1 text-sm font-medium">{t('severity')} (1-10)</label>
-        <input
-          type="range"
-          min="1"
-          max="10"
-          value={formData.severity}
-          onChange={(e) => handleChange('severity', e.target.value)}
-          className="w-full"
-        />
-        <div className="flex justify-between text-xs text-gray-500">
-          <span>1</span>
-          <span>5</span>
-          <span>10</span>
-        </div>
-      </div>
-
-      <div className="mb-3">
-        <label className="block mb-1 text-sm font-medium">{t('impact')}</label>
-        <Input
-          type="text"
-          value={formData.impact}
-          onChange={(e) => handleChange('impact', e.target.value)}
-          placeholder={t('weather_impact_placeholder')}
-        />
-      </div>
-
-      <NotesField
-        value={formData.notes}
-        onChange={(value) => handleChange('notes', value)}
-      />
-    </EventFormBase>
-  );
-};
 
 // Note Form
 export const NoteForm = ({ onSubmit, onCancel }) => {
@@ -1008,8 +918,7 @@ export const EventFormSelector = ({ eventType, onSubmit, onCancel }) => {
       return <GrowthForm onSubmit={onSubmit} onCancel={onCancel} />;
     case 'harvest':
       return <HarvestForm onSubmit={onSubmit} onCancel={onCancel} />;
-    case 'weather':
-      return <WeatherForm onSubmit={onSubmit} onCancel={onCancel} />;
+
     case 'cost':
       return <CostForm onSubmit={onSubmit} onCancel={onCancel} />;
     case 'labor':

@@ -173,7 +173,7 @@ const CropWidget = ({ cropId, onClose }) => {
     { id: 'pestDisease', label: t('pests_diseases'), icon: FaBug },
     { id: 'growth', label: t('growth'), icon: FaRuler },
     { id: 'harvest', label: t('harvest'), icon: FaBalanceScale },
-    { id: 'weather', label: t('weather'), icon: FaCloudSun },
+
     { id: 'cost', label: t('costs'), icon: FaRupeeSign },
     { id: 'labor', label: t('labor'), icon: FaClock },
     { id: 'note', label: t('notes'), icon: FaStickyNote },

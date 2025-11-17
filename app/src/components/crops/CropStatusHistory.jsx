@@ -8,7 +8,6 @@ import {
   faBug,
   faRulerVertical,
   faWeightHanging,
-  faCloudRain,
   faMoneyBill,
   faBusinessTime,
   faNoteSticky,
@@ -23,7 +22,7 @@ const EventTypeIcons = {
   pestDisease: faBug,
   growth: faRulerVertical,
   harvest: faWeightHanging,
-  weather: faCloudRain,
+
   cost: faMoneyBill,
   labor: faBusinessTime,
   note: faNoteSticky,
@@ -66,8 +65,6 @@ const CropStatusHistory = React.memo(({ crop, onAddEvent }) => {
         return crop.growthHistory || [];
       case 'harvest':
         return crop.harvestHistory || [];
-      case 'weather':
-        return crop.weatherEvents || [];
       case 'cost':
         return crop.costs || [];
       case 'labor':
@@ -160,15 +157,7 @@ const CropStatusHistory = React.memo(({ crop, onAddEvent }) => {
           </>
         );
 
-      case 'weather':
-        return (
-          <>
-            <div className="font-semibold">{event.eventType}</div>
-            {event.severity && <div>Severity: {event.severity}/10</div>}
-            {event.impact && <div>Impact: {event.impact}</div>}
-            {event.notes && <div className="text-gray-500">{event.notes}</div>}
-          </>
-        );
+
 
       case 'cost':
         return (
@@ -229,7 +218,7 @@ const CropStatusHistory = React.memo(({ crop, onAddEvent }) => {
       case 'pestDisease': return 'Add Pest/Disease';
       case 'growth': return 'Add Growth Record';
       case 'harvest': return 'Add Harvest';
-      case 'weather': return 'Add Weather Event';
+
       case 'cost': return 'Add Cost';
       case 'labor': return 'Add Labor';
       case 'note': return 'Add Note';
@@ -274,12 +263,7 @@ const CropStatusHistory = React.memo(({ crop, onAddEvent }) => {
           icon={EventTypeIcons.harvest}
           label={t('harvest')}
         />
-        <TabButton
-          active={activeTab === 'weather'}
-          onClick={() => setActiveTab('weather')}
-          icon={EventTypeIcons.weather}
-          label={t('weather')}
-        />
+
         <TabButton
           active={activeTab === 'cost'}
           onClick={() => setActiveTab('cost')}
