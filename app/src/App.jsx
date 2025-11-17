@@ -10,6 +10,7 @@ import LightThemeHome from './components/home/LightThemeHome'
 import CropRecommendation from './components/CropRecommendation'
 import MarketPrices from './components/MarketPrices'
 import DiseaseAlerts from './components/DiseaseAlerts'
+import ChatbotDemo from './components/ChatbotDemo'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import ModernLandingPage from './components/ModernLandingPage';
 import GovSchemes from './components/GovSchemes'
@@ -77,6 +78,9 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/profile" element={<Profile />} />
+
+              {/* Chatbot Demo */}
+              <Route path="/chatbot-demo" element={<ChatbotDemo />} />
 
               {/* Task management routes */}
               <Route path="/tasks" element={<div className="p-4"><CropTaskSelector /></div>} />
