@@ -488,8 +488,8 @@ const ChatBot = ({ isOpen, onClose }) => {
                     onClick={isListening ? stopListening : startListening}
                     disabled={isLoading}
                     className={`p-1.5 md:p-2 rounded-lg transition-all duration-200 shadow-sm ${isListening
-                        ? 'bg-red-500 text-white hover:bg-red-600 animate-pulse shadow-red-200'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-105'
+                      ? 'bg-red-500 text-white hover:bg-red-600 animate-pulse shadow-red-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-105'
                       } disabled:opacity-50`}
                     title={isListening ? 'Stop recording' : `Start voice input (${supportedLanguages.find(lang => lang.code === speechLanguage)?.name})`}
                   >
@@ -555,12 +555,12 @@ const MessageBubble = ({ message }) => {
 
         {/* Message Bubble */}
         <div className={`px-3 md:px-4 py-2 md:py-3 rounded-xl md:rounded-2xl shadow-md ${isUser
-            ? 'bg-gradient-to-br from-green-600 to-green-700 text-white rounded-br-md'
-            : isError
-              ? 'bg-gradient-to-br from-red-50 to-red-100 text-red-800 border border-red-200 rounded-bl-md'
-              : isSuggestion
-                ? 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-800 border border-blue-200 rounded-bl-md'
-                : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 border border-gray-200 rounded-bl-md'
+          ? 'bg-gradient-to-br from-green-600 to-green-700 text-white rounded-br-md'
+          : isError
+            ? 'bg-gradient-to-br from-red-50 to-red-100 text-red-800 border border-red-200 rounded-bl-md'
+            : isSuggestion
+              ? 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-800 border border-blue-200 rounded-bl-md'
+              : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 border border-gray-200 rounded-bl-md'
           } transition-all duration-200 hover:shadow-lg`}>
 
           {/* Message Content */}
