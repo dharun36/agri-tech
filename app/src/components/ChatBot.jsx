@@ -378,7 +378,7 @@ const ChatBot = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-4 md:bottom-20 left-4 right-4 md:right-6 md:left-auto z-50 md:w-96 w-full max-w-md mx-auto md:mx-0 h-[550px] md:h-[550px] flex flex-col">
+    <div className="fixed bottom-16 md:bottom-20 left-2 right-2 md:right-6 md:left-auto z-50 md:w-96 w-auto max-w-sm md:max-w-md mx-auto md:mx-0 h-[520px] md:h-[550px] flex flex-col">
       <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl md:rounded-3xl shadow-2xl border border-gray-100 h-full flex flex-col overflow-hidden backdrop-blur-sm">
         {/* Header */}
         <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-3 md:p-4 flex items-center justify-between flex-shrink-0">
@@ -428,9 +428,9 @@ const ChatBot = ({ isOpen, onClose }) => {
         </div>
 
         {/* Input Area */}
-        <div className="border-t border-gray-200 bg-white p-3 md:p-4 rounded-b-2xl md:rounded-b-3xl flex-shrink-0">
+        <div className="border-t border-gray-200 bg-white p-2 md:p-4 rounded-b-2xl md:rounded-b-3xl flex-shrink-0">
           {/* Input Row */}
-          <div className="flex items-end space-x-2 md:space-x-3 mb-2 md:mb-3">
+          <div className="flex items-end space-x-1 md:space-x-3 mb-2 md:mb-3">
             <div className="flex-1 relative">
               <textarea
                 ref={inputRef}
@@ -439,7 +439,7 @@ const ChatBot = ({ isOpen, onClose }) => {
                 onKeyPress={handleKeyPress}
                 placeholder={isListening ? "🎤 Listening..." : "💬 Type your message"}
                 rows="1"
-                className="w-full border-2 border-gray-200 rounded-xl md:rounded-2xl px-3 md:px-5 py-2 md:py-3 pr-20 md:pr-28 resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 shadow-sm text-xs md:text-sm placeholder-gray-500 transition-all duration-200"
+                className="w-full border-2 border-gray-200 rounded-xl md:rounded-2xl px-2 md:px-5 py-2 md:py-3 pr-16 md:pr-28 resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 shadow-sm text-xs md:text-sm placeholder-gray-500 transition-all duration-200"
                 disabled={isLoading || isListening}
                 style={{
                   minHeight: '40px',
@@ -449,7 +449,7 @@ const ChatBot = ({ isOpen, onClose }) => {
 
               {/* Voice Controls */}
               {speechSupported && (
-                <div className="absolute right-12 md:right-16 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
+                <div className="absolute right-10 md:right-16 top-1/2 transform -translate-y-1/2 flex items-center space-x-0.5 md:space-x-1">
                   {/* Language selector */}
                   <div className="relative language-menu">
                     <button
@@ -463,7 +463,7 @@ const ChatBot = ({ isOpen, onClose }) => {
                     </button>
 
                     {showLanguageMenu && (
-                      <div className="absolute bottom-full mb-2 right-0 bg-white border border-gray-200 rounded-xl shadow-xl z-20 min-w-48 md:min-w-56 max-h-40 md:max-h-48 overflow-y-auto">
+                      <div className="absolute bottom-full mb-2 right-0 bg-white border border-gray-200 rounded-xl shadow-xl z-20 min-w-40 md:min-w-56 max-h-36 md:max-h-48 overflow-y-auto">
                         <div className="p-3">
                           <p className="text-xs font-semibold text-gray-600 mb-3 pb-2 border-b border-gray-100">🎤 Voice Language</p>
                           {supportedLanguages.map((lang) => (
@@ -488,8 +488,8 @@ const ChatBot = ({ isOpen, onClose }) => {
                     onClick={isListening ? stopListening : startListening}
                     disabled={isLoading}
                     className={`p-1.5 md:p-2 rounded-lg transition-all duration-200 shadow-sm ${isListening
-                        ? 'bg-red-500 text-white hover:bg-red-600 animate-pulse shadow-red-200'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-105'
+                      ? 'bg-red-500 text-white hover:bg-red-600 animate-pulse shadow-red-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-105'
                       } disabled:opacity-50`}
                     title={isListening ? 'Stop recording' : `Start voice input (${supportedLanguages.find(lang => lang.code === speechLanguage)?.name})`}
                   >
@@ -503,7 +503,7 @@ const ChatBot = ({ isOpen, onClose }) => {
                 <button
                   onClick={sendMessage}
                   disabled={isLoading || isListening}
-                  className="absolute right-1 md:right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-green-600 to-green-700 text-white p-2 md:p-2.5 rounded-lg md:rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 disabled:opacity-50 shadow-md hover:scale-105 hover:shadow-lg"
+                  className="absolute right-0.5 md:right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-green-600 to-green-700 text-white p-1.5 md:p-2.5 rounded-lg md:rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 disabled:opacity-50 shadow-md hover:scale-105 hover:shadow-lg"
                 >
                   <FaPaperPlane className="text-xs md:text-sm" />
                 </button>
@@ -512,7 +512,7 @@ const ChatBot = ({ isOpen, onClose }) => {
           </div>
 
           {/* Quick actions */}
-          <div className="flex space-x-1 md:space-x-2">
+          <div className="flex space-x-0.5 md:space-x-2">
             <QuickActionButton
               text="🌾 My crops"
               onClick={() => useSuggestedMessage("Show me all my crops")}
@@ -542,7 +542,7 @@ const MessageBubble = ({ message }) => {
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3 md:mb-4`}>
-      <div className={`max-w-[90%] md:max-w-[85%] ${isUser ? 'order-2' : 'order-1'}`}>
+      <div className={`max-w-[85%] md:max-w-[85%] ${isUser ? 'order-2' : 'order-1'}`}>
         {/* Assistant Avatar and Name */}
         {!isUser && (
           <div className="flex items-center mb-1 md:mb-2 px-1">
@@ -555,12 +555,12 @@ const MessageBubble = ({ message }) => {
 
         {/* Message Bubble */}
         <div className={`px-3 md:px-4 py-2 md:py-3 rounded-xl md:rounded-2xl shadow-md ${isUser
-            ? 'bg-gradient-to-br from-green-600 to-green-700 text-white rounded-br-md'
-            : isError
-              ? 'bg-gradient-to-br from-red-50 to-red-100 text-red-800 border border-red-200 rounded-bl-md'
-              : isSuggestion
-                ? 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-800 border border-blue-200 rounded-bl-md'
-                : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 border border-gray-200 rounded-bl-md'
+          ? 'bg-gradient-to-br from-green-600 to-green-700 text-white rounded-br-md'
+          : isError
+            ? 'bg-gradient-to-br from-red-50 to-red-100 text-red-800 border border-red-200 rounded-bl-md'
+            : isSuggestion
+              ? 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-800 border border-blue-200 rounded-bl-md'
+              : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 border border-gray-200 rounded-bl-md'
           } transition-all duration-200 hover:shadow-lg`}>
 
           {/* Message Content */}
@@ -603,16 +603,16 @@ const MessageBubble = ({ message }) => {
  */
 const TypingIndicator = () => (
   <div className="flex justify-start">
-    <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 rounded-2xl border border-gray-200 shadow-sm">
-      <div className="flex items-center space-x-3">
-        <div className="bg-green-100 p-1.5 rounded-lg">
-          <FaRobot className="text-green-600 text-sm" />
+    <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-3 md:px-4 py-2 md:py-3 rounded-2xl border border-gray-200 shadow-sm">
+      <div className="flex items-center space-x-2 md:space-x-3">
+        <div className="bg-green-100 p-1 md:p-1.5 rounded-lg">
+          <FaRobot className="text-green-600 text-xs md:text-sm" />
         </div>
-        <span className="text-sm text-gray-600 font-medium">Assistant is typing</span>
+        <span className="text-xs md:text-sm text-gray-600 font-medium">Assistant is typing</span>
         <div className="flex space-x-1">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce"></div>
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+          <div className="w-1.5 md:w-2 h-1.5 md:h-2 bg-green-500 rounded-full animate-bounce"></div>
+          <div className="w-1.5 md:w-2 h-1.5 md:h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+          <div className="w-1.5 md:w-2 h-1.5 md:h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
         </div>
       </div>
     </div>
@@ -626,16 +626,16 @@ const SuggestedMessages = ({ onSelect }) => {
   const suggestions = chatService.getSuggestedMessages();
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 md:space-y-3">
       <div className="text-center">
-        <p className="text-sm font-medium text-gray-600 bg-gray-100 inline-block px-3 py-1 rounded-full">💡 Try asking:</p>
+        <p className="text-xs md:text-sm font-medium text-gray-600 bg-gray-100 inline-block px-2 md:px-3 py-1 rounded-full">💡 Try asking:</p>
       </div>
-      <div className="grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-1 gap-1.5 md:gap-2">
         {suggestions.slice(0, 4).map((suggestion, index) => (
           <button
             key={index}
             onClick={() => onSelect(suggestion)}
-            className="text-left p-4 bg-gradient-to-r from-white to-gray-50 hover:from-green-50 hover:to-green-100 rounded-xl border border-gray-200 hover:border-green-300 transition-all duration-200 text-sm shadow-sm hover:shadow-md transform hover:scale-[1.02]"
+            className="text-left p-3 md:p-4 bg-gradient-to-r from-white to-gray-50 hover:from-green-50 hover:to-green-100 rounded-xl border border-gray-200 hover:border-green-300 transition-all duration-200 text-xs md:text-sm shadow-sm hover:shadow-md transform hover:scale-[1.02]"
           >
             <span className="font-medium text-gray-700 hover:text-green-700">{suggestion}</span>
           </button>
