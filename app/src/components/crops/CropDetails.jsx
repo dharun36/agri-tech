@@ -725,35 +725,6 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
       {/* Crop Status History component */}
       <CropStatusHistory crop={crop} onAddEvent={handleAddEvent} />
 
-      {/* Floating Edit Button for Mobile */}
-      <div className="fixed bottom-6 right-6 sm:hidden z-50">
-        <Button
-          onClick={isEditing ? handleSaveEdit : handleStartEdit}
-          variant={isEditing ? "primary" : "secondary"}
-          className={`rounded-full w-14 h-14 p-0 shadow-lg ${isEditing ? "bg-blue-600 hover:bg-blue-700" : "bg-green-600 hover:bg-green-700 text-white"}`}
-          disabled={loading}
-        >
-          {isEditing ? (
-            <FontAwesomeIcon icon={faCheckCircle} className="text-xl" />
-          ) : (
-            <FontAwesomeIcon icon={faEdit} className="text-xl" />
-          )}
-        </Button>
-      </div>
-
-      {/* Floating Cancel Button for Mobile (when editing) */}
-      {isEditing && (
-        <div className="fixed bottom-6 right-24 sm:hidden z-50">
-          <Button
-            onClick={handleCancelEdit}
-            variant="secondary"
-            className="rounded-full w-12 h-12 p-0 shadow-lg bg-red-500 hover:bg-red-600 text-white"
-          >
-            <FontAwesomeIcon icon={faTimes} className="text-lg" />
-          </Button>
-        </div>
-      )}
-
       {/* Event form (conditionally rendered) */}
       {activeEventForm && (
         <EventFormSelector
