@@ -197,7 +197,7 @@ router.put('/:id', async (req, res) => {
     // These should be modified via their specific endpoints
     const {
       irrigationHistory, fertilizationHistory, pestDiseaseHistory,
-      growthHistory, harvestHistory, weatherEvents, costs, laborHours,
+      growthHistory, harvestHistory, costs, laborHours,
       notes, ...updateData
     } = req.body;
 
@@ -795,33 +795,6 @@ router.post('/:id/labor', async (req, res) => {
   }
 });
 
-// Add weather event
-router.post('/:id/weather', async (req, res) => {
-  try {
-    const crop = await Crop.findOne({ _id: req.params.id, user: req.user._id });
-    if (!crop) return res.status(404).json({ message: 'Crop not found' });
-
-    const { date, eventType, severity, impact, notes } = req.body;
-
-    if (!date || !eventType) {
-      return res.status(400).json({ message: 'Date and event type required' });
-    }
-
-    crop.weatherEvents.push({
-      date: new Date(date),
-      eventType,
-      severity,
-      impact,
-      notes
-    });
-
-    await crop.save();
-    res.json(crop);
-  } catch (error) {
-    console.error('Error adding weather event:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
 
 // Add fertilization event
 router.post('/:id/fertilization', async (req, res) => {

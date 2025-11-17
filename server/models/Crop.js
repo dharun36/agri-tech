@@ -109,14 +109,7 @@ const cropSchema = new mongoose.Schema({
   growthHistory: [growthRecordSchema],
   harvestHistory: [harvestEventSchema],
 
-  // Weather events affecting the crop
-  weatherEvents: [{
-    date: Date,
-    eventType: { type: String, enum: ['frost', 'heatwave', 'heavy rain', 'drought', 'storm', 'other'] },
-    severity: { type: Number, min: 1, max: 10 },
-    impact: String,
-    notes: String
-  }],
+
 
   // Cost and labor tracking
   costs: [{
