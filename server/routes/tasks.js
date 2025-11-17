@@ -10,6 +10,30 @@ const { ensureDailyTasksForUser } = require('../services/dailyGeneration');
 
 const router = express.Router();
 
+/**
+ * ACTIVITY LOGGING SYSTEM FOR AI CONTEXT
+ * =====================================
+ * 
+ * This module ensures that ALL task completions are logged as activities 
+ * in the activities collection so the AI has complete context of what users have done.
+ * 
+ * Activity logging is implemented in:
+ * 1. POST /api/tasks/:id/complete - Main task completion with detailed feedback
+ * 2. PUT /api/tasks/:id/status - Status updates (done/skipped)  
+ * 3. PATCH /api/tasks/:id/complete - Quick task completion
+ * 
+ * Each completion creates both:
+ * - Updated task record with completion date
+ * - Activity record with rich context for AI prompt generation
+ * 
+ * Activity records include:
+ * - Descriptive title and detailed description
+ * - Mapped activity type based on task category
+ * - Comprehensive tags for filtering and analysis
+ * - Completion timing and effectiveness data
+ * - User feedback and images when provided
+ */
+
 // Helper function to update user completion patterns for AI learning
 async function updateUserCompletionPatterns(userId, patternData) {
   try {
@@ -351,7 +375,9 @@ router.get('/', async (req, res) => {
  */
 router.get('/daily', async (req, res) => {
   try {
-    const result = await ensureDailyTasksForUser(req.user._id);
+    // Allow configuration of max tasks per day via query parameter (default: 5)
+    const maxTasksPerDay = parseInt(req.query.maxTasks) || 5;
+    const result = await ensureDailyTasksForUser(req.user._id, maxTasksPerDay);
     return res.json(result);
   } catch (error) {
     console.error('Error getting/generating daily tasks:', error);
@@ -827,6 +853,62 @@ router.put('/:id/status', async (req, res) => {
           ...feedback
         };
       }
+
+      // Create activity record for AI context when task is completed
+      try {
+        await task.populate('crop', 'name variety status');
+
+        // Map task category to activity type
+        let activityType = 'general';
+        switch (task.category) {
+          case 'irrigation':
+            activityType = 'maintenance';
+            break;
+          case 'pest_control':
+          case 'disease_treatment':
+            activityType = 'inspection';
+            break;
+          case 'soil_management':
+          case 'fertilization':
+            activityType = 'maintenance';
+            break;
+          case 'harvesting':
+            activityType = 'general';
+            break;
+          case 'pruning':
+            activityType = 'pruning';
+            break;
+          default:
+            activityType = 'general';
+        }
+
+        const activity = new Activity({
+          crop: task.crop._id,
+          user: req.user._id,
+          title: `${status === 'done' ? 'Completed' : 'Skipped'}: ${task.title}`,
+          description: `${status === 'done' ? '✅' : '⏭️'} Task ${status} via status update\n\n` +
+            `Original task: ${task.description}\n` +
+            `Category: ${task.category}\n` +
+            `Priority: ${task.priority}\n` +
+            `${feedback?.notes ? `Completion notes: ${feedback.notes}\n` : ''}` +
+            `${feedback?.effectiveness ? `Effectiveness: ${feedback.effectiveness}/5\n` : ''}`,
+          activityType: activityType,
+          date: task.completedDate,
+          images: feedback?.images || [],
+          tags: [
+            'task-completion',
+            status,
+            task.category,
+            task.priority,
+            task.source || 'unknown-source'
+          ]
+        });
+
+        await activity.save();
+        console.log(`📝 Activity created for ${status} task: ${task.title}`);
+      } catch (activityError) {
+        console.error('Error creating activity for task status update:', activityError);
+      }
     } else {
       // If reverting to pending, clear completion date
       task.completedDate = null;
@@ -866,6 +948,60 @@ router.patch('/:id/complete', async (req, res) => {
     task.completedDate = new Date();
 
     await task.save();
+
+    // Create activity record for AI context
+    try {
+      await task.populate('crop', 'name variety status');
+
+      // Map task category to activity type
+      let activityType = 'general';
+      switch (task.category) {
+        case 'irrigation':
+          activityType = 'maintenance';
+          break;
+        case 'pest_control':
+        case 'disease_treatment':
+          activityType = 'inspection';
+          break;
+        case 'soil_management':
+        case 'fertilization':
+          activityType = 'maintenance';
+          break;
+        case 'harvesting':
+          activityType = 'general';
+          break;
+        case 'pruning':
+          activityType = 'pruning';
+          break;
+        default:
+          activityType = 'general';
+      }
+
+      const activity = new Activity({
+        crop: task.crop._id,
+        user: req.user._id,
+        title: `Completed: ${task.title}`,
+        description: `✅ Task completed via quick complete\n\n` +
+          `Original task: ${task.description}\n` +
+          `Category: ${task.category}\n` +
+          `Priority: ${task.priority}\n` +
+          `Completion method: Quick complete button`,
+        activityType: activityType,
+        date: task.completedDate,
+        tags: [
+          'task-completion',
+          'quick-complete',
+          task.category,
+          task.priority,
+          task.source || 'unknown-source'
+        ]
+      });
+
+      await activity.save();
+      console.log(`📝 Activity created for completed task: ${task.title}`);
+    } catch (activityError) {
+      console.error('Error creating activity for task completion:', activityError);
+    }
 
     // Populate the crop reference in the response
     await task.populate('crop', 'name variety status');

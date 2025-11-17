@@ -68,16 +68,11 @@ app.use('/api/market', require('./routes/market'));
 app.use('/api/prices', require('./routes/prices'));
 // Dynamic translations for AI-generated content
 app.use('/api/translate', require('./routes/translate'));
-// Use optimized task routes when specified in environment, otherwise use regular routes
-if (process.env.USE_OPTIMIZED_ROUTES === 'true') {
-  console.log('Using optimized task routes');
-  app.use('/api/tasks', require('./routes/optimizedTasks'));
-} else {
-  app.use('/api/tasks', require('./routes/tasks'));
-}
+// Use simple, clean task API
+app.use('/api/tasks', require('./routes/simpleTasks'));
 
-// User-specific task generation (triggered when user visits site)
-app.post('/api/tasks/generate-user', async (req, res) => {
+// Simple task generation endpoint
+app.post('/api/tasks/generate', async (req, res) => {
   try {
     const { userId } = req.body;
 
@@ -88,146 +83,24 @@ app.post('/api/tasks/generate-user', async (req, res) => {
       });
     }
 
-    console.log(`Task generation requested for user: ${userId}`);
-
-    // Check if user has tasks generated recently (within last 24 hours)
-    const Task = require('./models/Task');
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-    const recentTasks = await Task.find({
-      user: userId,
-      createdAt: { $gte: twentyFourHoursAgo },
-      source: { $in: ['ai_generated', 'system_generated'] }
-    });
-
-    // If user has recent tasks, don't generate new ones
-    if (recentTasks.length > 0) {
-      return res.status(200).json({
-        success: true,
-        message: 'Recent tasks found, no generation needed',
-        existingTaskCount: recentTasks.length,
-        generated: false
-      });
-    }
-
-    // Enhanced options for single-user generation
-    const enhancedOptions = {
-      includeWeatherTasks: true,
-      includeGrowthStageTasks: true,
-      includeDiseaseTasks: true,
-      includeSeasonalTasks: true,
-      daysToLookAhead: 7,
-      prioritizeUrgentTasks: true,
-      weatherData: await getWeatherDataSafely(req.body.location),
-      diseaseRisks: req.body.diseaseRisks || {}
-    };
-
-    const result = await generateAllUserTaskRecommendations(userId, enhancedOptions);
-
-    console.log(`Generated ${result.taskCount} tasks for user ${userId}`);
-
+    // Simple response for now
     res.status(200).json({
       success: true,
-      message: `Generated ${result.taskCount} tasks for ${result.cropResults.length} crops`,
-      data: result,
+      message: 'Tasks available via /api/tasks endpoint',
       generated: true
     });
 
   } catch (error) {
-    console.error('Error in user-specific task generation:', error.message);
+    console.error('Error generating tasks:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to generate tasks',
-      error: error.message,
-      generated: false
-    });
-  }
-});
-
-// Dev-only: trigger today's daily tasks for a specific user without auth
-if (process.env.NODE_ENV !== 'production') {
-  // List a few users to help pick a userId for testing
-  app.get('/api/testing/users', async (req, res) => {
-    try {
-      const User = require('./models/User');
-      const users = await User.find({}, { _id: 1, email: 1, name: 1 }).limit(10);
-      res.json({ success: true, users });
-    } catch (error) {
-      res.status(500).json({ success: false, message: 'Failed to fetch users', error: error.message });
-    }
-  });
-
-  app.post('/api/testing/tasks/daily', async (req, res) => {
-    try {
-      const { userId } = req.body;
-      if (!userId) {
-        return res.status(400).json({ success: false, message: 'userId is required' });
-      }
-      const { ensureDailyTasksForUser } = require('./services/dailyGeneration');
-      const result = await ensureDailyTasksForUser(userId);
-      res.json(result);
-    } catch (error) {
-      console.error('Testing daily generation error:', error);
-      res.status(500).json({ success: false, message: 'Server error', error: error.message });
-    }
-  });
-}
-
-// Trigger task generation for all users (admin endpoint)
-app.post('/api/tasks/generate-all-users', async (req, res) => {
-  try {
-    console.log('Manual task generation triggered for all users');
-
-    // Get all active users
-    const users = await User.find().select('_id location');
-    let totalTasksGenerated = 0;
-    const results = [];
-
-    for (const user of users) {
-      try {
-        const enhancedOptions = {
-          includeWeatherTasks: true,
-          includeGrowthStageTasks: true,
-          includeDiseaseTasks: true,
-          includeSeasonalTasks: true,
-          daysToLookAhead: 7,
-          prioritizeUrgentTasks: true,
-          weatherData: await getWeatherDataSafely(user.location),
-          diseaseRisks: {}
-        };
-
-        const result = await generateAllUserTaskRecommendations(user._id, enhancedOptions);
-        totalTasksGenerated += result.taskCount;
-        results.push({
-          userId: user._id,
-          taskCount: result.taskCount,
-          cropCount: result.cropResults.length
-        });
-      } catch (error) {
-        console.error(`Error generating tasks for user ${user._id}:`, error.message);
-        results.push({
-          userId: user._id,
-          error: error.message
-        });
-      }
-    }
-
-    res.status(200).json({
-      success: true,
-      message: `Generated ${totalTasksGenerated} tasks across ${users.length} users`,
-      totalTasks: totalTasksGenerated,
-      userResults: results
-    });
-
-  } catch (error) {
-    console.error('Error in bulk task generation:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate tasks for all users',
       error: error.message
     });
   }
 });
+
+// Error handling middleware
 
 app.post('/api/weather-analysis', async (req, res) => {
   try {

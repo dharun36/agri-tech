@@ -54,6 +54,19 @@ const alternativeImages = {
   Grains: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='100%' height='100%' fill='%23d97706'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='20' fill='%23ffffff'>Grains</text></svg>"
 };
 
+// Unique date formatting function
+const formatUniqueDate = (dateString) => {
+  if (!dateString) return new Date().toLocaleDateString('en-GB');
+
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+
+  // Format: DD/MM/YYYY (European style as shown in image)
+  return `${day}/${month}/${year}`;
+};
+
 const MarketPrices = () => {
   const [userCrops, setUserCrops] = useState([]);
   const [products, setProducts] = useState([]);
@@ -172,7 +185,7 @@ const MarketPrices = () => {
           marketLocation: 'Data unavailable',
           img: cropImages[name] || cropImages.Default,
           alt: name,
-          date: new Date().toLocaleDateString(),
+          date: formatUniqueDate(),
           trend: 'stable',
           change: 0,
           isOldData: false
@@ -213,7 +226,7 @@ const MarketPrices = () => {
             marketLocation: found.marketLocation || 'Unknown',
             img: cropImages[cropName] || cropImages.Default,
             alt: cropName,
-            date: found.lastUpdated || new Date().toLocaleDateString(),
+            date: formatUniqueDate(found.lastUpdated),
             isSearchResult: true,
             trend: found.trend || 'stable',
             change: found.change || 0,
@@ -240,7 +253,7 @@ const MarketPrices = () => {
             marketLocation: "No market data found",
             img: cropImages.Default,
             alt: cropName,
-            date: new Date().toLocaleDateString(),
+            date: formatUniqueDate(),
             isSearchResult: true,
             trend: 'stable',
             change: 0,
@@ -476,15 +489,20 @@ const MarketPrices = () => {
                   </div>
 
                   <div className="p-2 sm:p-4 space-y-2">
-                    {/* Old data warning */}
+                    {/* Old data warning with enhanced date display */}
                     {item.isOldData && (
-                      <div className="bg-orange-50 border border-orange-200 rounded-md p-2 mb-2">
-                        <div className="flex items-center gap-1 text-orange-700 text-xs">
-                          <span className="font-medium">⚠️ Previous Data</span>
-                          <span>({item.daysAgo} {item.daysAgo === 1 ? 'day' : 'days'} ago)</span>
+                      <div className="bg-orange-50 border border-orange-200 rounded-md p-3 mb-3">
+                        <div className="flex items-center gap-2 text-orange-700 text-sm">
+                          <span className="font-semibold">⚠️ Previous Data</span>
+                          <span className="bg-orange-100 px-2 py-1 rounded-full text-xs font-medium">
+                            {item.daysAgo} {item.daysAgo === 1 ? 'day' : 'days'} ago
+                          </span>
+                        </div>
+                        <div className="text-orange-600 text-xs mt-1 font-medium">
+                          Last updated: {item.date}
                         </div>
                         {item.note && (
-                          <div className="text-orange-600 text-xs mt-1">{item.note}</div>
+                          <div className="text-orange-600 text-xs mt-2 bg-orange-100 p-2 rounded">{item.note}</div>
                         )}
                       </div>
                     )}
@@ -519,11 +537,11 @@ const MarketPrices = () => {
                       </div>
 
                       <div className="text-right">
-                        <span className={`text-xs px-2 py-1 rounded-full ${item.isOldData
-                            ? 'text-orange-600 bg-orange-100'
-                            : 'text-gray-500 bg-gray-100'
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${item.isOldData
+                          ? 'text-orange-600 bg-orange-100'
+                          : 'text-gray-600 bg-gray-100'
                           }`}>
-                          {item.date}
+                          {formatUniqueDate(item.date)}
                         </span>
                       </div>
                     </div>

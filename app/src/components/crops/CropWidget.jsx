@@ -74,7 +74,12 @@ const CropWidget = ({ cropId, onClose }) => {
           </div>
           <div>
             <h3 className="font-medium text-gray-900">{crop.name}</h3>
-            <p className="text-sm text-gray-500">{t('plants')} {crop.plantCount || 1}</p>
+            <p className="text-sm text-gray-500">
+              {crop.locationArea
+                ? `${crop.locationArea} ${crop.locationAreaUnit || 'units'}`
+                : t('area_not_specified')
+              }
+            </p>
           </div>
         </div>
         <div className="flex space-x-2">

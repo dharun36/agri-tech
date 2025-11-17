@@ -1,21 +1,20 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { fetchWeatherData, getWeatherDesc, getWeatherIcon, formatDay } from '../../utils/weatherUtils';
-import WeatherAnalysis from '../WeatherAnalysis';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowLeft,
   faLeaf,
   faSeedling,
   faCalendarAlt,
-  faMapMarkerAlt,
   faRulerCombined,
   faLayerGroup,
-  faCloudSun,
   faFlask,
   faWater,
-  faClipboard
+  faCloudSun,
+  faEdit,
+  faCheckCircle,
+  faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import axios from 'axios';
 import { format } from 'date-fns';
@@ -24,7 +23,7 @@ import Button from '../ui/Button';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import CropStatusHistory from './CropStatusHistory';
 import { EventFormSelector } from './CropEventForms';
-import { FaTasks, FaCloudSun, FaTemperatureHigh, FaTemperatureLow, FaWater, FaCalendarDay } from 'react-icons/fa';
+import { FaTasks } from 'react-icons/fa';
 import { API_BASE_URL } from '../../config/api';
 
 const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId }) => {
@@ -44,13 +43,8 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [activeEventForm, setActiveEventForm] = useState(null);
-
-  // Weather state
-  const [weather, setWeather] = useState(null);
-  const [hourly, setHourly] = useState([]);
-  const [daily, setDaily] = useState([]);
-  const [weatherLoading, setWeatherLoading] = useState(true);
-  const [weatherError, setWeatherError] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedCrop, setEditedCrop] = useState({});
 
   // Memoize expensive operations - moved to top to avoid conditional hook calls
   const formatDate = useCallback((dateString) => {
@@ -68,6 +62,53 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
 
   // Cancel form handler
   const handleCancelForm = useCallback(() => setActiveEventForm(null), []);
+
+  // Edit mode handlers
+  const handleStartEdit = useCallback(() => {
+    setIsEditing(true);
+    setEditedCrop({
+      name: crop.name || '',
+      variety: crop.variety || '',
+      plantingDate: crop.plantingDate ? crop.plantingDate.split('T')[0] : '',
+      harvestDate: crop.harvestDate ? crop.harvestDate.split('T')[0] : '',
+      locationArea: crop.locationArea || '',
+      locationAreaUnit: crop.locationAreaUnit || 'acres',
+      soilType: crop.soilType || '',
+      irrigationType: crop.irrigationType || '',
+      seedSource: crop.seedSource || '',
+      previousCrop: crop.previousCrop || ''
+    });
+  }, [crop]);
+
+  const handleCancelEdit = useCallback(() => {
+    setIsEditing(false);
+    setEditedCrop({});
+  }, []);
+
+  const handleSaveEdit = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`${API_BASE_URL}/api/crops/${id}`, editedCrop, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      setCrop(response.data);
+      setIsEditing(false);
+      setSuccess('Crop information updated successfully!');
+    } catch (err) {
+      console.error('Error updating crop:', err);
+      setError('Failed to update crop information');
+    } finally {
+      setLoading(false);
+    }
+  }, [editedCrop, id]);
+
+  const handleEditChange = useCallback((field, value) => {
+    setEditedCrop(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   // Memoize the fetch function to prevent unnecessary recreations
   const fetchCropData = useCallback(async () => {
@@ -94,14 +135,7 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
       }
 
       const cropData = await response.json();
-      // Properly format notes without mutating the original data
-      const formattedCropData = {
-        ...cropData,
-        notes: cropData.notes && typeof cropData.notes === 'object' && !Array.isArray(cropData.notes)
-          ? [cropData.notes]
-          : cropData.notes
-      };
-      setCrop(formattedCropData);
+      setCrop(cropData);
     } catch (err) {
       console.error('Error fetching crop:', err);
       setError(`Failed to load crop details: ${err.message}`);
@@ -363,6 +397,36 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
           <FaTasks className="mr-2" />
           {t('crop_tasks_and_recommendations', { ns: 'tasks' })}
         </Button>
+
+        <Button
+          onClick={isEditing ? handleSaveEdit : handleStartEdit}
+          variant={isEditing ? "primary" : "secondary"}
+          className={isEditing ? "bg-blue-600 hover:bg-blue-700" : ""}
+          disabled={loading}
+        >
+          {isEditing ? (
+            <>
+              <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
+              {t('save')}
+            </>
+          ) : (
+            <>
+              <FontAwesomeIcon icon={faEdit} className="mr-2" />
+              {t('edit')}
+            </>
+          )}
+        </Button>
+
+        {isEditing && (
+          <Button
+            onClick={handleCancelEdit}
+            variant="secondary"
+            className="bg-gray-500 hover:bg-gray-600 text-white"
+          >
+            <FontAwesomeIcon icon={faTimes} className="mr-2" />
+            {t('cancel')}
+          </Button>
+        )}
       </div>
 
       {/* Success message */}
@@ -409,10 +473,55 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
           <div>
             <div className="mb-4">
               <div className="flex items-center text-gray-500 mb-1">
+                <FontAwesomeIcon icon={faSeedling} className="mr-2" />
+                {t('crop_name')}
+              </div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedCrop.name}
+                  onChange={(e) => handleEditChange('name', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                  placeholder={t('crop_name')}
+                />
+              ) : (
+                <div className="text-lg">{crop.name}</div>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <div className="flex items-center text-gray-500 mb-1">
+                <FontAwesomeIcon icon={faLeaf} className="mr-2" />
+                {t('variety')}
+              </div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedCrop.variety}
+                  onChange={(e) => handleEditChange('variety', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                  placeholder={t('variety')}
+                />
+              ) : (
+                <div className="text-lg">{crop.variety || 'N/A'}</div>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <div className="flex items-center text-gray-500 mb-1">
                 <FontAwesomeIcon icon={faCalendarAlt} className="mr-2" />
                 {t('planting_date')}
               </div>
-              <div className="text-lg">{formatDate(crop.plantingDate)}</div>
+              {isEditing ? (
+                <input
+                  type="date"
+                  value={editedCrop.plantingDate}
+                  onChange={(e) => handleEditChange('plantingDate', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              ) : (
+                <div className="text-lg">{formatDate(crop.plantingDate)}</div>
+              )}
             </div>
 
             <div className="mb-4">
@@ -420,20 +529,16 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
                 <FontAwesomeIcon icon={faCalendarAlt} className="mr-2" />
                 {t('expected_harvest')}
               </div>
-              <div className="text-lg">{formatDate(crop.harvestDate)}</div>
-            </div>
-
-            <div className="mb-4">
-              <div className="flex items-center text-gray-500 mb-1">
-                <FontAwesomeIcon icon={faLeaf} className="mr-2" />
-                {t('growth_days')}
-              </div>
-              <div className="text-lg">
-                {crop.growthDays
-                  ? `${crop.growthDays} ${t('days')}`
-                  : 'N/A'
-                }
-              </div>
+              {isEditing ? (
+                <input
+                  type="date"
+                  value={editedCrop.harvestDate}
+                  onChange={(e) => handleEditChange('harvestDate', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              ) : (
+                <div className="text-lg">{formatDate(crop.harvestDate)}</div>
+              )}
             </div>
 
             <div className="mb-4">
@@ -441,37 +546,66 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
                 <FontAwesomeIcon icon={faWater} className="mr-2" />
                 {t('irrigation_type')}
               </div>
-              <div className="text-lg">
-                {crop.irrigationType
-                  ? t(crop.irrigationType.toLowerCase() + '_irrigation')
-                  : 'N/A'
-                }
-              </div>
+              {isEditing ? (
+                <select
+                  value={editedCrop.irrigationType}
+                  onChange={(e) => handleEditChange('irrigationType', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                >
+                  <option value="">{t('select_irrigation_type')}</option>
+                  <option value="drip">{t('drip_irrigation')}</option>
+                  <option value="sprinkler">{t('sprinkler_irrigation')}</option>
+                  <option value="flood">{t('flood_irrigation')}</option>
+                  <option value="manual">{t('manual_irrigation')}</option>
+                  <option value="rainwater">{t('rainwater_irrigation')}</option>
+                </select>
+              ) : (
+                <div className="text-lg">
+                  {crop.irrigationType
+                    ? t(crop.irrigationType.toLowerCase() + '_irrigation')
+                    : 'N/A'
+                  }
+                </div>
+              )}
             </div>
           </div>
 
           <div>
             <div className="mb-4">
               <div className="flex items-center text-gray-500 mb-1">
-                <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-2" />
-                {t('field_location')}
-              </div>
-              <div className="text-lg">
-                {crop.locationName || crop.location || crop.fieldLocation?.name || crop.fieldId || 'N/A'}
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <div className="flex items-center text-gray-500 mb-1">
                 <FontAwesomeIcon icon={faRulerCombined} className="mr-2" />
                 {t('area')}
               </div>
-              <div className="text-lg">
-                {crop.locationArea
-                  ? `${crop.locationArea} ${crop.locationAreaUnit || 'units'}`
-                  : 'N/A'
-                }
-              </div>
+              {isEditing ? (
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={editedCrop.locationArea}
+                    onChange={(e) => handleEditChange('locationArea', e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                    placeholder={t('area')}
+                    min="0"
+                    step="0.01"
+                  />
+                  <select
+                    value={editedCrop.locationAreaUnit}
+                    onChange={(e) => handleEditChange('locationAreaUnit', e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                  >
+                    <option value="acres">{t('acres')}</option>
+                    <option value="hectares">{t('hectares')}</option>
+                    <option value="square meters">{t('square_meters')}</option>
+                    <option value="square feet">{t('square_feet')}</option>
+                  </select>
+                </div>
+              ) : (
+                <div className="text-lg">
+                  {crop.locationArea
+                    ? `${crop.locationArea} ${crop.locationAreaUnit || 'units'}`
+                    : 'N/A'
+                  }
+                </div>
+              )}
             </div>
 
             <div className="mb-4">
@@ -479,12 +613,64 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
                 <FontAwesomeIcon icon={faLayerGroup} className="mr-2" />
                 {t('soil_type')}
               </div>
-              <div className="text-lg">
-                {crop.soilType
-                  ? t(crop.soilType.toLowerCase())
-                  : 'N/A'
-                }
+              {isEditing ? (
+                <select
+                  value={editedCrop.soilType}
+                  onChange={(e) => handleEditChange('soilType', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                >
+                  <option value="">{t('select_soil_type')}</option>
+                  <option value="clay">{t('clay')}</option>
+                  <option value="sandy">{t('sandy')}</option>
+                  <option value="loamy">{t('loamy')}</option>
+                  <option value="silty">{t('silty')}</option>
+                  <option value="peaty">{t('peaty')}</option>
+                  <option value="chalky">{t('chalky')}</option>
+                </select>
+              ) : (
+                <div className="text-lg">
+                  {crop.soilType
+                    ? t(crop.soilType.toLowerCase())
+                    : 'N/A'
+                  }
+                </div>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <div className="flex items-center text-gray-500 mb-1">
+                <FontAwesomeIcon icon={faSeedling} className="mr-2" />
+                {t('seed_source')}
               </div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedCrop.seedSource}
+                  onChange={(e) => handleEditChange('seedSource', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                  placeholder={t('seed_source')}
+                />
+              ) : (
+                <div className="text-lg">{crop.seedSource || 'N/A'}</div>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <div className="flex items-center text-gray-500 mb-1">
+                <FontAwesomeIcon icon={faLeaf} className="mr-2" />
+                {t('previous_crop')}
+              </div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedCrop.previousCrop}
+                  onChange={(e) => handleEditChange('previousCrop', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                  placeholder={t('previous_crop')}
+                />
+              ) : (
+                <div className="text-lg">{crop.previousCrop || 'N/A'}</div>
+              )}
             </div>
           </div>
         </div>
@@ -509,80 +695,7 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
           </div>
         </div>
 
-        {/* Weather information */}
-        <div className="mt-4">
-          <div className="flex items-center text-gray-500 mb-1">
-            <FaCloudSun className="mr-2" />
-            {t('weather_information')}
-          </div>
 
-          {weatherLoading ? (
-            <div className="flex justify-center p-4">
-              <LoadingSpinner size="medium" />
-            </div>
-          ) : weatherError ? (
-            <div className="text-center text-red-500 p-4">
-              {weatherError}
-            </div>
-          ) : weather ? (
-            <div>
-              {/* Current Weather */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4">
-                <div className="flex items-center">
-                  <img
-                    src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
-                    alt={weather.desc}
-                    className="w-16 h-16"
-                  />
-                  <div className="ml-4">
-                    <div className="text-2xl font-semibold">{Math.round(weather.temp)}°C</div>
-                    <div className="text-gray-600 dark:text-gray-300">{weather.desc}</div>
-                    <div className="text-gray-600 dark:text-gray-300">
-                      <FaWater className="inline mr-1" /> {weather.humidity}% humidity
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3-day forecast */}
-                <div className="mt-4 border-t pt-3">
-                  <div className="text-sm font-medium mb-2">{t('forecast')}</div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {daily.slice(0, 3).map((day, idx) => (
-                      <div key={idx} className="text-center">
-                        <div className="text-xs">{formatDay(day.time)}</div>
-                        <img
-                          src={`https://openweathermap.org/img/wn/${getWeatherIcon(day.values.weatherCode)}@2x.png`}
-                          alt={getWeatherDesc(day.values.weatherCode)}
-                          className="w-10 h-10 mx-auto"
-                        />
-                        <div className="flex text-xs justify-center">
-                          <span className="text-red-500 dark:text-red-400 mr-1">
-                            {Math.round(day.values.temperatureMax)}°
-                          </span>
-                          <span className="text-blue-500 dark:text-blue-400">
-                            {Math.round(day.values.temperatureMin)}°
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Weather Analysis */}
-              <WeatherAnalysis
-                weather={weather}
-                daily={daily}
-                formatDay={formatDay}
-                getWeatherDesc={getWeatherDesc}
-              />
-            </div>
-          ) : (
-            <div className="text-center text-gray-500 p-4">
-              {t('no_weather_data')}
-            </div>
-          )}
-        </div>
 
         <div className="mt-4">
           <div className="flex items-center text-gray-500 mb-1">
@@ -602,28 +715,7 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
           </div>
         </div>
 
-        {crop.notes && (
-          <div className="mt-4">
-            <div className="flex items-center text-gray-500 mb-1">
-              <FontAwesomeIcon icon={faClipboard} className="mr-2" />
-              {t('crop_notes')}
-            </div>
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg text-gray-700">
-              {typeof crop.notes === 'string'
-                ? crop.notes
-                : Array.isArray(crop.notes)
-                  ? crop.notes.map((note, i) => (
-                    <div key={i} className="mb-2">
-                      {typeof note === 'string' ? note : note.text || JSON.stringify(note)}
-                    </div>
-                  ))
-                  : typeof crop.notes === 'object' && crop.notes !== null
-                    ? (crop.notes.text || JSON.stringify(crop.notes))
-                    : String(crop.notes)
-              }
-            </div>
-          </div>
-        )}
+
       </Card>
 
       {/* Crop Status History component */}

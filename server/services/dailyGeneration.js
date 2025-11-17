@@ -3,10 +3,12 @@ const Crop = require('../models/Crop');
 const Activity = require('../models/Activity');
 
 // Helper used by both route and testing endpoint
-async function generateDailyTasksForCrop(crop, today, dayOfWeek) {
+async function generateDailyTasksForCrop(crop, today, dayOfWeek, maxTasksPerDay = 5) {
   const tasks = [];
   const cropName = crop.name || crop.cropName;
   const userId = crop.user;
+
+  console.log(`Generating daily tasks for ${cropName} (max: ${maxTasksPerDay} tasks)`);
 
   // Get recent activities for this crop (last 30 days)
   const thirtyDaysAgo = new Date(today);
@@ -253,12 +255,18 @@ async function generateDailyTasksForCrop(crop, today, dayOfWeek) {
     });
   }
 
-  return tasks.slice(0, 3);
+  // Limit tasks to maximum specified (default 5, previously was 3)
+  const limitedTasks = tasks.slice(0, maxTasksPerDay);
+  console.log(`Generated ${tasks.length} potential tasks, limited to ${limitedTasks.length} for ${cropName}`);
+  
+  return limitedTasks;
 }
 
-async function ensureDailyTasksForUser(userId) {
+async function ensureDailyTasksForUser(userId, maxTasksPerDay = 5) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  console.log(`Ensuring daily tasks for user ${userId} (max: ${maxTasksPerDay} per crop)`);
 
   const existing = await Task.getTodaysGeneration(userId);
   if (existing && existing.status === 'done') {
@@ -280,7 +288,7 @@ async function ensureDailyTasksForUser(userId) {
   const dayOfWeek = today.getDay();
 
   for (const crop of crops) {
-    const cropTasks = await generateDailyTasksForCrop(crop, today, dayOfWeek);
+    const cropTasks = await generateDailyTasksForCrop(crop, today, dayOfWeek, maxTasksPerDay);
     if (cropTasks.length > 0) {
       const savedTasks = await Task.insertMany(cropTasks);
       tasks.push(...savedTasks);

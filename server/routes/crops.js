@@ -1,9 +1,47 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const Crop = require('../models/Crop');
+const Activity = require('../models/Activity');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
+
+// Helper function to create activity records for AI context
+async function createActivityFromCropEvent(cropId, userId, eventType, eventData, eventDetails = {}) {
+  try {
+    const activityTypeMap = {
+      irrigation: 'irrigation',
+      fertilization: 'maintenance',
+      pestDisease: 'pest_control',
+      growth: 'inspection',
+      harvest: 'harvest',
+      cost: 'general',
+      labor: 'general',
+      note: 'general'
+    };
+
+    const activity = new Activity({
+      crop: cropId,
+      user: userId,
+      title: eventDetails.title || `${eventType.charAt(0).toUpperCase() + eventType.slice(1)} Event`,
+      description: eventDetails.description || `Event recorded: ${JSON.stringify(eventData, null, 2)}`,
+      activityType: activityTypeMap[eventType] || 'general',
+      date: eventData.date || new Date(),
+      duration: eventData.duration || undefined,
+      images: eventData.images || [],
+      tags: ['crop-event', eventType, ...(eventDetails.tags || [])],
+      weather: eventData.weather || undefined,
+      location: eventData.location || undefined
+    });
+
+    await activity.save();
+    console.log(`📝 Activity created for AI context: ${eventType} event for crop ${cropId}`);
+    return activity;
+  } catch (error) {
+    console.error(`Error creating activity for ${eventType} event:`, error);
+    // Don't throw - activity creation shouldn't break the main flow
+  }
+}
 
 // All routes below require auth
 router.use(auth);
@@ -221,6 +259,17 @@ router.post('/:id/costs', async (req, res) => {
       return res.status(404).json({ message: 'Crop not found' });
     }
 
+    // Create activity record for AI context
+    await createActivityFromCropEvent(req.params.id, req.user._id, 'cost', newExpense, {
+      title: `Expense Recorded - ${category}`,
+      description: `💰 Cost Entry\n\n` +
+        `Category: ${category}\n` +
+        `Amount: $${amount}\n` +
+        `Description: ${description}\n` +
+        `Date: ${new Date().toLocaleDateString()}`,
+      tags: ['expense', category.toLowerCase(), 'financial-tracking']
+    });
+
     res.json(crop);
   } catch (error) {
     console.error('Error adding expense:', error);
@@ -301,6 +350,20 @@ router.post('/:id/irrigation', async (req, res) => {
     if (!result) {
       return res.status(404).json({ message: 'Could not update crop' });
     }
+
+    // Create activity record for AI context
+    await createActivityFromCropEvent(req.params.id, req.user._id, 'irrigation', irrigationEvent, {
+      title: `Irrigation Applied - ${method || 'Manual'}`,
+      description: `🚿 Irrigation Event\n\n` +
+        `Method: ${method || 'Not specified'}\n` +
+        `Amount: ${amount || 'Not specified'}\n` +
+        `Duration: ${duration ? duration + ' minutes' : 'Not specified'}\n` +
+        `Water Source: ${waterSource || 'Not specified'}\n` +
+        `${soilMoistureBefore ? `Soil Moisture Before: ${soilMoistureBefore}%\n` : ''}` +
+        `${soilMoistureAfter ? `Soil Moisture After: ${soilMoistureAfter}%\n` : ''}` +
+        `${notes ? `Notes: ${notes}` : ''}`,
+      tags: ['irrigation', method || 'manual', 'water-management']
+    });
 
     console.log('Crop updated successfully with new irrigation event');
     return res.status(200).json(result);
@@ -757,6 +820,305 @@ router.post('/:id/weather', async (req, res) => {
   } catch (error) {
     console.error('Error adding weather event:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Add fertilization event
+router.post('/:id/fertilization', async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const crop = await Crop.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    });
+
+    if (!crop) {
+      return res.status(404).json({ message: 'Crop not found or access denied' });
+    }
+
+    const {
+      date, type, product, npkRatio, amount, applicationMethod, coverage, notes
+    } = req.body;
+
+    if (!date || !type) {
+      return res.status(400).json({ message: 'Date and type are required' });
+    }
+
+    const fertilizationEvent = {
+      date: new Date(date),
+      type,
+      product: product || undefined,
+      npkRatio: npkRatio || undefined,
+      amount: amount ? Number(amount) : undefined,
+      applicationMethod: applicationMethod || undefined,
+      coverage: coverage || undefined,
+      notes: notes || undefined
+    };
+
+    const result = await Crop.findByIdAndUpdate(
+      req.params.id,
+      { $push: { fertilizationHistory: fertilizationEvent } },
+      { new: true, runValidators: false }
+    );
+
+    if (!result) {
+      return res.status(404).json({ message: 'Could not update crop' });
+    }
+
+    // Create activity record for AI context
+    await createActivityFromCropEvent(req.params.id, req.user._id, 'fertilization', fertilizationEvent, {
+      title: `Fertilization Applied - ${type}`,
+      description: `🌱 Fertilization Event\n\n` +
+        `Type: ${type}\n` +
+        `Product: ${product || 'Not specified'}\n` +
+        `NPK Ratio: ${npkRatio || 'Not specified'}\n` +
+        `Amount: ${amount || 'Not specified'}\n` +
+        `Application Method: ${applicationMethod || 'Not specified'}\n` +
+        `Coverage: ${coverage || 'Not specified'}\n` +
+        `${notes ? `Notes: ${notes}` : ''}`,
+      tags: ['fertilization', type.toLowerCase(), applicationMethod || 'unknown-method']
+    });
+
+    res.json({ success: true, message: 'Fertilization event added', crop: result });
+  } catch (error) {
+    console.error('Error adding fertilization event:', error);
+    res.status(500).json({ message: 'Server error processing fertilization event', error: error.message });
+  }
+});
+
+// Add pest/disease event
+router.post('/:id/pest-disease', async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const crop = await Crop.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    });
+
+    if (!crop) {
+      return res.status(404).json({ message: 'Crop not found or access denied' });
+    }
+
+    const {
+      date, type, name, severity, affectedArea, treatment, effectiveness, notes
+    } = req.body;
+
+    if (!date || !type) {
+      return res.status(400).json({ message: 'Date and type are required' });
+    }
+
+    const pestDiseaseEvent = {
+      date: new Date(date),
+      type,
+      name: name || undefined,
+      severity: severity ? Number(severity) : undefined,
+      affectedArea: affectedArea || undefined,
+      treatment: treatment || undefined,
+      effectiveness: effectiveness ? Number(effectiveness) : undefined,
+      notes: notes || undefined
+    };
+
+    const result = await Crop.findByIdAndUpdate(
+      req.params.id,
+      { $push: { pestDiseaseHistory: pestDiseaseEvent } },
+      { new: true, runValidators: false }
+    );
+
+    if (!result) {
+      return res.status(404).json({ message: 'Could not update crop' });
+    }
+
+    // Create activity record for AI context
+    await createActivityFromCropEvent(req.params.id, req.user._id, 'pestDisease', pestDiseaseEvent, {
+      title: `${type.charAt(0).toUpperCase() + type.slice(1)} Issue - ${name || 'Unknown'}`,
+      description: `🐛 Pest/Disease Event\n\n` +
+        `Type: ${type}\n` +
+        `Name: ${name || 'Not specified'}\n` +
+        `Severity: ${severity || 'Not specified'}/10\n` +
+        `Affected Area: ${affectedArea || 'Not specified'}\n` +
+        `Treatment: ${treatment?.product || 'Not specified'}\n` +
+        `Effectiveness: ${effectiveness || 'Not specified'}/10\n` +
+        `${notes ? `Notes: ${notes}` : ''}`,
+      tags: ['pest-disease', type.toLowerCase(), severity ? `severity-${severity}` : 'severity-unknown']
+    });
+
+    res.json({ success: true, message: 'Pest/disease event added', crop: result });
+  } catch (error) {
+    console.error('Error adding pest/disease event:', error);
+    res.status(500).json({ message: 'Server error processing pest/disease event', error: error.message });
+  }
+});
+
+// Add growth record
+router.post('/:id/growth', async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const crop = await Crop.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    });
+
+    if (!crop) {
+      return res.status(404).json({ message: 'Crop not found or access denied' });
+    }
+
+    const {
+      date, stage, height, canopyWidth, images, healthRating, notes
+    } = req.body;
+
+    if (!date || !stage) {
+      return res.status(400).json({ message: 'Date and stage are required' });
+    }
+
+    const growthEvent = {
+      date: new Date(date),
+      stage,
+      height: height ? Number(height) : undefined,
+      canopyWidth: canopyWidth ? Number(canopyWidth) : undefined,
+      images: images || [],
+      healthRating: healthRating ? Number(healthRating) : undefined,
+      notes: notes || undefined
+    };
+
+    const result = await Crop.findByIdAndUpdate(
+      req.params.id,
+      { $push: { growthHistory: growthEvent } },
+      { new: true, runValidators: false }
+    );
+
+    if (!result) {
+      return res.status(404).json({ message: 'Could not update crop' });
+    }
+
+    // Create activity record for AI context
+    await createActivityFromCropEvent(req.params.id, req.user._id, 'growth', growthEvent, {
+      title: `Growth Record - ${stage}`,
+      description: `📏 Growth Measurement\n\n` +
+        `Stage: ${stage}\n` +
+        `Height: ${height || 'Not measured'} cm\n` +
+        `Canopy Width: ${canopyWidth || 'Not measured'} cm\n` +
+        `Health Rating: ${healthRating || 'Not rated'}/10\n` +
+        `Images: ${images?.length || 0} photos\n` +
+        `${notes ? `Notes: ${notes}` : ''}`,
+      tags: ['growth-record', stage.toLowerCase(), healthRating ? `health-${healthRating}` : 'health-unrated']
+    });
+
+    res.json({ success: true, message: 'Growth record added', crop: result });
+  } catch (error) {
+    console.error('Error adding growth record:', error);
+    res.status(500).json({ message: 'Server error processing growth record', error: error.message });
+  }
+});
+
+// Add harvest event
+router.post('/:id/harvest', async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const crop = await Crop.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    });
+
+    if (!crop) {
+      return res.status(404).json({ message: 'Crop not found or access denied' });
+    }
+
+    const {
+      date, yield, yieldUnit, quality, marketValue, notes
+    } = req.body;
+
+    if (!date) {
+      return res.status(400).json({ message: 'Date is required' });
+    }
+
+    const harvestEvent = {
+      date: new Date(date),
+      yield: yield ? Number(yield) : undefined,
+      yieldUnit: yieldUnit || 'kg',
+      quality: quality || undefined,
+      marketValue: marketValue ? Number(marketValue) : undefined,
+      notes: notes || undefined
+    };
+
+    const result = await Crop.findByIdAndUpdate(
+      req.params.id,
+      { $push: { harvestHistory: harvestEvent } },
+      { new: true, runValidators: false }
+    );
+
+    if (!result) {
+      return res.status(404).json({ message: 'Could not update crop' });
+    }
+
+    // Create activity record for AI context
+    await createActivityFromCropEvent(req.params.id, req.user._id, 'harvest', harvestEvent, {
+      title: `Harvest Completed - ${yield || 'Unknown'} ${yieldUnit || 'units'}`,
+      description: `🌾 Harvest Event\n\n` +
+        `Yield: ${yield || 'Not recorded'} ${yieldUnit || 'units'}\n` +
+        `Quality: ${quality || 'Not assessed'}\n` +
+        `Market Value: $${marketValue || 'Not calculated'}\n` +
+        `${notes ? `Notes: ${notes}` : ''}`,
+      tags: ['harvest', quality || 'quality-unknown', `yield-${yield || 0}`]
+    });
+
+    res.json({ success: true, message: 'Harvest event added', crop: result });
+  } catch (error) {
+    console.error('Error adding harvest event:', error);
+    res.status(500).json({ message: 'Server error processing harvest event', error: error.message });
+  }
+});
+
+// Add notes to crop
+router.post('/:id/notes', async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const { date, text } = req.body;
+
+    if (!text) {
+      return res.status(400).json({ message: 'Note text is required' });
+    }
+
+    const newNote = {
+      date: date ? new Date(date) : new Date(),
+      text
+    };
+
+    const crop = await Crop.findOneAndUpdate(
+      { _id: req.params.id, user: req.user._id },
+      { $push: { notes: newNote } },
+      { new: true }
+    );
+
+    if (!crop) {
+      return res.status(404).json({ message: 'Crop not found' });
+    }
+
+    // Create activity record for AI context
+    await createActivityFromCropEvent(req.params.id, req.user._id, 'note', newNote, {
+      title: `Note Added - ${text.substring(0, 30)}${text.length > 30 ? '...' : ''}`,
+      description: `📝 Note Entry\n\n${text}`,
+      tags: ['note', 'documentation', 'user-input']
+    });
+
+    res.json({ success: true, message: 'Note added', crop });
+  } catch (error) {
+    console.error('Error adding note:', error);
+    res.status(500).json({ message: 'Server error processing note', error: error.message });
   }
 });
 

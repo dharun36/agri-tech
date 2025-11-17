@@ -277,7 +277,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-800">Today's Tasks</h3>
-                <p className="text-green-600 text-sm">Loading farm recommendations...</p>
+                <p className="text-green-600 text-sm">Loading tasks...</p>
               </div>
             </div>
             <div className="bg-green-600 text-white px-3 py-1.5 rounded-full text-sm font-semibold">
@@ -346,7 +346,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
             </div>
             <div>
               <h3 className="text-xl font-bold text-gray-800">Today's Tasks</h3>
-              <p className="text-green-600 text-sm">Farm recommendations</p>
+              <p className="text-green-600 text-sm">Daily activities</p>
             </div>
           </div>
 
@@ -395,57 +395,20 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          {/* Better typography hierarchy */}
-                          <h4 className="text-base font-bold text-gray-900 mb-2 leading-tight">
+                          {/* Simplified task title */}
+                          <h4 className="text-base font-semibold text-gray-900 mb-2 leading-tight">
                             {task.displayTitle || task.title}
                           </h4>
 
-                          {/* Enhanced description with better formatting */}
-                          <div className="text-sm text-gray-600 mb-3 leading-relaxed">
-                            {(task.displayDescription || task.description).split('\n').map((line, lineIndex) => {
-                              // Handle emoji-based sections
-                              if (line.trim().startsWith('🚿') || line.trim().startsWith('🌱') ||
-                                line.trim().startsWith('🔍') || line.trim().startsWith('🌾') ||
-                                line.trim().startsWith('🌿') || line.trim().startsWith('🚜')) {
-                                return (
-                                  <div key={lineIndex} className="font-semibold text-green-700 mb-1">
-                                    {line.trim()}
-                                  </div>
-                                );
-                              }
-
-                              // Handle bullet points and steps
-                              if (line.trim().startsWith('•') || line.trim().startsWith('✅')) {
-                                return (
-                                  <div key={lineIndex} className="ml-2 text-xs mb-1">
-                                    {line.trim()}
-                                  </div>
-                                );
-                              }
-
-                              // Handle info lines with emojis
-                              if (line.trim().startsWith('📅') || line.trim().startsWith('📊') ||
-                                line.trim().startsWith('💡') || line.trim().startsWith('🎯') ||
-                                line.trim().startsWith('⏰') || line.trim().startsWith('📋')) {
-                                return (
-                                  <div key={lineIndex} className="text-xs text-blue-600 mb-1 font-medium">
-                                    {line.trim()}
-                                  </div>
-                                );
-                              }
-
-                              // Handle regular lines
-                              if (line.trim()) {
-                                return (
-                                  <div key={lineIndex} className="mb-1">
-                                    {line.trim()}
-                                  </div>
-                                );
-                              }
-
-                              // Empty lines for spacing
-                              return <br key={lineIndex} />;
-                            })}
+                          {/* Simplified description - show only essential info */}
+                          <div className="text-sm text-gray-600 mb-3">
+                            {(() => {
+                              const desc = task.displayDescription || task.description;
+                              const firstLine = desc.split('\n')[0];
+                              // Remove emojis and show only the main task
+                              const cleanDesc = firstLine.replace(/[🚿🌱🔍🌾🌿🚜📅📊💡🎯⏰📋]/g, '').trim();
+                              return cleanDesc || 'Farm maintenance task';
+                            })()}
                           </div>
                         </div>
 
