@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { translateTasksBatch } from '@/utils/dynamicTranslator';
 import {
   FaCheckCircle,
   FaTimes,
@@ -56,6 +57,8 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
   // Fetch daily tasks from API - generated only once per day
   useEffect(() => {
     const fetchDailyTasks = async () => {
@@ -73,7 +76,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
           return;
         }
 
-        const response = await fetch('http://localhost:5000/api/tasks/daily', {
+        const response = await fetch(`${API_BASE}/api/tasks/daily`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -93,7 +96,20 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
 
         if (data.success) {
           console.log(`📋 Retrieved ${data.tasks.length} daily tasks`, data);
-          setTodayTasks(data.tasks || []);
+          let tasks = data.tasks || [];
+
+          // Runtime translation for AI-generated content using Lingo.dev SDK via backend
+          // Only translate when user's language is not English
+          const lng = localStorage.getItem('i18nextLng') || 'en';
+          if (lng && lng !== 'en') {
+            try {
+              tasks = await translateTasksBatch(tasks, lng, 'en');
+            } catch (e) {
+              // fail silently, keep English
+            }
+          }
+
+          setTodayTasks(tasks);
 
           // Show generation status in console
           if (data.generated) {
@@ -135,7 +151,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
         requestBody.feedback = { notes: reason.trim() };
       }
 
-      const response = await fetch(`http://localhost:5000/api/tasks/${task._id}/status`, {
+      const response = await fetch(`${API_BASE}/api/tasks/${task._id}/status`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -193,7 +209,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
         requestBody.notes = notes.trim();
       }
 
-      const response = await fetch(`http://localhost:5000/api/tasks/${task._id}/complete`, {
+      const response = await fetch(`${API_BASE}/api/tasks/${task._id}/complete`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -261,7 +277,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-800">Today's Tasks</h3>
-                <p className="text-green-600 text-sm">Loading farm recommendations...</p>
+                <p className="text-green-600 text-sm">Loading tasks...</p>
               </div>
             </div>
             <div className="bg-green-600 text-white px-3 py-1.5 rounded-full text-sm font-semibold">
@@ -322,26 +338,26 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden min-h-[500px] max-h-[550px] w-full max-w-full">{/* Added min-height to match weather widget */}
       {/* Enhanced header with green colors and white background */}
-      <div className="bg-white border-b border-gray-200 p-5">
+      <div className="bg-white border-b border-gray-200 p-3 sm:p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 mr-4">
-              <FaLeaf className="text-green-600 text-lg" />
+            <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-100 mr-3 sm:mr-4">
+              <FaLeaf className="text-green-600 text-sm sm:text-lg" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-gray-800">Today's Tasks</h3>
-              <p className="text-green-600 text-sm">Farm recommendations</p>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800">Today's Tasks</h3>
+              <p className="text-green-600 text-xs sm:text-sm">Daily activities</p>
             </div>
           </div>
 
-          <div className="bg-green-600 text-white px-3 py-1.5 rounded-full text-sm font-semibold">
+          <div className="bg-green-600 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs sm:text-sm font-semibold">
             {todayTasks.length}
           </div>
         </div>
       </div>
 
       {/* Scrollable content with height to match weather widget */}
-      <div className="p-2 min-h-[400px] max-h-96 overflow-y-auto bg-white">{/* Added min-height for consistent sizing */}
+      <div className="p-2 sm:p-3 min-h-[400px] max-h-96 overflow-y-auto bg-white">{/* Added min-height for consistent sizing */}
         {todayTasks.length === 0 ? (
           <div className="text-center py-8">
             <div className="flex items-center justify-center w-16 h-16 rounded-full text-green-600 mx-auto mb-4">
@@ -351,7 +367,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
             <p className="text-gray-600">Your farm is up to date</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1 sm:space-y-2">
             {todayTasks.map((task, index) => {
               const categoryInfo = getCategoryInfo(task.category);
               const IconComponent = categoryInfo.icon;
@@ -359,106 +375,68 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
               return (
                 <div
                   key={task._id || task.id || index}
-                  className="bg-white rounded-xl border border-gray-100 p-2 hover:shadow-lg hover:border-green-200 transition-all duration-300"
+                  className="bg-white rounded-lg border border-gray-100 p-2 sm:p-3 hover:shadow-md hover:border-green-200 transition-all duration-200"
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between gap-2 sm:gap-4">
                     {/* Add crop element at top */}
                     <div className="w-full">
                       <div className="flex items-center justify-between pb-2">
-                        <div className="text-sm bg-green-100 text-green-700 px-3 rounded-lg font-semibold">
-                          <FaSeedling className="inline mr-2 text-xs" />
+                        <div className="text-xs sm:text-sm bg-green-50 text-green-700 px-2 py-1 rounded-md font-medium">
+                          <FaSeedling className="inline mr-1 text-xs" />
                           {task.crop?.name || task.cropName || 'Unknown Crop'}
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-4 flex-1">
+                      <div className="flex items-start gap-2 sm:gap-3 flex-1">
                         {/* Enhanced category icon */}
-                        <div className={`flex items-center justify-center w-12 h-12 rounded-xl bg-white border-2 border-green-100 ${categoryInfo.color} flex-shrink-0`}>
-                          <IconComponent className="text-lg" />
-
+                        <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white border border-gray-200 ${categoryInfo.color} flex-shrink-0`}>
+                          <IconComponent className="text-sm sm:text-base" />
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          {/* Better typography hierarchy */}
-                          <h4 className="text-base font-bold text-gray-900 mb-2 leading-tight">
-                            {task.title}
+                          {/* Simplified task title */}
+                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-1 sm:mb-2 leading-tight">
+                            {task.displayTitle || task.title}
                           </h4>
 
-                          {/* Enhanced description with better formatting */}
-                          <div className="text-sm text-gray-600 mb-3 leading-relaxed">
-                            {task.description.split('\n').map((line, lineIndex) => {
-                              // Handle emoji-based sections
-                              if (line.trim().startsWith('🚿') || line.trim().startsWith('🌱') ||
-                                line.trim().startsWith('🔍') || line.trim().startsWith('🌾') ||
-                                line.trim().startsWith('🌿') || line.trim().startsWith('🚜')) {
-                                return (
-                                  <div key={lineIndex} className="font-semibold text-green-700 mb-1">
-                                    {line.trim()}
-                                  </div>
-                                );
-                              }
-
-                              // Handle bullet points and steps
-                              if (line.trim().startsWith('•') || line.trim().startsWith('✅')) {
-                                return (
-                                  <div key={lineIndex} className="ml-2 text-xs mb-1">
-                                    {line.trim()}
-                                  </div>
-                                );
-                              }
-
-                              // Handle info lines with emojis
-                              if (line.trim().startsWith('📅') || line.trim().startsWith('📊') ||
-                                line.trim().startsWith('💡') || line.trim().startsWith('🎯') ||
-                                line.trim().startsWith('⏰') || line.trim().startsWith('📋')) {
-                                return (
-                                  <div key={lineIndex} className="text-xs text-blue-600 mb-1 font-medium">
-                                    {line.trim()}
-                                  </div>
-                                );
-                              }
-
-                              // Handle regular lines
-                              if (line.trim()) {
-                                return (
-                                  <div key={lineIndex} className="mb-1">
-                                    {line.trim()}
-                                  </div>
-                                );
-                              }
-
-                              // Empty lines for spacing
-                              return <br key={lineIndex} />;
-                            })}
+                          {/* Simplified description - show only essential info */}
+                          <div className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3">
+                            {(() => {
+                              const desc = task.displayDescription || task.description;
+                              const firstLine = desc.split('\n')[0];
+                              // Remove emojis and show only the main task
+                              const cleanDesc = firstLine.replace(/[🚿🌱🔍🌾🌿🚜📅📊💡🎯⏰📋]/g, '').trim();
+                              return cleanDesc || 'Farm maintenance task';
+                            })()}
                           </div>
                         </div>
 
-                        {/* Action buttons: Complete and Skip */}
-                        <div className="flex gap-2 flex-shrink-0">
+                        {/* Action buttons: Complete and Skip - Mobile optimized */}
+                        <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 flex-shrink-0">
                           {/* Simple complete button */}
                           <button
                             onClick={() => handleMarkAsDone(task)}
                             disabled={loading}
-                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-2.5 rounded-lg transition-all duration-200 disabled:opacity-50 hover:scale-105 shadow-sm hover:shadow-md flex items-center gap-2"
+                            className="bg-green-600 hover:bg-green-700 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded text-xs sm:text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-1 min-w-[60px] sm:min-w-[80px]"
                             title="Complete Task"
                           >
                             {loading ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></div>
+                              <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border border-white/30 border-t-white"></div>
                             ) : (
-                              <FaCheck className="w-4 h-4" />
+                              <FaCheck className="w-3 h-3 sm:w-4 sm:h-4" />
                             )}
-                            <span className="text-sm font-medium">Done</span>
+                            <span className="font-medium">Done</span>
                           </button>
 
                           {/* Skip button */}
                           <button
                             onClick={() => setCompletionModal({ show: true, task, type: 'skip' })}
                             disabled={loading}
-                            className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2.5 rounded-lg transition-all duration-200 disabled:opacity-50 hover:scale-105 shadow-sm hover:shadow-md flex items-center gap-2"
+                            className="text-black-600 border border-gray-400 bg-white hover:bg-green-50 px-2 py-1.5 sm:px-3 sm:py-2 rounded text-xs sm:text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-1 min-w-[60px] sm:min-w-[80px]"
                             title="Skip Task"
                           >
-                            <FaTimes className="w-4 h-4" />
-                            <span className="text-sm font-medium">Skip</span>
+                            <FaTimes className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <span className="font-medium">Skip</span>
                           </button>
                         </div>
                       </div>
@@ -495,12 +473,12 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                     )}
                     <span className={`font-medium truncate ${task.status === 'skipped' ? 'text-gray-500 line-through' : 'text-gray-600 line-through'
                       }`}>
-                      {task.title}
+                      {task.displayTitle || task.title}
                     </span>
                   </div>
                   <span className={`text-sm font-semibold ml-3 px-2 py-1 rounded-lg ${task.status === 'skipped'
-                      ? 'text-gray-600 bg-gray-100'
-                      : 'text-green-600 bg-green-100'
+                    ? 'text-gray-600 bg-gray-100'
+                    : 'text-green-600 bg-green-100'
                     }`}>
                     {new Date(task.completedAt || task.skippedAt).toLocaleTimeString([], {
                       hour: '2-digit',
@@ -580,8 +558,8 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                   }}
                   disabled={loading}
                   className={`px-6 py-2 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 ${completionModal.type === 'complete'
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-gray-600 hover:bg-gray-700'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-gray-600 hover:bg-gray-700'
                     }`}
                 >
                   {loading ? (

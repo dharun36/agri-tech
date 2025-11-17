@@ -582,7 +582,7 @@ const MergedLightThemeHome = () => {
                 {t('add_crop_with_details') || 'Add crop with details'}
               </button>
               <button
-                onClick={() => navigate('/weather')}
+                onClick={() => navigate('/weather-analysis')}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center transition"
               >
                 <FontAwesomeIcon icon={faCloudSun} className="mr-2" />
@@ -866,7 +866,7 @@ const MergedLightThemeHome = () => {
                 >
                   <option value="Fertilizer">{t('fertilizer')}</option>
                   <option value="Seed">{t('seed')}</option>
-                  <option value="Pesticide">{t('pesticide')}</option>
+                  <option value="pesticide">{t('pesticide')}</option>
                   <option value="Labor">{t('labor')}</option>
                   <option value="Equipment">{t('equipment')}</option>
                   <option value="Other">{t('other')}</option>

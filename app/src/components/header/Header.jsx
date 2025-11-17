@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import LanguageSwitcher from '../LanguageSwitcher'
 import AlertsBadge from '../AlertsBadge'
 import { useTranslation } from 'react-i18next'
-import { FaSeedling, FaHome, FaSearch, FaRupeeSign, FaHandHoldingUsd, FaLeaf, FaSignInAlt, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa'
+import { FaSeedling, FaHome, FaSearch, FaRupeeSign, FaLeaf, FaSignInAlt, FaSignOutAlt, FaBars, FaTimes, FaCalendarAlt } from 'react-icons/fa'
 
 function Header() {
   const { t } = useTranslation()
@@ -14,9 +14,8 @@ function Header() {
 
   const userId = localStorage.getItem('userId');
 
-  // console.log(' Header - userId from localStorage:', localStorage.getItem('userId'));
-  // // console.log(' Header - token from localStorage:', localStorage.getItem('token'));
-  // useEffect(() => {
+  // Keep body scroll behavior and auth sync in sync with menu state
+  useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : 'auto';
     // Listen for login/logout changes from other tabs
     const syncAuth = () => setLoggedIn(!!localStorage.getItem('token'));
@@ -112,11 +111,11 @@ function Header() {
             </li>
             <li>
               <Link
-                to="/government-schemes"
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${isActive('/government-schemes') ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                to="/calendar"
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${isActive('/calendar') ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-100'}`}
               >
-                <FaHandHoldingUsd className="text-lg" />
-                <span>{t('government_schemes')}</span>
+                <FaCalendarAlt className="text-lg" />
+                <span>Calendar</span>
               </Link>
             </li>
             <li>
@@ -212,12 +211,12 @@ function Header() {
           </li>
           <li>
             <Link
-              to="/government-schemes"
+              to="/calendar"
               onClick={() => setMenuOpen(false)}
-              className={`flex items-center gap-3 px-3 py-3 rounded-lg ${isActive('/government-schemes') ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'}`}
+              className={`flex items-center gap-3 px-3 py-3 rounded-lg ${isActive('/calendar') ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'}`}
             >
-              <FaHandHoldingUsd className="text-lg" />
-              <span>{t('government_schemes')}</span>
+              <FaCalendarAlt className="text-lg" />
+              <span>Calendar</span>
             </Link>
           </li>
           <li>

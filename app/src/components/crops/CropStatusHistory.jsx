@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -30,7 +30,7 @@ const EventTypeIcons = {
   activity: faClipboardCheck
 };
 
-const TabButton = ({ active, onClick, icon, label }) => (
+const TabButton = React.memo(({ active, onClick, icon, label }) => (
   <button
     className={`px-4 py-2 flex items-center gap-2 rounded-md transition ${active ? 'bg-green-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
       }`}
@@ -39,15 +39,22 @@ const TabButton = ({ active, onClick, icon, label }) => (
     <FontAwesomeIcon icon={icon} />
     <span>{label}</span>
   </button>
-);
+));
 
-const CropStatusHistory = ({ crop, onAddEvent }) => {
+TabButton.displayName = 'TabButton';
+
+const CropStatusHistory = React.memo(({ crop, onAddEvent }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('irrigation');
   const [showAddForm, setShowAddForm] = useState(false);
 
+  // Memoize tab change handler
+  const handleTabChange = useCallback((tabName) => {
+    setActiveTab(tabName);
+  }, []);
+
   // Helper function to get the appropriate data array based on the active tab
-  const getActiveData = () => {
+  const getActiveData = useCallback(() => {
     switch (activeTab) {
       case 'irrigation':
         return crop.irrigationHistory || [];
@@ -78,7 +85,10 @@ const CropStatusHistory = ({ crop, onAddEvent }) => {
       default:
         return [];
     }
-  };
+  }, [activeTab, crop]);
+
+  // Memoize the active data to prevent unnecessary recalculations
+  const activeData = useMemo(() => getActiveData(), [getActiveData]);
 
   // Render specific content based on the event type
   const renderEventContent = (event) => {
@@ -331,6 +341,8 @@ const CropStatusHistory = ({ crop, onAddEvent }) => {
       </div>
     </Card>
   );
-};
+});
+
+CropStatusHistory.displayName = 'CropStatusHistory';
 
 export default CropStatusHistory;

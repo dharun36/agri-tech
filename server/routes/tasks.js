@@ -2,20 +2,282 @@ const express = require('express');
 const Task = require('../models/Task');
 const Crop = require('../models/Crop');
 const Activity = require('../models/Activity');
+const UserAnalytics = require('../models/UserAnalytics');
 const auth = require('../middleware/auth');
 const mongoose = require('mongoose');
 const { generateRecommendations, saveRecommendations, generateAllUserTaskRecommendations } = require('../utils/taskRecommendationGenerator');
+const { ensureDailyTasksForUser } = require('../services/dailyGeneration');
 
 const router = express.Router();
+
+/**
+ * ACTIVITY LOGGING SYSTEM FOR AI CONTEXT
+ * =====================================
+ * 
+ * This module ensures that ALL task completions are logged as activities 
+ * in the activities collection so the AI has complete context of what users have done.
+ * 
+ * Activity logging is implemented in:
+ * 1. POST /api/tasks/:id/complete - Main task completion with detailed feedback
+ * 2. PUT /api/tasks/:id/status - Status updates (done/skipped)  
+ * 3. PATCH /api/tasks/:id/complete - Quick task completion
+ * 
+ * Each completion creates both:
+ * - Updated task record with completion date
+ * - Activity record with rich context for AI prompt generation
+ * 
+ * Activity records include:
+ * - Descriptive title and detailed description
+ * - Mapped activity type based on task category
+ * - Comprehensive tags for filtering and analysis
+ * - Completion timing and effectiveness data
+ * - User feedback and images when provided
+ */
+
+// Helper function to update user completion patterns for AI learning
+async function updateUserCompletionPatterns(userId, patternData) {
+  try {
+    const analytics = await UserAnalytics.getOrCreateForUser(userId);
+    await analytics.updateCompletionPattern(patternData);
+    console.log(`📊 Updated completion patterns for user ${userId}: ${patternData.category} (${patternData.timing})`);
+  } catch (error) {
+    console.error('Error updating user completion patterns:', error);
+  }
+}
+
 
 // All routes below require authentication
 router.use(auth);
 
 /**
- * @route   GET /api/tasks
- * @desc    Get all tasks for the authenticated user
+ * @route   GET /api/tasks/analytics
+ * @desc    Get AI learning analytics for the user
  * @access  Private
  */
+router.get('/analytics', async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Get user analytics
+    const analytics = await UserAnalytics.getOrCreateForUser(userId);
+
+    // Calculate additional insights
+    const totalTasks = analytics.engagementMetrics.totalTasksCompleted;
+    const insights = {
+      summary: {
+        totalTasksCompleted: totalTasks,
+        completionRate: analytics.engagementMetrics.completionRate,
+        streakDays: analytics.engagementMetrics.streakDays,
+        lastActive: analytics.engagementMetrics.lastActiveDate
+      },
+
+      categoryPerformance: Object.keys(analytics.completionPatterns.categoryStats).map(category => {
+        const stats = analytics.completionPatterns.categoryStats[category];
+        const total = stats.total;
+        return {
+          category,
+          total,
+          onTimeRate: total > 0 ? ((stats.onTime + stats.early) / total * 100).toFixed(1) : 0,
+          avgCompletionTime: stats.avgCompletionTime,
+          performance: total > 0 ? (stats.onTime + stats.early > stats.late ? 'Good' : 'Needs Improvement') : 'No Data'
+        };
+      }).filter(item => item.total > 0),
+
+      timePreferences: {
+        bestDay: analytics.completionPatterns.temporalPatterns.dayOfWeekStats
+          .reduce((best, current) => current.completions > best.completions ? current : best, { day: 0, completions: 0 }),
+        monthlyDistribution: analytics.completionPatterns.temporalPatterns.monthlyStats
+          .filter(m => m.completions > 0)
+          .map(m => ({ month: m.month, completions: m.completions }))
+      },
+
+      aiRecommendations: {
+        preferredCategories: Object.keys(analytics.completionPatterns.categoryStats)
+          .filter(cat => analytics.completionPatterns.categoryStats[cat].total > 0)
+          .sort((a, b) => analytics.completionPatterns.categoryStats[b].total - analytics.completionPatterns.categoryStats[a].total)
+          .slice(0, 3),
+
+        improvementAreas: Object.keys(analytics.completionPatterns.categoryStats)
+          .filter(cat => {
+            const stats = analytics.completionPatterns.categoryStats[cat];
+            return stats.total > 0 && (stats.late / stats.total) > 0.3;
+          }),
+
+        recommendedSchedule: generateScheduleRecommendations(analytics)
+      }
+    };
+
+    res.json({
+      success: true,
+      analytics: insights,
+      lastUpdated: analytics.updatedAt
+    });
+
+  } catch (error) {
+    console.error('Error fetching analytics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch analytics',
+      error: error.message
+    });
+  }
+});
+
+// Helper function to generate schedule recommendations
+function generateScheduleRecommendations(analytics) {
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  // Find the best performing days
+  const bestDays = analytics.completionPatterns.temporalPatterns.dayOfWeekStats
+    .sort((a, b) => b.completions - a.completions)
+    .slice(0, 3)
+    .map(d => dayNames[d.day]);
+
+  return {
+    bestDaysForTasks: bestDays,
+    suggestion: bestDays.length > 0
+      ? `You perform best on ${bestDays.join(', ')}. Consider scheduling important tasks on these days.`
+      : 'Complete more tasks to get personalized scheduling recommendations.'
+  };
+}
+
+/**
+ * @route   GET /api/tasks/insights
+ * @desc    Get personalized task insights for AI learning
+ * @access  Private
+ */
+router.get('/insights', async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Get recent completed tasks for pattern analysis
+    const recentTasks = await Task.find({
+      user: userId,
+      status: 'done',
+      generationType: 'individual_task',
+      completedDate: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
+    }).populate('crop', 'name variety').sort({ completedDate: -1 });
+
+    // Get corresponding activities
+    const activities = await Activity.find({
+      user: userId,
+      tags: 'task-completion',
+      createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+    }).sort({ createdAt: -1 });
+
+    // Analyze patterns
+    const patterns = analyzeTaskPatterns(recentTasks, activities);
+
+    res.json({
+      success: true,
+      insights: {
+        recentActivity: {
+          tasksCompleted: recentTasks.length,
+          activitiesRecorded: activities.length,
+          averageCompletionTime: patterns.avgCompletionTime
+        },
+        patterns,
+        recommendations: generateAIRecommendations(patterns)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error generating insights:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate insights',
+      error: error.message
+    });
+  }
+});
+
+// Helper function to analyze task patterns
+function analyzeTaskPatterns(tasks, activities) {
+  if (tasks.length === 0) {
+    return {
+      avgCompletionTime: 0,
+      categoryDistribution: {},
+      timingPerformance: {},
+      engagement: 'low'
+    };
+  }
+
+  const categoryCount = {};
+  const timingCount = { early: 0, onTime: 0, late: 0 };
+  let totalCompletionTime = 0;
+
+  tasks.forEach(task => {
+    // Category distribution
+    categoryCount[task.category] = (categoryCount[task.category] || 0) + 1;
+
+    // Timing analysis
+    const dueDate = new Date(task.dueDate);
+    const completedDate = new Date(task.completedDate);
+    const diff = Math.floor((completedDate - dueDate) / (1000 * 60 * 60 * 24));
+
+    if (diff < 0) timingCount.early++;
+    else if (diff === 0) timingCount.onTime++;
+    else timingCount.late++;
+
+    // Completion time
+    const createdDate = new Date(task.createdAt);
+    totalCompletionTime += Math.floor((completedDate - createdDate) / (1000 * 60 * 60 * 24));
+  });
+
+  return {
+    avgCompletionTime: totalCompletionTime / tasks.length,
+    categoryDistribution: categoryCount,
+    timingPerformance: timingCount,
+    engagement: tasks.length > 10 ? 'high' : tasks.length > 5 ? 'medium' : 'low'
+  };
+}
+
+// Helper function to generate AI recommendations
+function generateAIRecommendations(patterns) {
+  const recommendations = [];
+
+  // Timing recommendations
+  const totalTiming = patterns.timingPerformance.early + patterns.timingPerformance.onTime + patterns.timingPerformance.late;
+  if (totalTiming > 0) {
+    const lateRate = patterns.timingPerformance.late / totalTiming;
+    if (lateRate > 0.3) {
+      recommendations.push({
+        type: 'timing',
+        message: 'Consider setting earlier due dates or reminders to improve task completion timing.',
+        priority: 'medium'
+      });
+    } else if (patterns.timingPerformance.early / totalTiming > 0.5) {
+      recommendations.push({
+        type: 'timing',
+        message: 'Great job completing tasks early! You might be able to handle more challenging tasks.',
+        priority: 'low'
+      });
+    }
+  }
+
+  // Category recommendations
+  const topCategory = Object.keys(patterns.categoryDistribution).reduce((a, b) =>
+    patterns.categoryDistribution[a] > patterns.categoryDistribution[b] ? a : b, '');
+
+  if (topCategory) {
+    recommendations.push({
+      type: 'category',
+      message: `You excel at ${topCategory} tasks. Consider taking on more complex ${topCategory} activities.`,
+      priority: 'low'
+    });
+  }
+
+  // Engagement recommendations
+  if (patterns.engagement === 'low') {
+    recommendations.push({
+      type: 'engagement',
+      message: 'Try setting smaller, more achievable daily goals to build momentum.',
+      priority: 'high'
+    });
+  }
+
+  return recommendations;
+}
 router.get('/', async (req, res) => {
   try {
     const {
@@ -113,106 +375,10 @@ router.get('/', async (req, res) => {
  */
 router.get('/daily', async (req, res) => {
   try {
-    const userId = req.user._id;
-
-    // Check if tasks were already generated today
-    const todaysGeneration = await Task.getTodaysGeneration(userId);
-
-    if (todaysGeneration && todaysGeneration.status === 'done') {
-      // Tasks already generated today, return existing tasks
-      const tasks = await Task.find({
-        _id: { $in: todaysGeneration.dailyGeneration.taskIds },
-        status: 'pending' // Only return pending tasks
-      }).populate('crop', 'name variety status').sort({ priority: -1 });
-
-      return res.json({
-        success: true,
-        tasks,
-        generated: false,
-        generatedAt: todaysGeneration.createdAt,
-        totalGenerated: todaysGeneration.dailyGeneration.tasksGenerated,
-        completionPercentage: todaysGeneration.completionPercentage
-      });
-    }
-
-    // Tasks not generated today, generate new ones
-    console.log('🔄 Generating daily tasks for user:', userId);
-
-    // Get user's active crops
-    const crops = await Crop.find({
-      user: userId,
-      status: { $in: ['Growing', 'Planning'] }
-    });
-
-    if (crops.length === 0) {
-      return res.json({
-        success: true,
-        tasks: [],
-        generated: false,
-        message: 'No active crops found for task generation'
-      });
-    }
-
-    // Generate tasks for today
-    const tasks = [];
-    const taskIds = [];
-    const cropsProcessed = [];
-
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-
-    for (const crop of crops) {
-      const cropTasks = await generateDailyTasksForCrop(crop, today, dayOfWeek);
-
-      if (cropTasks.length > 0) {
-        // Save tasks to database
-        const savedTasks = await Task.insertMany(cropTasks);
-        tasks.push(...savedTasks);
-        taskIds.push(...savedTasks.map(task => task._id));
-
-        cropsProcessed.push({
-          cropId: crop._id,
-          cropName: crop.name,
-          tasksCreated: cropTasks.length
-        });
-      }
-    }
-
-    // Create generation tracking record
-    const dailyGenerationTracker = new Task({
-      user: userId,
-      title: `Daily Generation - ${today.toDateString()}`,
-      description: `Daily task generation tracking record`,
-      category: 'general',
-      dueDate: today,
-      status: 'done', // Mark as done to indicate generation is complete
-      generationType: 'daily_generation_tracker',
-      dailyGeneration: {
-        date: today,
-        tasksGenerated: tasks.length,
-        taskIds,
-        cropsProcessed,
-        totalTasks: tasks.length,
-        completedTasks: 0
-      }
-    });
-
-    await dailyGenerationTracker.save();
-
-    // Populate crop data for response
-    const populatedTasks = await Task.find({
-      _id: { $in: taskIds }
-    }).populate('crop', 'name variety status').sort({ priority: -1 });
-
-    res.json({
-      success: true,
-      tasks: populatedTasks,
-      generated: true,
-      generatedAt: new Date(),
-      totalGenerated: tasks.length,
-      cropsProcessed: cropsProcessed.length
-    });
-
+    // Allow configuration of max tasks per day via query parameter (default: 5)
+    const maxTasksPerDay = parseInt(req.query.maxTasks) || 5;
+    const result = await ensureDailyTasksForUser(req.user._id, maxTasksPerDay);
+    return res.json(result);
   } catch (error) {
     console.error('Error getting/generating daily tasks:', error);
     res.status(500).json({
@@ -223,278 +389,7 @@ router.get('/daily', async (req, res) => {
   }
 });
 
-/**
- * Helper function to generate daily tasks for a specific crop
- * Enhanced with activities data for smarter task generation
- */
-async function generateDailyTasksForCrop(crop, today, dayOfWeek) {
-  const tasks = [];
-  const cropName = crop.name || crop.cropName;
-  const userId = crop.user;
-
-  // Get recent activities for this crop (last 30 days)
-  const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  const recentActivities = await Activity.find({
-    crop: crop._id,
-    user: userId,
-    date: { $gte: thirtyDaysAgo }
-  }).sort({ date: -1 });
-
-  // Helper function to get last activity of a type
-  const getLastActivityOfType = (activityType) => {
-    return recentActivities.find(activity =>
-      activity.activityType === activityType ||
-      activity.title.toLowerCase().includes(activityType.toLowerCase())
-    );
-  };
-
-  // Helper function to check if activity happened recently
-  const wasRecentlyDone = (activityType, daysThreshold = 7) => {
-    const lastActivity = getLastActivityOfType(activityType);
-    if (!lastActivity) return false;
-
-    const daysSince = Math.floor((today - lastActivity.date) / (1000 * 60 * 60 * 24));
-    return daysSince <= daysThreshold;
-  };
-
-  // 1. SMART IRRIGATION TASKS - Based on activities and crop data
-  if (crop.status === 'Growing') {
-    // Check for recent watering activities
-    const lastWateringActivity = getLastActivityOfType('watering') ||
-      getLastActivityOfType('irrigation') ||
-      recentActivities.find(a => a.title.toLowerCase().includes('water'));
-
-    const lastWatered = lastWateringActivity ? lastWateringActivity.date :
-      (crop.lastIrrigation ? new Date(crop.lastIrrigation) : null);
-
-    const daysSinceWater = lastWatered
-      ? Math.floor((today - lastWatered) / (1000 * 60 * 60 * 24))
-      : 5; // Assume needs water if no record
-
-    // Crop-specific water intervals with weather consideration
-    let waterInterval = 2;
-    let waterAdvice = '';
-
-    if (cropName.toLowerCase().includes('rice') || cropName.toLowerCase().includes('paddy')) {
-      waterInterval = 1;
-      waterAdvice = 'Keep water level 2-3 inches above soil. Rice requires constant moisture.';
-    } else if (cropName.toLowerCase().includes('wheat') || cropName.toLowerCase().includes('corn') ||
-      cropName.toLowerCase().includes('maize')) {
-      waterInterval = 3;
-      waterAdvice = 'Deep watering is better than frequent shallow watering for grain crops.';
-    } else if (cropName.toLowerCase().includes('tomato') || cropName.toLowerCase().includes('pepper')) {
-      waterInterval = 2;
-      waterAdvice = 'Water at soil level to avoid wetting leaves and preventing disease.';
-    } else if (cropName.toLowerCase().includes('lettuce') || cropName.toLowerCase().includes('spinach')) {
-      waterInterval = 1;
-      waterAdvice = 'Leafy greens need consistent moisture but avoid waterlogging.';
-    } else {
-      waterAdvice = 'Check soil moisture 2 inches deep - water if dry to touch.';
-    }
-
-    if (daysSinceWater >= waterInterval) {
-      const urgency = daysSinceWater > waterInterval + 2 ? 'URGENT' : '';
-      const lastWaterInfo = lastWateringActivity ?
-        `Last watered on ${lastWateringActivity.date.toLocaleDateString()} (${daysSinceWater} days ago)` :
-        `No recent watering recorded (${daysSinceWater} days since last irrigation)`;
-
-      tasks.push({
-        crop: crop._id,
-        user: crop.user,
-        title: `${urgency ? urgency + ' - ' : ''}Water ${cropName}`,
-        description: `🚿 IRRIGATION NEEDED\n\n📅 ${lastWaterInfo}\n\n💡 ${waterAdvice}\n\n🔍 Check: Soil moisture at root level, leaf drooping, and weather forecast before watering.`,
-        category: 'irrigation',
-        priority: daysSinceWater > waterInterval + 2 ? 'high' : 'medium',
-        dueDate: today,
-        source: 'system_generated',
-        generationFactors: {
-          cropStage: crop.status,
-          weather: { daysSinceWater }
-        }
-      });
-    }
-
-    // 2. SMART FERTILIZER TASKS - Based on planting date and previous fertilization
-    const plantingDate = crop.plantingDate ? new Date(crop.plantingDate) : null;
-    const cropAge = plantingDate ? Math.floor((today - plantingDate) / (1000 * 60 * 60 * 24)) : 0;
-
-    const lastFertilizing = getLastActivityOfType('fertiliz');
-    const daysSinceFertilizer = lastFertilizing ?
-      Math.floor((today - lastFertilizing.date) / (1000 * 60 * 60 * 24)) : 999;
-
-    // Growth stage-based fertilization with activity history
-    if (cropAge > 0) {
-      let shouldFertilize = false;
-      let fertilizerType = '';
-      let fertilizerReason = '';
-
-      if ((cropAge === 21 || (cropAge >= 18 && cropAge <= 24)) && daysSinceFertilizer > 14) {
-        shouldFertilize = true;
-        fertilizerType = 'Nitrogen-rich fertilizer (21-0-0 or similar)';
-        fertilizerReason = '3-week stage: Focus on leaf and stem development';
-      } else if ((cropAge === 45 || (cropAge >= 42 && cropAge <= 48)) && daysSinceFertilizer > 20) {
-        shouldFertilize = true;
-        fertilizerType = 'Balanced NPK fertilizer (10-10-10)';
-        fertilizerReason = '6-week stage: Support overall growth and prepare for flowering';
-      } else if ((cropAge === 70 || (cropAge >= 67 && cropAge <= 73)) && daysSinceFertilizer > 25) {
-        shouldFertilize = true;
-        fertilizerType = 'Phosphorus-potassium fertilizer (0-20-20)';
-        fertilizerReason = '10-week stage: Promote flowering and fruit development';
-      }
-
-      if (shouldFertilize) {
-        const lastFertInfo = lastFertilizing ?
-          `Last fertilized on ${lastFertilizing.date.toLocaleDateString()} (${daysSinceFertilizer} days ago)` :
-          'No recent fertilization recorded';
-
-        tasks.push({
-          crop: crop._id,
-          user: crop.user,
-          title: `Apply fertilizer to ${cropName}`,
-          description: `🌱 FERTILIZATION SCHEDULED\n\n📅 Crop age: ${cropAge} days old\n📊 ${lastFertInfo}\n\n💡 Recommended: ${fertilizerType}\n🎯 Purpose: ${fertilizerReason}\n\n📋 Apply early morning or evening, water lightly after application.`,
-          category: 'fertilization',
-          priority: 'medium',
-          dueDate: today,
-          source: 'system_generated',
-          generationFactors: {
-            cropStage: `${cropAge} days old`,
-            weather: { daysSinceFertilizer }
-          }
-        });
-      }
-    }
-
-    // 3. SMART PEST INSPECTION - Based on recent inspection history
-    if (dayOfWeek === 1 || !wasRecentlyDone('inspection', 7)) {
-      const lastInspection = getLastActivityOfType('inspection');
-      const inspectionInfo = lastInspection ?
-        `Last inspection: ${lastInspection.date.toLocaleDateString()}` :
-        'No recent inspection recorded';
-
-      // Crop-specific pest concerns
-      let pestConcerns = '';
-      if (cropName.toLowerCase().includes('tomato')) {
-        pestConcerns = '🐛 Watch for: Hornworms, aphids, whiteflies\n🍄 Disease: Blight, fusarium wilt';
-      } else if (cropName.toLowerCase().includes('corn') || cropName.toLowerCase().includes('maize')) {
-        pestConcerns = '🐛 Watch for: Corn borers, armyworms, cutworms\n🍄 Disease: Corn smut, leaf blight';
-      } else if (cropName.toLowerCase().includes('rice')) {
-        pestConcerns = '🐛 Watch for: Brown planthopper, rice bugs\n🍄 Disease: Blast, bacterial leaf blight';
-      } else {
-        pestConcerns = '🐛 Watch for: Aphids, spider mites, caterpillars\n🍄 Disease: Fungal spots, wilting';
-      }
-
-      tasks.push({
-        crop: crop._id,
-        user: crop.user,
-        title: `Weekly pest inspection - ${cropName}`,
-        description: `🔍 PEST & DISEASE INSPECTION\n\n📅 ${inspectionInfo}\n\n${pestConcerns}\n\n📋 Check: Top and bottom of leaves, stems, soil around base\n📸 Take photos of any issues for identification`,
-        category: 'pest_control',
-        priority: 'medium',
-        dueDate: today,
-        source: 'system_generated'
-      });
-    }
-
-    // 4. HARVEST PREPARATION - Enhanced with activity tracking
-    const harvestDate = crop.harvestDate ? new Date(crop.harvestDate) : null;
-    if (harvestDate) {
-      const daysToHarvest = Math.floor((harvestDate - today) / (1000 * 60 * 60 * 24));
-      if (daysToHarvest <= 7 && daysToHarvest > 0) {
-        const lastHarvestPrep = recentActivities.find(a =>
-          a.title.toLowerCase().includes('harvest') ||
-          a.title.toLowerCase().includes('tool') ||
-          a.title.toLowerCase().includes('prepare')
-        );
-
-        const prepInfo = lastHarvestPrep ?
-          `Previous prep: ${lastHarvestPrep.date.toLocaleDateString()}` :
-          'No harvest preparation recorded';
-
-        tasks.push({
-          crop: crop._id,
-          user: crop.user,
-          title: `🚨 Prepare for ${cropName} harvest`,
-          description: `🌾 HARVEST PREPARATION\n\n⏰ Harvest scheduled in ${daysToHarvest} days\n📅 ${prepInfo}\n\n✅ Tasks:\n• Check crop maturity indicators\n• Clean and sharpen harvesting tools\n• Prepare storage containers\n• Check weather forecast\n• Plan harvesting schedule\n\n💡 Early morning harvest often gives best quality.`,
-          category: 'harvesting',
-          priority: 'high',
-          dueDate: today,
-          source: 'system_generated',
-          generationFactors: {
-            weather: { daysToHarvest }
-          }
-        });
-      }
-    }
-
-    // 5. SMART WEEDING - Based on maintenance history
-    const lastWeeding = getLastActivityOfType('maintenance') ||
-      recentActivities.find(a => a.title.toLowerCase().includes('weed'));
-    const daysSinceWeeding = lastWeeding ?
-      Math.floor((today - lastWeeding.date) / (1000 * 60 * 60 * 24)) : 999;
-
-    if ((cropAge > 0 && cropAge % 14 === 0) || daysSinceWeeding > 14) {
-      const weedingInfo = lastWeeding ?
-        `Last weeding: ${lastWeeding.date.toLocaleDateString()} (${daysSinceWeeding} days ago)` :
-        'No recent weeding activity recorded';
-
-      tasks.push({
-        crop: crop._id,
-        user: crop.user,
-        title: `Remove weeds around ${cropName}`,
-        description: `🌿 WEED MANAGEMENT\n\n📅 ${weedingInfo}\n\n🎯 Why: Weeds compete for nutrients, water, and sunlight\n\n📋 Method:\n• Hand-pull small weeds when soil is moist\n• Use hoe for larger areas\n• Mulch after weeding to prevent regrowth\n\n⏰ Best time: After watering or rain when soil is soft`,
-        category: 'soil_management',
-        priority: 'medium',
-        dueDate: today,
-        source: 'system_generated',
-        generationFactors: {
-          weather: { daysSinceWeeding }
-        }
-      });
-    }
-  }
-
-  // 6. SOIL PREPARATION FOR PLANNING CROPS - Enhanced with detailed instructions
-  if (crop.status === 'Planning') {
-    const lastSoilPrep = getLastActivityOfType('maintenance') ||
-      recentActivities.find(a => a.title.toLowerCase().includes('soil') ||
-        a.title.toLowerCase().includes('till'));
-
-    const prepInfo = lastSoilPrep ?
-      `Previous soil work: ${lastSoilPrep.date.toLocaleDateString()}` :
-      'No recent soil preparation recorded';
-
-    // Get soil-specific advice based on crop type
-    let soilAdvice = '';
-    if (cropName.toLowerCase().includes('tomato') || cropName.toLowerCase().includes('pepper')) {
-      soilAdvice = '🎯 Target: Well-draining, pH 6.0-6.8, rich in organic matter';
-    } else if (cropName.toLowerCase().includes('rice')) {
-      soilAdvice = '🎯 Target: Clay-loam soil, can hold water, pH 6.0-7.0';
-    } else if (cropName.toLowerCase().includes('corn') || cropName.toLowerCase().includes('wheat')) {
-      soilAdvice = '🎯 Target: Deep, fertile soil with good drainage, pH 6.0-7.0';
-    } else {
-      soilAdvice = '🎯 Target: Well-draining soil rich in organic matter';
-    }
-
-    tasks.push({
-      crop: crop._id,
-      user: crop.user,
-      title: `Prepare field for ${cropName}`,
-      description: `🚜 FIELD PREPARATION\n\n📅 ${prepInfo}\n\n${soilAdvice}\n\n📋 Steps:\n• Clear weeds and debris\n• Till soil 6-8 inches deep\n• Add compost or aged manure\n• Level the field\n• Test soil pH if possible\n\n💡 Let soil settle for 1-2 weeks before planting`,
-      category: 'soil_management',
-      priority: 'medium',
-      dueDate: today,
-      source: 'system_generated',
-      generationFactors: {
-        cropStage: 'Planning phase'
-      }
-    });
-  }
-
-  // Limit to realistic number of daily tasks per crop (max 2-3 tasks)
-  return tasks.slice(0, 3);
-}
+// generation helper moved to services/dailyGeneration.js
 
 /**
  * @route   POST /api/tasks/:id/complete
@@ -526,7 +421,7 @@ router.post('/:id/complete', async (req, res) => {
       });
     }
 
-    // Create corresponding activity record for learning
+    // Create comprehensive activity record for AI learning
     try {
       let activityType = 'general';
 
@@ -547,27 +442,59 @@ router.post('/:id/complete', async (req, res) => {
         case 'harvesting':
           activityType = 'harvesting';
           break;
+        case 'pruning':
+          activityType = 'pruning';
+          break;
         default:
           activityType = 'general';
       }
 
-      // Create activity record
+      // Calculate completion timing analysis
+      const dueDate = new Date(task.dueDate);
+      const completionDate = new Date();
+      const timingDifference = Math.floor((completionDate - dueDate) / (1000 * 60 * 60 * 24)); // Days difference
+      const timingStatus = timingDifference < 0 ? 'early' : timingDifference === 0 ? 'onTime' : 'late';
+
+      // Calculate task duration (time from creation to completion)
+      const taskDuration = Math.floor((completionDate - task.createdAt) / (1000 * 60 * 60 * 24));
+
+      // Enhanced activity record with AI learning data
       const activity = new Activity({
         crop: task.crop._id,
         user: userId,
         title: `Completed: ${task.title}`,
-        description: `✅ Task completed via AgriTech system\n\nOriginal task: ${task.description}${notes ? `\n\nUser notes: ${notes}` : ''}`,
+        description: `✅ Task completed via AgriTech system\n\nOriginal task: ${task.description}${notes ? `\n\nUser notes: ${notes}` : ''}\n\n📊 Completion Analysis:\n• Timing: ${timingStatus} (${Math.abs(timingDifference)} days ${timingDifference < 0 ? 'early' : timingDifference > 0 ? 'late' : 'on time'})\n• Priority: ${task.priority}\n• Category: ${task.category}\n• Duration in system: ${taskDuration} days`,
         activityType: activityType,
-        date: new Date(),
-        tags: ['system-generated', 'task-completion', task.category]
+        date: completionDate,
+        duration: taskDuration * 1440, // Convert to minutes for consistency
+        images: images || [],
+        tags: [
+          'system-generated',
+          'task-completion',
+          task.category,
+          task.priority,
+          timingStatus,
+          `source-${task.source}`,
+          `completion-day-${new Date().getDay()}`, // Track completion day patterns
+          `season-${Math.floor((new Date().getMonth() + 1) / 3) + 1}` // Track seasonal patterns
+        ]
       });
 
       await activity.save();
 
-      console.log(`📝 Created activity record for task completion: ${task.title}`);
+      // Track user completion patterns for AI learning
+      await updateUserCompletionPatterns(userId, {
+        category: task.category,
+        priority: task.priority,
+        timing: timingStatus,
+        dayOfWeek: new Date().getDay(),
+        month: new Date().getMonth()
+      });
+
+      console.log(`📝 Enhanced activity record created for AI learning: ${task.title} (${timingStatus})`);
     } catch (activityError) {
       // Don't fail the task completion if activity creation fails
-      console.error('Error creating activity record:', activityError);
+      console.error('Error creating enhanced activity record:', activityError);
     }
 
     // Update the daily generation tracker record
@@ -842,6 +769,7 @@ router.post('/', async (req, res) => {
       description,
       priority,
       category,
+      type, // Support both 'category' and 'type' for compatibility
       dueDate,
       recommendedTimeframe,
       source,
@@ -849,19 +777,36 @@ router.post('/', async (req, res) => {
       resources
     } = req.body;
 
-    // Verify crop exists and belongs to the user
-    const crop = await Crop.findOne({ _id: cropId, user: req.user._id });
-    if (!crop) {
-      return res.status(404).json({ message: 'Crop not found or access denied' });
+    // Use category or type, whichever is provided
+    const categoryMapping = {
+      'sowing': 'planting',
+      'fertilizer': 'fertilization',
+      'pesticide': 'pest_control',
+      'harvest': 'harvesting',
+      'irrigation': 'irrigation',
+      'pruning': 'pruning',
+      'general': 'general'
+    };
+
+    const rawCategory = category || type || 'general';
+    const taskCategory = categoryMapping[rawCategory] || rawCategory;
+
+    // If crop is provided, verify it exists and belongs to the user
+    let crop = null;
+    if (cropId) {
+      crop = await Crop.findOne({ _id: cropId, user: req.user._id });
+      if (!crop) {
+        return res.status(404).json({ message: 'Crop not found or access denied' });
+      }
     }
 
     const task = new Task({
-      crop: cropId,
+      crop: cropId || null, // Allow null for general tasks
       user: req.user._id,
       title,
-      description,
+      description: description || title, // Use title as description if not provided
       priority,
-      category,
+      category: taskCategory,
       dueDate,
       recommendedTimeframe,
       source,
@@ -871,8 +816,10 @@ router.post('/', async (req, res) => {
 
     await task.save();
 
-    // Populate the crop reference in the response
-    await task.populate('crop', 'name variety status');
+    // Populate the crop reference in the response only if crop exists
+    if (cropId) {
+      await task.populate('crop', 'name variety status');
+    }
 
     res.status(201).json(task);
   } catch (error) {
@@ -926,6 +873,62 @@ router.put('/:id/status', async (req, res) => {
           ...feedback
         };
       }
+
+      // Create activity record for AI context when task is completed
+      try {
+        await task.populate('crop', 'name variety status');
+
+        // Map task category to activity type
+        let activityType = 'general';
+        switch (task.category) {
+          case 'irrigation':
+            activityType = 'maintenance';
+            break;
+          case 'pest_control':
+          case 'disease_treatment':
+            activityType = 'inspection';
+            break;
+          case 'soil_management':
+          case 'fertilization':
+            activityType = 'maintenance';
+            break;
+          case 'harvesting':
+            activityType = 'general';
+            break;
+          case 'pruning':
+            activityType = 'pruning';
+            break;
+          default:
+            activityType = 'general';
+        }
+
+        const activity = new Activity({
+          crop: task.crop._id,
+          user: req.user._id,
+          title: `${status === 'done' ? 'Completed' : 'Skipped'}: ${task.title}`,
+          description: `${status === 'done' ? '✅' : '⏭️'} Task ${status} via status update\n\n` +
+            `Original task: ${task.description}\n` +
+            `Category: ${task.category}\n` +
+            `Priority: ${task.priority}\n` +
+            `${feedback?.notes ? `Completion notes: ${feedback.notes}\n` : ''}` +
+            `${feedback?.effectiveness ? `Effectiveness: ${feedback.effectiveness}/5\n` : ''}`,
+          activityType: activityType,
+          date: task.completedDate,
+          images: feedback?.images || [],
+          tags: [
+            'task-completion',
+            status,
+            task.category,
+            task.priority,
+            task.source || 'unknown-source'
+          ]
+        });
+
+        await activity.save();
+        console.log(`📝 Activity created for ${status} task: ${task.title}`);
+      } catch (activityError) {
+        console.error('Error creating activity for task status update:', activityError);
+      }
     } else {
       // If reverting to pending, clear completion date
       task.completedDate = null;
@@ -965,6 +968,60 @@ router.patch('/:id/complete', async (req, res) => {
     task.completedDate = new Date();
 
     await task.save();
+
+    // Create activity record for AI context
+    try {
+      await task.populate('crop', 'name variety status');
+
+      // Map task category to activity type
+      let activityType = 'general';
+      switch (task.category) {
+        case 'irrigation':
+          activityType = 'maintenance';
+          break;
+        case 'pest_control':
+        case 'disease_treatment':
+          activityType = 'inspection';
+          break;
+        case 'soil_management':
+        case 'fertilization':
+          activityType = 'maintenance';
+          break;
+        case 'harvesting':
+          activityType = 'general';
+          break;
+        case 'pruning':
+          activityType = 'pruning';
+          break;
+        default:
+          activityType = 'general';
+      }
+
+      const activity = new Activity({
+        crop: task.crop._id,
+        user: req.user._id,
+        title: `Completed: ${task.title}`,
+        description: `✅ Task completed via quick complete\n\n` +
+          `Original task: ${task.description}\n` +
+          `Category: ${task.category}\n` +
+          `Priority: ${task.priority}\n` +
+          `Completion method: Quick complete button`,
+        activityType: activityType,
+        date: task.completedDate,
+        tags: [
+          'task-completion',
+          'quick-complete',
+          task.category,
+          task.priority,
+          task.source || 'unknown-source'
+        ]
+      });
+
+      await activity.save();
+      console.log(`📝 Activity created for completed task: ${task.title}`);
+    } catch (activityError) {
+      console.error('Error creating activity for task completion:', activityError);
+    }
 
     // Populate the crop reference in the response
     await task.populate('crop', 'name variety status');

@@ -7,11 +7,14 @@ import './styles/layout.css'
 import './styles/pageTitles.css'
 import App from './App.jsx'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { LingoProviderWrapper, loadDictionary as lingoLoadDictionary } from 'lingo.dev/react/client'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
+    <LingoProviderWrapper loadDictionary={(locale) => lingoLoadDictionary(locale)}>
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
+    </LingoProviderWrapper>
   </StrictMode>,
 )

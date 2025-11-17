@@ -103,6 +103,14 @@ const TaskDetail = () => {
     }
   };
 
+  // Check if a date is today
+  const isToday = (dateString) => {
+    if (!dateString) return false;
+    const today = new Date();
+    const date = new Date(dateString);
+    return today.toDateString() === date.toDateString();
+  };
+
   // Fetch task data
   const fetchTask = useCallback(async () => {
     setLoading(true);
@@ -318,15 +326,17 @@ const TaskDetail = () => {
     new Date(task.dueDate).toDateString() !== new Date().toDateString();
 
   return (
-    <div className="max-w-3xl mx-auto bg-white rounded-lg shadow p-6">
+    <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-sm p-4 sm:p-6 m-4">
       {/* Back button */}
-      <button
-        onClick={() => navigate(-1)} /* This uses browser history to go back to previous page */
-        className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-      >
-        <FaArrowLeft className="mr-1" />
-        {t('back_to_tasks', { ns: 'tasks' })}
-      </button>
+      <div className="mb-6">
+        <button
+          onClick={() => navigate(-1)} /* This uses browser history to go back to previous page */
+          className="inline-flex items-center text-gray-600 hover:text-gray-900 py-2 px-3 rounded-md hover:bg-gray-50 transition-colors text-sm sm:text-base"
+        >
+          <FaArrowLeft className="mr-2" />
+          {t('back_to_tasks', { ns: 'tasks' })}
+        </button>
+      </div>
 
       {/* Error state */}
       {error && (
@@ -348,76 +358,113 @@ const TaskDetail = () => {
             // View mode
             <div>
               {/* Task header */}
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-2">
-                  {task?.category && (
-                    <span className="text-xl">
-                      {getCategoryIcon(task.category)}
-                    </span>
-                  )}
-                  <h1 className={`text-2xl font-bold ${task?.status === 'done' ? 'text-green-700' :
-                    task?.status === 'skipped' ? 'text-gray-500 line-through' :
-                      isOverdue ? 'text-red-700' : 'text-gray-900'
-                    }`}>
-                    {task?.title}
-                  </h1>
-                </div>
-
-                <div className="text-sm text-gray-500 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  {task?.category && (
-                    <span>{t(`${task.category}`, { ns: 'tasks' })}</span>
-                  )}
-
-                  {task?.dueDate && (
-                    <span className="flex items-center">
-                      <FaCalendarAlt className="mr-1" />
-                      {formatDate(task.dueDate)}
-                      {isOverdue && (
-                        <span className="ml-1 text-red-600 font-medium">
-                          ({t('overdue', { ns: 'tasks' })})
+              <div className="mb-8">
+                {/* Main title section */}
+                <div className="bg-gradient-to-r from-gray-50 to-white p-4 sm:p-6 rounded-lg border border-gray-200 mb-4">
+                  <div className="flex items-start gap-3 mb-4">
+                    {task?.category && (
+                      <div className="flex-shrink-0 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
+                        <span className="text-2xl">
+                          {getCategoryIcon(task.category)}
                         </span>
+                      </div>
+                    )}
+
+                    <div className="flex-1 min-w-0">
+                      <h1 className={`text-2xl sm:text-3xl font-bold leading-tight mb-2 ${task?.status === 'done' ? 'text-green-700' :
+                        task?.status === 'skipped' ? 'text-gray-500 line-through' :
+                          isOverdue ? 'text-red-700' : 'text-gray-900'
+                        }`}>
+                        {task?.title}
+                      </h1>
+
+                      {task?.category && (
+                        <div className="mb-3">
+                          <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                            {t(`${task.category}`, { ns: 'tasks' })}
+                          </span>
+                        </div>
                       )}
-                    </span>
-                  )}
+                    </div>
 
-                  {task?.status === 'done' && task?.completedDate && (
-                    <span className="flex items-center text-green-600">
-                      <FaCheck className="mr-1" />
-                      {t('completed_on', { ns: 'tasks' })}: {formatDate(task.completedDate)}
-                    </span>
-                  )}
+                    {/* Status indicator */}
+                    <div className="flex-shrink-0">
+                      {task?.status === 'done' && (
+                        <div className="bg-green-100 text-green-800 px-3 py-2 rounded-full flex items-center text-sm font-semibold">
+                          <FaCheck className="mr-1 w-4 h-4" />
+                          {t('completed', { ns: 'tasks' })}
+                        </div>
+                      )}
+                      {task?.status === 'skipped' && (
+                        <div className="bg-gray-100 text-gray-600 px-3 py-2 rounded-full flex items-center text-sm font-semibold">
+                          <FaTimes className="mr-1 w-4 h-4" />
+                          {t('skipped', { ns: 'tasks' })}
+                        </div>
+                      )}
+                      {task?.status === 'pending' && isOverdue && (
+                        <div className="bg-red-100 text-red-700 px-3 py-2 rounded-full flex items-center text-sm font-semibold">
+                          <FaExclamationTriangle className="mr-1 w-4 h-4" />
+                          {t('overdue', { ns: 'tasks' })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-                  {task?.status === 'skipped' && task?.completedDate && (
-                    <span className="flex items-center text-gray-500">
-                      <FaTimes className="mr-1" />
-                      {t('skipped_on', { ns: 'tasks' })}: {formatDate(task.completedDate)}
-                    </span>
-                  )}
+                  {/* Task metadata */}
+                  <div className="flex flex-wrap gap-3">
+                    {task?.dueDate && (
+                      <div className="flex items-center bg-white px-3 py-2 rounded-lg border border-gray-200 text-sm">
+                        <FaCalendarAlt className="mr-2 text-blue-500 w-4 h-4" />
+                        <span className="font-medium text-gray-700">{t('due', { ns: 'tasks' })}: </span>
+                        <span className={`ml-1 font-semibold ${isToday(task.dueDate) ? 'text-orange-600' : 'text-gray-900'}`}>
+                          {isToday(task.dueDate) ? t('today', { ns: 'tasks' }) : formatDate(task.dueDate)}
+                        </span>
+                      </div>
+                    )}
 
-                  {task?.estimatedTime && (
-                    <span className="flex items-center">
-                      <FaClock className="mr-1" />
-                      {task.estimatedTime} {t('minutes', { ns: 'tasks' })}
-                    </span>
-                  )}
+                    {task?.estimatedTime && (
+                      <div className="flex items-center bg-white px-3 py-2 rounded-lg border border-gray-200 text-sm">
+                        <FaClock className="mr-2 text-yellow-500 w-4 h-4" />
+                        <span className="font-medium text-gray-700">{t('duration', { ns: 'tasks' })}: </span>
+                        <span className="ml-1 font-semibold text-gray-900">{task.estimatedTime} {t('minutes', { ns: 'tasks' })}</span>
+                      </div>
+                    )}
+
+                    {(task?.status === 'done' || task?.status === 'skipped') && task?.completedDate && (
+                      <div className={`flex items-center px-3 py-2 rounded-lg border text-sm ${task.status === 'done'
+                          ? 'bg-green-50 border-green-200 text-green-700'
+                          : 'bg-gray-50 border-gray-200 text-gray-600'
+                        }`}>
+                        {task.status === 'done' ? (
+                          <FaCheck className="mr-2 w-4 h-4" />
+                        ) : (
+                          <FaTimes className="mr-2 w-4 h-4" />
+                        )}
+                        <span className="font-medium">
+                          {task.status === 'done' ? t('completed_on', { ns: 'tasks' }) : t('skipped_on', { ns: 'tasks' })}:
+                        </span>
+                        <span className="ml-1 font-semibold">{formatDate(task.completedDate)}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Task description */}
-              <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                <h2 className="font-medium mb-2">{t('description', { ns: 'tasks' })}</h2>
-                <p className="text-gray-700 whitespace-pre-line">{task?.description}</p>
+              <div className="bg-gray-50 p-3 sm:p-4 rounded-lg mb-6">
+                <h2 className="font-medium mb-2 text-sm sm:text-base">{t('description', { ns: 'tasks' })}</h2>
+                <p className="text-gray-700 whitespace-pre-line text-sm sm:text-base leading-relaxed">{task?.description}</p>
               </div>
 
               {/* Task actions */}
               {task?.status === 'pending' && (
-                <div className="flex gap-2 mb-6">
+                <div className="flex flex-col sm:flex-row gap-3 mb-6">
                   <button
                     onClick={handleMarkDone}
                     disabled={isSubmitting}
-                    className={`px-4 py-2 rounded-md flex-1 flex justify-center items-center ${isSubmitting
+                    className={`px-4 py-3 rounded-md flex-1 flex justify-center items-center text-sm sm:text-base font-medium ${isSubmitting
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
                       }`}
                   >
                     <FaCheck className="mr-2" />
@@ -427,9 +474,9 @@ const TaskDetail = () => {
                   <button
                     onClick={handleMarkSkipped}
                     disabled={isSubmitting}
-                    className={`px-4 py-2 rounded-md flex-1 flex justify-center items-center ${isSubmitting
+                    className={`px-4 py-3 rounded-md flex-1 flex justify-center items-center text-sm sm:text-base font-medium ${isSubmitting
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300 active:bg-gray-400'
                       }`}
                   >
                     <FaTimes className="mr-2" />
@@ -441,9 +488,9 @@ const TaskDetail = () => {
               {/* Task notes */}
               {task?.notes && (
                 <div className="mb-6">
-                  <h2 className="font-medium mb-2">{t('notes', { ns: 'tasks' })}</h2>
-                  <div className="bg-yellow-50 p-4 rounded-lg">
-                    <p className="text-gray-700 whitespace-pre-line">{task.notes}</p>
+                  <h2 className="font-medium mb-2 text-sm sm:text-base">{t('notes', { ns: 'tasks' })}</h2>
+                  <div className="bg-yellow-50 p-3 sm:p-4 rounded-lg">
+                    <p className="text-gray-700 whitespace-pre-line text-sm sm:text-base leading-relaxed">{task.notes}</p>
                   </div>
                 </div>
               )}
@@ -451,20 +498,22 @@ const TaskDetail = () => {
               {/* Task image if available */}
               {task?.imageUrl && (
                 <div className="mb-6">
-                  <h2 className="font-medium mb-2">{t('reference_image', { ns: 'tasks' })}</h2>
-                  <img
-                    src={task.imageUrl}
-                    alt={t('task_reference_image', { ns: 'tasks' })}
-                    className="rounded-lg max-h-80 object-cover"
-                  />
+                  <h2 className="font-medium mb-2 text-sm sm:text-base">{t('reference_image', { ns: 'tasks' })}</h2>
+                  <div className="rounded-lg overflow-hidden">
+                    <img
+                      src={task.imageUrl}
+                      alt={t('task_reference_image', { ns: 'tasks' })}
+                      className="w-full h-auto max-h-80 object-cover"
+                    />
+                  </div>
                 </div>
               )}
 
               {/* Edit and delete buttons */}
-              <div className="flex justify-between">
+              <div className="flex flex-col sm:flex-row justify-between gap-3">
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-md flex items-center"
+                  className="px-4 py-3 text-blue-600 hover:bg-blue-50 active:bg-blue-100 rounded-md flex items-center justify-center text-sm sm:text-base font-medium border border-blue-200 hover:border-blue-300"
                 >
                   <FaEdit className="mr-2" />
                   {t('edit_task', { ns: 'tasks' })}
@@ -473,7 +522,7 @@ const TaskDetail = () => {
                 <button
                   onClick={handleDeleteTask}
                   disabled={isSubmitting}
-                  className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-md flex items-center"
+                  className="px-4 py-3 text-red-600 hover:bg-red-50 active:bg-red-100 rounded-md flex items-center justify-center text-sm sm:text-base font-medium border border-red-200 hover:border-red-300"
                 >
                   <FaTrash className="mr-2" />
                   {t('delete_task', { ns: 'tasks' })}
@@ -482,11 +531,11 @@ const TaskDetail = () => {
             </div>
           ) : (
             // Edit mode
-            <form onSubmit={handleUpdateTask}>
-              <h1 className="text-2xl font-bold mb-6">{t('edit_task', { ns: 'tasks' })}</h1>
+            <form onSubmit={handleUpdateTask} className="space-y-4">
+              <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">{t('edit_task', { ns: 'tasks' })}</h1>
 
-              <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-1" htmlFor="title">
+              <div>
+                <label className="block text-gray-700 font-medium mb-2 text-sm" htmlFor="title">
                   {t('task_title', { ns: 'tasks' })}*
                 </label>
                 <input
@@ -495,13 +544,13 @@ const TaskDetail = () => {
                   name="title"
                   value={formData.title}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full border border-gray-300 rounded-md px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                   required
                 />
               </div>
 
-              <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-1" htmlFor="description">
+              <div>
+                <label className="block text-gray-700 font-medium mb-2 text-sm" htmlFor="description">
                   {t('description', { ns: 'tasks' })}*
                 </label>
                 <textarea
@@ -510,14 +559,14 @@ const TaskDetail = () => {
                   value={formData.description}
                   onChange={handleInputChange}
                   rows="4"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full border border-gray-300 rounded-md px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
                   required
                 ></textarea>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-700 font-medium mb-1" htmlFor="category">
+                  <label className="block text-gray-700 font-medium mb-2 text-sm" htmlFor="category">
                     {t('category', { ns: 'tasks' })}*
                   </label>
                   <select
@@ -525,7 +574,7 @@ const TaskDetail = () => {
                     name="category"
                     value={formData.category}
                     onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                     required
                   >
                     <option value="">{t('select_category', { ns: 'tasks' })}</option>
@@ -543,7 +592,7 @@ const TaskDetail = () => {
                 </div>
 
                 <div>
-                  <label className="block text-gray-700 font-medium mb-1" htmlFor="dueDate">
+                  <label className="block text-gray-700 font-medium mb-2 text-sm" htmlFor="dueDate">
                     {t('due_date', { ns: 'tasks' })}*
                   </label>
                   <input
@@ -552,14 +601,14 @@ const TaskDetail = () => {
                     name="dueDate"
                     value={formData.dueDate}
                     onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                     required
                   />
                 </div>
               </div>
 
-              <div className="mb-6">
-                <label className="block text-gray-700 font-medium mb-1" htmlFor="notes">
+              <div>
+                <label className="block text-gray-700 font-medium mb-2 text-sm" htmlFor="notes">
                   {t('notes', { ns: 'tasks' })}
                 </label>
                 <textarea
@@ -568,17 +617,17 @@ const TaskDetail = () => {
                   value={formData.notes}
                   onChange={handleInputChange}
                   rows="4"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full border border-gray-300 rounded-md px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
                 ></textarea>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className={`px-4 py-2 rounded-md flex-1 flex justify-center items-center ${isSubmitting
+                  className={`px-4 py-3 rounded-md flex-1 flex justify-center items-center text-sm sm:text-base font-medium ${isSubmitting
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
                     }`}
                 >
                   {isSubmitting ? t('saving', { ns: 'tasks' }) : t('save_changes', { ns: 'tasks' })}
@@ -587,7 +636,7 @@ const TaskDetail = () => {
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  className="px-4 py-3 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 active:bg-gray-400 text-sm sm:text-base font-medium flex-1 sm:flex-none"
                 >
                   {t('cancel', { ns: 'tasks' })}
                 </button>

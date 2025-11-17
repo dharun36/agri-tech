@@ -100,7 +100,12 @@ const CropSelector = ({ onSelectCrop }) => {
             </div>
             <div>
               <h4 className="font-medium text-gray-800">{crop.name}</h4>
-              <p className="text-xs text-gray-500">{crop.plantCount || 1} {t('plants')}</p>
+              <p className="text-xs text-gray-500">
+                {crop.locationArea
+                  ? `${crop.locationArea} ${crop.locationAreaUnit || 'units'}`
+                  : t('area_not_specified')
+                }
+              </p>
             </div>
           </div>
         ))}

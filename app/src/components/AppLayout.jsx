@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import VerticalHeader from './VerticalHeader';
 import MobileHeader from './header/MobileHeader';
 import MobileBottomNav from './header/MobileBottomNav';
 import PageTitle from './ui/PageTitle';
+import FloatingChatButton from './FloatingChatButton';
 import { getPageNameFromPath } from '../utils/translationHelper';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import '../styles/layout.css';
@@ -13,6 +14,7 @@ const AppLayout = ({ children, pageTitle }) => {
   const location = useLocation();
   const path = location.pathname;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
   // Page name for translation - use provided pageTitle or determine from path
   const pageName = pageTitle || getPageNameFromPath(path);
@@ -33,25 +35,28 @@ const AppLayout = ({ children, pageTitle }) => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  // Use media query for responsive states with device breakpoints
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
-  const [isMobile, setIsMobile] = useState(windowWidth < 768);
-  const [isTablet, setIsTablet] = useState(windowWidth >= 768 && windowWidth < 1024);
-  const [isDesktop, setIsDesktop] = useState(windowWidth >= 1024);
+  // Memoize device state calculations to prevent unnecessary recalculations
+  const deviceState = useMemo(() => ({
+    isMobile: windowWidth < 768,
+    isTablet: windowWidth >= 768 && windowWidth < 1024,
+    isDesktop: windowWidth >= 1024
+  }), [windowWidth]);
+
+  const { isMobile, isTablet, isDesktop } = deviceState;
+
+  // Optimize resize handler with useCallback
+  const handleResize = useCallback(() => {
+    setWindowWidth(window.innerWidth);
+  }, []);
 
   // Update window width and device states on resize
   useEffect(() => {
-    const handleResize = () => {
-      const newWidth = window.innerWidth;
-      setWindowWidth(newWidth);
-      setIsMobile(newWidth < 768);
-      setIsTablet(newWidth >= 768 && newWidth < 1024);
-      setIsDesktop(newWidth >= 1024);
-    };
+    // Set initial values
+    handleResize();
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [handleResize]);
 
   // Get userId for alerts
   const userId = localStorage.getItem('userId');
@@ -115,6 +120,11 @@ const AppLayout = ({ children, pageTitle }) => {
 
         {children}
       </div>
+
+      {/* Floating Chat Button - Only show when user is logged in and not on excluded paths */}
+      {!isExcludedPath && localStorage.getItem('token') && (
+        <FloatingChatButton />
+      )}
     </>
   );
 };

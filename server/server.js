@@ -21,6 +21,19 @@ const io = new Server(server, {
 });
 
 app.use(cors());
+
+// Configure headers for OAuth compatibility
+app.use((req, res, next) => {
+  // Set OAuth-compatible Cross-Origin-Opener-Policy
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+
+  // Remove problematic headers that interfere with OAuth flows
+  res.removeHeader('Cross-Origin-Embedder-Policy');
+  res.removeHeader('Cross-Origin-Resource-Policy');
+
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -51,16 +64,17 @@ app.use('/api/disease', require('./routes/disease'));
 app.use('/api/activities', require('./routes/activities'));
 // Market prices proxy
 app.use('/api/market', require('./routes/market'));
-// Use optimized task routes when specified in environment, otherwise use regular routes
-if (process.env.USE_OPTIMIZED_ROUTES === 'true') {
-  console.log('Using optimized task routes');
-  app.use('/api/tasks', require('./routes/optimizedTasks'));
-} else {
-  app.use('/api/tasks', require('./routes/tasks'));
-}
+// Government API crop prices
+app.use('/api/prices', require('./routes/prices'));
+// Dynamic translations for AI-generated content
+app.use('/api/translate', require('./routes/translate'));
+// Use full task API with daily tasks support
+app.use('/api/tasks', require('./routes/tasks'));
+// Farming assistant chatbot
+app.use('/api/chat', require('./routes/chat'));
 
-// User-specific task generation (triggered when user visits site)
-app.post('/api/tasks/generate-user', async (req, res) => {
+// Simple task generation endpoint
+app.post('/api/tasks/generate', async (req, res) => {
   try {
     const { userId } = req.body;
 
@@ -71,117 +85,24 @@ app.post('/api/tasks/generate-user', async (req, res) => {
       });
     }
 
-    console.log(`Task generation requested for user: ${userId}`);
-
-    // Check if user has tasks generated recently (within last 24 hours)
-    const Task = require('./models/Task');
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-    const recentTasks = await Task.find({
-      user: userId,
-      createdAt: { $gte: twentyFourHoursAgo },
-      source: { $in: ['ai_generated', 'system_generated'] }
-    });
-
-    // If user has recent tasks, don't generate new ones
-    if (recentTasks.length > 0) {
-      return res.status(200).json({
-        success: true,
-        message: 'Recent tasks found, no generation needed',
-        existingTaskCount: recentTasks.length,
-        generated: false
-      });
-    }
-
-    // Enhanced options for single-user generation
-    const enhancedOptions = {
-      includeWeatherTasks: true,
-      includeGrowthStageTasks: true,
-      includeDiseaseTasks: true,
-      includeSeasonalTasks: true,
-      daysToLookAhead: 7,
-      prioritizeUrgentTasks: true,
-      weatherData: await getWeatherDataSafely(req.body.location),
-      diseaseRisks: req.body.diseaseRisks || {}
-    };
-
-    const result = await generateAllUserTaskRecommendations(userId, enhancedOptions);
-
-    console.log(`Generated ${result.taskCount} tasks for user ${userId}`);
-
+    // Simple response for now
     res.status(200).json({
       success: true,
-      message: `Generated ${result.taskCount} tasks for ${result.cropResults.length} crops`,
-      data: result,
+      message: 'Tasks available via /api/tasks endpoint',
       generated: true
     });
 
   } catch (error) {
-    console.error('Error in user-specific task generation:', error.message);
+    console.error('Error generating tasks:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to generate tasks',
-      error: error.message,
-      generated: false
-    });
-  }
-});
-
-// Trigger task generation for all users (admin endpoint)
-app.post('/api/tasks/generate-all-users', async (req, res) => {
-  try {
-    console.log('Manual task generation triggered for all users');
-
-    // Get all active users
-    const users = await User.find().select('_id location');
-    let totalTasksGenerated = 0;
-    const results = [];
-
-    for (const user of users) {
-      try {
-        const enhancedOptions = {
-          includeWeatherTasks: true,
-          includeGrowthStageTasks: true,
-          includeDiseaseTasks: true,
-          includeSeasonalTasks: true,
-          daysToLookAhead: 7,
-          prioritizeUrgentTasks: true,
-          weatherData: await getWeatherDataSafely(user.location),
-          diseaseRisks: {}
-        };
-
-        const result = await generateAllUserTaskRecommendations(user._id, enhancedOptions);
-        totalTasksGenerated += result.taskCount;
-        results.push({
-          userId: user._id,
-          taskCount: result.taskCount,
-          cropCount: result.cropResults.length
-        });
-      } catch (error) {
-        console.error(`Error generating tasks for user ${user._id}:`, error.message);
-        results.push({
-          userId: user._id,
-          error: error.message
-        });
-      }
-    }
-
-    res.status(200).json({
-      success: true,
-      message: `Generated ${totalTasksGenerated} tasks across ${users.length} users`,
-      totalTasks: totalTasksGenerated,
-      userResults: results
-    });
-
-  } catch (error) {
-    console.error('Error in bulk task generation:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate tasks for all users',
       error: error.message
     });
   }
 });
+
+// Error handling middleware
 
 app.post('/api/weather-analysis', async (req, res) => {
   try {
@@ -244,20 +165,54 @@ app.post('/api/weather-analysis', async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => res.send('AgriTech Simple API Running'));
+// If a frontend build exists in ../app/dist or ../app/build, serve it (SPA fallback)
+const fs = require('fs');
+const pathStatic = require('path');
+const possibleBuildDirs = [pathStatic.join(__dirname, '..', 'app', 'dist'), pathStatic.join(__dirname, '..', 'app', 'build')];
+const existing = possibleBuildDirs.find(d => fs.existsSync(d));
+
+if (existing) {
+  console.log('Serving frontend from', existing);
+  app.use(express.static(existing));
+
+  // SPA fallback: return index.html for any unknown GET route (must be after API routes)
+  app.get('*', (req, res) => {
+    const indexPath = pathStatic.join(existing, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      return res.sendFile(indexPath);
+    }
+    return res.status(404).send('Frontend build not found');
+  });
+} else {
+  // Fallback route when no frontend build is found
+  app.get('/', (req, res) => res.send('AgriTech Simple API Running'));
+}
 
 // Socket.io connection handling
+let connectionCount = 0;
+const isDev = process.env.NODE_ENV === 'development';
+
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  connectionCount++;
+
+  // Only log every 10th connection in production, all in development
+  if (isDev || connectionCount % 10 === 0) {
+    console.log(`🔗 User connected: ${socket.id} (Total: ${connectionCount})`);
+  }
 
   // Join user to their personal room for targeted alerts
   socket.on('join-user-room', (userId) => {
     socket.join(`user-${userId}`);
-    console.log(`User ${userId} joined their room`);
+    if (isDev && Math.random() < 0.2) {
+      console.log(`👤 User ${userId} joined room`);
+    }
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    connectionCount = Math.max(0, connectionCount - 1);
+    if (isDev || connectionCount % 10 === 0) {
+      console.log(`🔌 User disconnected: ${socket.id} (Active: ${connectionCount})`);
+    }
   });
 });
 
@@ -360,20 +315,45 @@ async function getWeatherDataSafely(location) {
 const PORT = process.env.PORT || 5000;
 // Bind host explicitly so PaaS port scans detect the listening socket
 const HOST = process.env.HOST || '0.0.0.0';
-server.listen(PORT, HOST, () => console.log(`Server running on ${HOST}:${PORT}`));
-// If a frontend build exists in ../app/dist or ../app/dist, serve it (SPA fallback)
-const fs = require('fs');
-const pathStatic = require('path');
-const possibleBuildDirs = [pathStatic.join(__dirname, '..', 'app', 'dist'), pathStatic.join(__dirname, '..', 'app', 'build'), pathStatic.join(__dirname, '..', 'app', 'dist')];
-const existing = possibleBuildDirs.find(d => fs.existsSync(d));
-if (existing) {
-  console.log('Serving frontend from', existing);
-  app.use(express.static(existing));
-  // SPA fallback: return index.html for any unknown GET route
-  app.get('*', (req, res) => {
-    const indexPath = pathStatic.join(existing, 'index.html');
-    if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
-    return res.status(404).send('Not found');
+
+// Global error handler middleware - must be after all routes
+app.use((err, req, res, next) => {
+  console.error('❌ Unhandled error:', err);
+  console.error('❌ Error stack:', err.stack);
+  console.error('❌ Request URL:', req.url);
+  console.error('❌ Request method:', req.method);
+  console.error('❌ Request body:', req.body);
+
+  res.status(500).json({
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
   });
-}
+});
+
+// Process-level error handling
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  console.error(error.stack);
+  // In production, you might want to restart the server or perform cleanup here
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // Application specific logging, throwing an error, or other logic here
+});
+
+server.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on ${HOST}:${PORT}`);
+
+  // Check critical environment variables
+  const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET'];
+  const missing = requiredEnvVars.filter(env => !process.env[env]);
+
+  if (missing.length > 0) {
+    console.error('❌ Missing required environment variables:', missing);
+    console.error('❌ Server may not function properly!');
+  } else {
+    console.log('✅ All required environment variables are set');
+  }
+});
 

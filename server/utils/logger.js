@@ -1,6 +1,6 @@
 /**
  * Logger Utility
- * Centralized logging system with different log levels and formatting
+ * Centralized logging system with environment-based log level control
  */
 
 const { isDevelopment } = require('../config');
@@ -12,6 +12,16 @@ const LOG_LEVELS = {
   INFO: 2,
   DEBUG: 3
 };
+
+// Get log level from environment variable
+const getLogLevel = () => {
+  const envLevel = process.env.LOG_LEVEL ? process.env.LOG_LEVEL.toUpperCase() : 'INFO';
+  return LOG_LEVELS[envLevel] !== undefined ? LOG_LEVELS[envLevel] : LOG_LEVELS.INFO;
+};
+
+// Check if specific logging is disabled
+const isAuthLogsDisabled = () => process.env.DISABLE_AUTH_LOGS === 'true';
+const isSocketLogsDisabled = () => process.env.DISABLE_SOCKET_LOGS === 'true';
 
 // Color codes for console output
 const COLORS = {
@@ -217,16 +227,34 @@ class Logger {
   }
 
   /**
-   * Log authentication-related message
+   * Log authentication-related message (respects DISABLE_AUTH_LOGS)
    * @param {string} message - Auth message
    * @param {*} data - Additional data
    */
   auth(message, data = null) {
-    const formattedMessage = this.formatMessage('AUTH', message, EMOJIS.auth, COLORS.green);
-    console.log(formattedMessage);
+    if (!isAuthLogsDisabled() && this.level >= LOG_LEVELS.DEBUG) {
+      const formattedMessage = this.formatMessage('AUTH', message, EMOJIS.auth, COLORS.green);
+      console.log(formattedMessage);
 
-    if (data && isDevelopment()) {
-      console.log(`${COLORS.green}Data:${COLORS.reset}`, data);
+      if (data && isDevelopment()) {
+        console.log(`${COLORS.green}Data:${COLORS.reset}`, data);
+      }
+    }
+  }
+
+  /**
+   * Log socket-related message (respects DISABLE_SOCKET_LOGS)
+   * @param {string} message - Socket message
+   * @param {*} data - Additional data
+   */
+  socket(message, data = null) {
+    if (!isSocketLogsDisabled() && this.level >= LOG_LEVELS.INFO) {
+      const formattedMessage = this.formatMessage('SOCKET', message, EMOJIS.socket, COLORS.cyan);
+      console.log(formattedMessage);
+
+      if (data && isDevelopment()) {
+        console.log(`${COLORS.cyan}Data:${COLORS.reset}`, data);
+      }
     }
   }
 
@@ -262,6 +290,7 @@ class Logger {
       email: (message, data) => self.email(`[${context}] ${message}`, data),
       file: (message, data) => self.file(`[${context}] ${message}`, data),
       auth: (message, data) => self.auth(`[${context}] ${message}`, data),
+      socket: (message, data) => self.socket(`[${context}] ${message}`, data),
       disease: (message, data) => self.disease(`[${context}] ${message}`, data)
     };
   }

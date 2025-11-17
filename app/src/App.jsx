@@ -7,12 +7,10 @@ import DetectDisease from './components/DetectDisease'
 import Home from './components/Home'
 import ModernHome from './components/ModernHome'
 import LightThemeHome from './components/home/LightThemeHome'
-import WeatherPage from './components/WeatherPage'
-import TomorrowWeatherPage from './components/TomorrowWeatherPage'
-import WeatherDemo from './components/weather/WeatherDemo'
 import CropRecommendation from './components/CropRecommendation'
 import MarketPrices from './components/MarketPrices'
 import DiseaseAlerts from './components/DiseaseAlerts'
+import ChatbotDemo from './components/ChatbotDemo'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import ModernLandingPage from './components/ModernLandingPage';
 import GovSchemes from './components/GovSchemes'
@@ -26,6 +24,7 @@ import CropTaskSelector from './components/tasks/CropTaskSelector'
 import TaskDashboard from './components/tasks/TaskDashboard'
 // Import task detail component  
 import TaskDetail from './components/tasks/TaskDetail'
+import Calendar from './components/tasks/Calendar'
 import AppLayout from './components/AppLayout'
 import ErrorBoundary from './components/ErrorBoundary'
 // Import hooks and utilities
@@ -66,11 +65,7 @@ function App() {
             <Routes>
               <Route path="/home" element={<LightThemeHome />} />
               <Route path="/dark-home" element={<ModernHome />} />
-              <Route path="/old-home" element={<Home />} />
               <Route path="/disease-detection" element={<DetectDisease />} />
-              <Route path="/weather" element={<TomorrowWeatherPage />} />
-              <Route path="/weather-old" element={<WeatherPage />} />
-              <Route path="/weather-demo" element={<WeatherDemo />} />
               <Route path="/merged-home" element={<MergedLightThemeHome />} />
               <Route path="/crop-recommendation" element={<CropRecommendation />} />
               <Route path="/market-prices" element={<MarketPrices />} />
@@ -84,11 +79,17 @@ function App() {
               <Route path="/signup" element={<Signup />} />
               <Route path="/profile" element={<Profile />} />
 
+              {/* Chatbot Demo */}
+              <Route path="/chatbot-demo" element={<ChatbotDemo />} />
+
               {/* Task management routes */}
               <Route path="/tasks" element={<div className="p-4"><CropTaskSelector /></div>} />
               {/* Individual crop task management */}
               <Route path="/tasks/:cropId" element={<div className="p-4"><TaskDashboard /></div>} />
               <Route path="/tasks/detail/:id" element={<div className="p-4"><TaskDetail /></div>} />
+
+              {/* Calendar view */}
+              <Route path="/calendar" element={<div className="p-4"><Calendar /></div>} />
 
               {/* Crop routes */}
               <Route path="/crops/:id" element={<CropDetails />} />
