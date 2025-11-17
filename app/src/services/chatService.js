@@ -20,7 +20,7 @@ class ChatService {
   /**
    * Send a message to the chatbot and get response
    * @param {string} message - User message
-   * @param {Object} options - Additional options
+   * @param {Object} options - Additional options (userLocation, locationError, etc.)
    * @returns {Promise<Object>} - Chat response
    */
   async sendMessage(message, options = {}) {
@@ -41,6 +41,8 @@ class ChatService {
         body: JSON.stringify({
           message,
           conversationHistory: this.conversationHistory.slice(-10), // Limit history
+          userLocation: options.userLocation, // Include user location
+          locationError: options.locationError, // Include location error if any
           ...options
         })
       });
