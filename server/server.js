@@ -70,6 +70,8 @@ app.use('/api/prices', require('./routes/prices'));
 app.use('/api/translate', require('./routes/translate'));
 // Use full task API with daily tasks support
 app.use('/api/tasks', require('./routes/tasks'));
+// Farming assistant chatbot
+app.use('/api/chat', require('./routes/chat'));
 
 // Simple task generation endpoint
 app.post('/api/tasks/generate', async (req, res) => {

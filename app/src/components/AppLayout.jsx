@@ -4,6 +4,7 @@ import VerticalHeader from './VerticalHeader';
 import MobileHeader from './header/MobileHeader';
 import MobileBottomNav from './header/MobileBottomNav';
 import PageTitle from './ui/PageTitle';
+import FloatingChatButton from './FloatingChatButton';
 import { getPageNameFromPath } from '../utils/translationHelper';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import '../styles/layout.css';
@@ -119,6 +120,11 @@ const AppLayout = ({ children, pageTitle }) => {
 
         {children}
       </div>
+
+      {/* Floating Chat Button - Only show when user is logged in and not on excluded paths */}
+      {!isExcludedPath && localStorage.getItem('token') && (
+        <FloatingChatButton />
+      )}
     </>
   );
 };
