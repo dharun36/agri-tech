@@ -17,7 +17,7 @@ let tasks = [
     id: '2',
     title: 'Apply fertilizer to corn',
     description: 'Apply nitrogen-rich fertilizer to growing corn',
-    category: 'fertilizer', 
+    category: 'fertilizer',
     priority: 'medium',
     status: 'pending',
     dueDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
@@ -29,7 +29,7 @@ let tasks = [
     description: 'Check plants for signs of pest damage',
     category: 'pest_control',
     priority: 'medium',
-    status: 'pending', 
+    status: 'pending',
     dueDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
     type: 'pesticide'
   }
@@ -39,29 +39,29 @@ let tasks = [
 router.get('/', (req, res) => {
   try {
     const { status, category, dueAfter, dueBefore, limit = 50 } = req.query;
-    
+
     let filteredTasks = [...tasks];
-    
+
     // Apply filters
     if (status) {
       filteredTasks = filteredTasks.filter(task => task.status === status);
     }
-    
+
     if (category) {
       filteredTasks = filteredTasks.filter(task => task.category === category);
     }
-    
+
     if (dueAfter) {
       filteredTasks = filteredTasks.filter(task => task.dueDate >= dueAfter);
     }
-    
+
     if (dueBefore) {
       filteredTasks = filteredTasks.filter(task => task.dueDate <= dueBefore);
     }
-    
+
     // Limit results
     filteredTasks = filteredTasks.slice(0, parseInt(limit));
-    
+
     res.json({
       tasks: filteredTasks,
       total: filteredTasks.length
@@ -76,11 +76,11 @@ router.get('/', (req, res) => {
 router.get('/:id', (req, res) => {
   try {
     const task = tasks.find(t => t.id === req.params.id);
-    
+
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
-    
+
     res.json(task);
   } catch (error) {
     console.error('Error fetching task:', error);
@@ -92,11 +92,11 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   try {
     const { title, description, category, priority, dueDate, type } = req.body;
-    
+
     if (!title) {
       return res.status(400).json({ message: 'Title is required' });
     }
-    
+
     const newTask = {
       id: Date.now().toString(),
       title,
@@ -108,9 +108,9 @@ router.post('/', (req, res) => {
       type: type || 'general',
       createdAt: new Date().toISOString()
     };
-    
+
     tasks.push(newTask);
-    
+
     res.status(201).json(newTask);
   } catch (error) {
     console.error('Error creating task:', error);
@@ -123,21 +123,21 @@ router.put('/:id/status', (req, res) => {
   try {
     const { status } = req.body;
     const taskIndex = tasks.findIndex(t => t.id === req.params.id);
-    
+
     if (taskIndex === -1) {
       return res.status(404).json({ message: 'Task not found' });
     }
-    
+
     if (!['pending', 'done', 'skipped'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
-    
+
     tasks[taskIndex].status = status;
-    
+
     if (status === 'done' || status === 'skipped') {
       tasks[taskIndex].completedDate = new Date().toISOString();
     }
-    
+
     res.json(tasks[taskIndex]);
   } catch (error) {
     console.error('Error updating task status:', error);
@@ -149,14 +149,14 @@ router.put('/:id/status', (req, res) => {
 router.post('/:id/done', (req, res) => {
   try {
     const taskIndex = tasks.findIndex(t => t.id === req.params.id);
-    
+
     if (taskIndex === -1) {
       return res.status(404).json({ message: 'Task not found' });
     }
-    
+
     tasks[taskIndex].status = 'done';
     tasks[taskIndex].completedDate = new Date().toISOString();
-    
+
     res.json(tasks[taskIndex]);
   } catch (error) {
     console.error('Error marking task as done:', error);
@@ -168,13 +168,13 @@ router.post('/:id/done', (req, res) => {
 router.delete('/:id', (req, res) => {
   try {
     const taskIndex = tasks.findIndex(t => t.id === req.params.id);
-    
+
     if (taskIndex === -1) {
       return res.status(404).json({ message: 'Task not found' });
     }
-    
+
     tasks.splice(taskIndex, 1);
-    
+
     res.json({ message: 'Task deleted successfully' });
   } catch (error) {
     console.error('Error deleting task:', error);

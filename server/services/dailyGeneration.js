@@ -258,7 +258,7 @@ async function generateDailyTasksForCrop(crop, today, dayOfWeek, maxTasksPerDay 
   // Limit tasks to maximum specified (default 5, previously was 3)
   const limitedTasks = tasks.slice(0, maxTasksPerDay);
   console.log(`Generated ${tasks.length} potential tasks, limited to ${limitedTasks.length} for ${cropName}`);
-  
+
   return limitedTasks;
 }
 

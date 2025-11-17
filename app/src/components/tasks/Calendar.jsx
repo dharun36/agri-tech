@@ -34,7 +34,7 @@ const getDemoTasks = () => {
   tomorrow.setDate(tomorrow.getDate() + 1);
   const nextWeek = new Date(today);
   nextWeek.setDate(nextWeek.getDate() + 7);
-  
+
   return [
     {
       _id: 'demo-1',
@@ -47,7 +47,7 @@ const getDemoTasks = () => {
       type: 'irrigation'
     },
     {
-      _id: 'demo-2', 
+      _id: 'demo-2',
       title: 'Apply fertilizer to corn',
       description: 'Apply nitrogen-rich fertilizer to growing corn',
       category: 'fertilizer',
@@ -61,7 +61,7 @@ const getDemoTasks = () => {
       title: 'Inspect for pests',
       description: 'Check plants for signs of pest damage',
       category: 'pest_control',
-      priority: 'medium', 
+      priority: 'medium',
       status: 'pending',
       dueDate: formatISODate(nextWeek),
       type: 'pesticide'
@@ -125,12 +125,12 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
   const [selectedDay, setSelectedDay] = useState(null);
   const [showDayModal, setShowDayModal] = useState(false);
   const [showNewTaskModal, setShowNewTaskModal] = useState(false);
-  const [newTask, setNewTask] = useState({ 
-    title: '', 
-    description: '', 
-    priority: 'medium', 
+  const [newTask, setNewTask] = useState({
+    title: '',
+    description: '',
+    priority: 'medium',
     type: 'general',
-    dueDate: '' 
+    dueDate: ''
   });
   const [viewMode, setViewMode] = useState('month'); // 'month', 'week', 'agenda'
   const [showFilters, setShowFilters] = useState(false);
@@ -262,7 +262,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
   const fetchTasks = useCallback(async (rangeStart, rangeEnd) => {
     setLoading(true);
     setError(null);
-    
+
     // Check server connectivity first if not already checked
     if (serverAvailable === null) {
       const isConnected = await checkServerConnectivity();
@@ -277,7 +277,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
       setLoading(false);
       return;
     }
-    
+
     try {
       // Avoid duplicate requests when the date range hasn't changed
       const key = `${new Date(rangeStart).toISOString()}_${new Date(rangeEnd).toISOString()}`;
@@ -302,7 +302,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
-      
+
       if (res.status === 404) {
         console.warn('Tasks API not available - using demo mode');
         setDemoMode(true);
@@ -310,7 +310,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
         setTasks(getDemoTasks());
         setError('Server not available - Calendar running in demo mode with sample tasks');
         return;
-      }      if (!res.ok) throw new Error(`Failed to fetch tasks: ${res.status}`);
+      } if (!res.ok) throw new Error(`Failed to fetch tasks: ${res.status}`);
       const data = await res.json();
       const arr = Array.isArray(data) ? data : (data.tasks || data.items || data.data || []);
       setTasks(arr);
@@ -339,7 +339,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
   const markDone = useCallback(async (task) => {
     const id = task._id || task.id;
     if (!id) return;
-    
+
     // If in demo mode or server unavailable, update locally
     if (demoMode || serverAvailable === false) {
       setTasks((prev) => prev.map((t) => (t._id === id || t.id === id ? {
@@ -398,7 +398,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
   const skipTask = useCallback(async (task) => {
     const id = task._id || task.id;
     if (!id) return;
-    
+
     // If in demo mode or server unavailable, update locally
     if (demoMode || serverAvailable === false) {
       setTasks((prev) => prev.map((t) => (t._id === id || t.id === id ? {
@@ -485,7 +485,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
         dueDate: newTask.dueDate || (selectedDay ? formatISODate(selectedDay) : formatISODate(new Date())),
         status: 'pending'
       };
-      
+
       const res = await fetch(`${API_BASE_URL}/api/tasks`, {
         method: 'POST',
         headers: {
@@ -494,7 +494,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
         },
         body: JSON.stringify(taskData)
       });
-      
+
       if (res.status === 404) {
         // Switch to demo mode and create task locally
         setDemoMode(true);
@@ -508,7 +508,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
         setNewTask({ title: '', description: '', priority: 'medium', type: 'general', dueDate: '' });
         return;
       }
-      
+
       if (res.ok) {
         const newTaskData = await res.json();
         setTasks(prev => [...prev, newTaskData]);
@@ -601,10 +601,10 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
               <div key={t._id || t.id}
                 title={tooltip}
                 className={`group flex items-center gap-1 px-2 py-1 rounded text-xs ${isDone
-                    ? 'opacity-60 line-through bg-gray-100'
-                    : isSkipped
-                      ? 'opacity-60 line-through bg-yellow-100'
-                      : `${m.bg} hover:opacity-80 ${isUrgent ? 'border border-red-300' : ''}`
+                  ? 'opacity-60 line-through bg-gray-100'
+                  : isSkipped
+                    ? 'opacity-60 line-through bg-yellow-100'
+                    : `${m.bg} hover:opacity-80 ${isUrgent ? 'border border-red-300' : ''}`
                   }`}
               >
                 <span className={`${m.color} text-sm`}>{m.icon}</span>
@@ -657,7 +657,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
 
           {/* Show more button */}
           {hiddenCount > 0 && (
-            <div 
+            <div
               className="w-full text-[10px] text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded text-center cursor-pointer border border-blue-200 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
@@ -853,8 +853,8 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
       {/* Error/Demo mode banner */}
       {error && (
         <div className={`mx-6 mt-4 p-3 rounded-lg border ${error.includes('demo mode') || error.includes('Server not available')
-            ? 'bg-blue-50 border-blue-200 text-blue-800'
-            : 'bg-red-50 border-red-200 text-red-800'
+          ? 'bg-blue-50 border-blue-200 text-blue-800'
+          : 'bg-red-50 border-red-200 text-red-800'
           }`}>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">
@@ -1128,10 +1128,10 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
                       <div
                         key={t._id || t.id}
                         className={`p-4 rounded border hover:shadow-md ${isDone
-                            ? 'bg-gray-50 border-gray-200 opacity-60'
-                            : isSkipped
-                              ? 'bg-yellow-50 border-yellow-200 opacity-60'
-                              : `${m.bg} border-gray-200`
+                          ? 'bg-gray-50 border-gray-200 opacity-60'
+                          : isSkipped
+                            ? 'bg-yellow-50 border-yellow-200 opacity-60'
+                            : `${m.bg} border-gray-200`
                           } ${isUrgent && !isDone && !isSkipped ? 'border-red-300' : ''
                           }`}
                       >
