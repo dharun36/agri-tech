@@ -271,16 +271,16 @@ function getFarmingTip(weatherData) {
 async function createTaskAPI(title, description, cropName, userId, authToken, baseURL) {
   try {
     let cropId = null;
-    
+
     // If crop name is provided, find the crop ID
     if (cropName && cropName.trim()) {
       const cropsResponse = await fetch(`${baseURL}/api/crops`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
-      
+
       if (cropsResponse.ok) {
         const crops = await cropsResponse.json();
-        const targetCrop = crops.find(crop => 
+        const targetCrop = crops.find(crop =>
           crop.name.toLowerCase().includes(cropName.toLowerCase())
         );
         if (targetCrop) {
@@ -330,7 +330,7 @@ async function createTaskAPI(title, description, cropName, userId, authToken, ba
 async function listTasksAPI(status, userId, authToken, baseURL) {
   try {
     let endpoint = `${baseURL}/api/tasks`;
-    
+
     switch (status.toLowerCase()) {
       case 'today':
         endpoint = `${baseURL}/api/tasks/today`;
@@ -353,7 +353,7 @@ async function listTasksAPI(status, userId, authToken, baseURL) {
     }
 
     const tasks = await response.json();
-    
+
     if (!Array.isArray(tasks) || tasks.length === 0) {
       return {
         success: true,
@@ -405,7 +405,7 @@ async function completeTaskAPI(taskIdentifier, userId, authToken, baseURL) {
       if (!isNaN(taskNumber) && taskNumber > 0 && taskNumber <= tasks.length) {
         targetTask = tasks[taskNumber - 1];
       } else {
-        targetTask = tasks.find(task => 
+        targetTask = tasks.find(task =>
           task.title.toLowerCase().includes(taskIdentifier.toLowerCase())
         );
       }
@@ -457,18 +457,18 @@ async function listActivitiesAPI(cropName, userId, authToken, baseURL) {
       const cropsResponse = await fetch(`${baseURL}/api/crops`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
-      
+
       if (cropsResponse.ok) {
         const crops = await cropsResponse.json();
-        const targetCrop = crops.find(crop => 
+        const targetCrop = crops.find(crop =>
           crop.name.toLowerCase().includes(cropName.toLowerCase())
         );
-        
+
         if (targetCrop) {
           const activitiesResponse = await fetch(`${baseURL}/api/activities/crop/${targetCrop._id}`, {
             headers: { 'Authorization': `Bearer ${authToken}` }
           });
-          
+
           if (activitiesResponse.ok) {
             const activitiesData = await activitiesResponse.json();
             activities = activitiesData.activities || [];
@@ -480,7 +480,7 @@ async function listActivitiesAPI(cropName, userId, authToken, baseURL) {
       const activitiesResponse = await fetch(`${baseURL}/api/activities`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
-      
+
       if (activitiesResponse.ok) {
         const activitiesData = await activitiesResponse.json();
         activities = activitiesData.activities || [];
@@ -526,7 +526,7 @@ async function addActivityAPI(cropName, title, description, activityType, userId
     }
 
     const crops = await cropsResponse.json();
-    const targetCrop = crops.find(crop => 
+    const targetCrop = crops.find(crop =>
       crop.name.toLowerCase().includes(cropName.toLowerCase())
     );
 
@@ -584,18 +584,18 @@ async function getMarketPricesAPI(cropName, userId, authToken, baseURL) {
       const generalResponse = await fetch(`${baseURL}/api/market/prices`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
-      
+
       if (generalResponse.ok) {
         const allPrices = await generalResponse.json();
-        const cropPrices = allPrices.filter(price => 
+        const cropPrices = allPrices.filter(price =>
           price.crop_name?.toLowerCase().includes(cropName.toLowerCase())
         );
-        
+
         if (cropPrices.length > 0) {
-          const priceInfo = cropPrices.slice(0, 3).map(price => 
+          const priceInfo = cropPrices.slice(0, 3).map(price =>
             `${price.market || 'Market'}: ₹${price.min_price}-₹${price.max_price}/quintal`
           ).join('\n');
-          
+
           return {
             success: true,
             message: `💰 Current market prices for ${cropName}:\n\n${priceInfo}\n\n📈 Prices may vary by location and quality`,
@@ -603,7 +603,7 @@ async function getMarketPricesAPI(cropName, userId, authToken, baseURL) {
           };
         }
       }
-      
+
       return {
         success: true,
         message: `💰 Sorry, current market prices for "${cropName}" are not available.\n\n💡 You can check prices for common crops like wheat, rice, tomato, onion`,
@@ -612,7 +612,7 @@ async function getMarketPricesAPI(cropName, userId, authToken, baseURL) {
     }
 
     const priceData = await response.json();
-    
+
     if (!priceData || (Array.isArray(priceData) && priceData.length === 0)) {
       return {
         success: true,
@@ -623,15 +623,15 @@ async function getMarketPricesAPI(cropName, userId, authToken, baseURL) {
 
     // Format price data
     let priceMessage = `💰 Market prices for ${cropName}:\n\n`;
-    
+
     if (Array.isArray(priceData)) {
-      priceMessage += priceData.slice(0, 5).map(price => 
+      priceMessage += priceData.slice(0, 5).map(price =>
         `📍 ${price.market || price.city || 'Market'}: ₹${price.min_price || price.price}-${price.max_price || price.price}/quintal`
       ).join('\n');
     } else {
       priceMessage += `📍 Average Price: ₹${priceData.price || 'N/A'}/quintal`;
     }
-    
+
     priceMessage += '\n\n📈 Prices may vary by location and quality\n💡 Consider market trends when planning sales';
 
     return {
@@ -641,9 +641,9 @@ async function getMarketPricesAPI(cropName, userId, authToken, baseURL) {
     };
   } catch (error) {
     console.error('Get market prices API error:', error);
-    return { 
-      success: false, 
-      message: `Failed to fetch market prices: ${error.message}\n\n💡 You can try checking prices for common crops like wheat, rice, tomato` 
+    return {
+      success: false,
+      message: `Failed to fetch market prices: ${error.message}\n\n💡 You can try checking prices for common crops like wheat, rice, tomato`
     };
   }
 }
@@ -820,7 +820,7 @@ router.post('/', async (req, res) => {
             /(?:create|add)\s+(.+)\s+task/i,
             /task\s+(?:to\s+)?(.+)/i
           ];
-          
+
           let taskTitle = null;
           for (const pattern of taskPatterns) {
             const match = message.match(pattern);
@@ -829,7 +829,7 @@ router.post('/', async (req, res) => {
               break;
             }
           }
-          
+
           if (taskTitle) {
             actionResult = await executeAction(`CREATE_TASK(${taskTitle})`, userId, authToken);
           } else {
@@ -840,7 +840,7 @@ router.post('/', async (req, res) => {
             /(?:complete|done|finish)\s+task\s+(\d+|.+)/i,
             /task\s+(\d+|.+)\s+(?:complete|done|finish)/i
           ];
-          
+
           let taskId = null;
           for (const pattern of completePatterns) {
             const match = message.match(pattern);
@@ -849,7 +849,7 @@ router.post('/', async (req, res) => {
               break;
             }
           }
-          
+
           if (taskId) {
             actionResult = await executeAction(`COMPLETE_TASK(${taskId})`, userId, authToken);
           } else {
@@ -860,12 +860,12 @@ router.post('/', async (req, res) => {
           if (lowerMessage.includes('today')) status = 'today';
           else if (lowerMessage.includes('upcoming')) status = 'upcoming';
           else if (lowerMessage.includes('completed') || lowerMessage.includes('done')) status = 'completed';
-          
+
           actionResult = await executeAction(`LIST_TASKS(${status})`, userId, authToken);
         } else {
           actionResult = await executeAction('LIST_TASKS(all)', userId, authToken);
         }
-        
+
         if (actionResult) {
           finalMessage += '\n\n' + actionResult.message;
         }
@@ -878,10 +878,10 @@ router.post('/', async (req, res) => {
             /applied\s+(.+)\s+to\s+(\w+)/i,
             /fertilized\s+(\w+)\s+with\s+(.+)/i
           ];
-          
+
           let activityTitle = null;
           let cropName = null;
-          
+
           for (const pattern of activityPatterns) {
             const match = message.match(pattern);
             if (match) {
@@ -895,7 +895,7 @@ router.post('/', async (req, res) => {
               break;
             }
           }
-          
+
           if (activityTitle && cropName) {
             actionResult = await executeAction(`ADD_ACTIVITY(${cropName}, ${activityTitle})`, userId, authToken);
           } else {
@@ -904,14 +904,14 @@ router.post('/', async (req, res) => {
         } else {
           const cropMatch = message.match(/activities?\s+for\s+(\w+)/i);
           const cropName = cropMatch ? cropMatch[1] : null;
-          
+
           if (cropName) {
             actionResult = await executeAction(`LIST_ACTIVITIES(${cropName})`, userId, authToken);
           } else {
             actionResult = await executeAction('LIST_ACTIVITIES()', userId, authToken);
           }
         }
-        
+
         if (actionResult) {
           finalMessage += '\n\n' + actionResult.message;
         }
@@ -922,7 +922,7 @@ router.post('/', async (req, res) => {
           /(\w+)\s+(?:price|market)/i,
           /check\s+(\w+)\s+prices?/i
         ];
-        
+
         let cropName = null;
         for (const pattern of pricePatterns) {
           const match = message.match(pattern);
@@ -931,13 +931,13 @@ router.post('/', async (req, res) => {
             break;
           }
         }
-        
+
         if (cropName) {
           actionResult = await executeAction(`GET_MARKET_PRICES(${cropName})`, userId, authToken);
         } else {
           actionResult = await executeAction('GET_MARKET_PRICES()', userId, authToken);
         }
-        
+
         if (actionResult) {
           finalMessage += '\n\n' + actionResult.message;
         }
