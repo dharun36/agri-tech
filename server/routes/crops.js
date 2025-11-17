@@ -215,6 +215,31 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// Handle PATCH requests for crop updates (same as PUT)
+router.patch('/:id', async (req, res) => {
+  try {
+    // Remove event history arrays from direct updates
+    // These should be modified via their specific endpoints
+    const {
+      irrigationHistory, fertilizationHistory, pestDiseaseHistory,
+      growthHistory, harvestHistory, costs, laborHours,
+      notes, ...updateData
+    } = req.body;
+
+    const crop = await Crop.findOneAndUpdate(
+      { _id: req.params.id, user: req.user._id },
+      updateData,
+      { new: true }
+    );
+
+    if (!crop) return res.status(404).json({ message: 'Crop not found' });
+    res.json(crop);
+  } catch (error) {
+    console.error('Error updating crop:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Delete crop
 router.delete('/:id', async (req, res) => {
   try {
