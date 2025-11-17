@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FaSearch, FaFilter, FaSyncAlt, FaLeaf, FaMapMarkerAlt, FaRupeeSign } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { API_BASE_URL, buildApiUrl } from '../config/api';
+import { formatMarketDate } from '../utils/dateUtils';
 
 // Get API key from environment variables
 const GOV_API_KEY = import.meta.env.VITE_GOV_API_KEY;
@@ -141,7 +142,12 @@ const MarketPrices = () => {
               marketLocation: found.marketLocation || 'Unknown',
               img: cropImages[name] || cropImages.Default,
               alt: name,
-              date: new Date().toLocaleDateString()
+              date: found.lastUpdated || new Date().toLocaleDateString(),
+              trend: found.trend || 'stable',
+              change: found.change || 0,
+              isOldData: found.isOldData || false,
+              daysAgo: found.daysAgo || 0,
+              note: found.note || found.error || null
             };
           }
           return {
@@ -150,7 +156,11 @@ const MarketPrices = () => {
             marketLocation: 'Data unavailable',
             img: cropImages[name] || cropImages.Default,
             alt: name,
-            date: new Date().toLocaleDateString()
+            date: new Date().toLocaleDateString(),
+            trend: 'stable',
+            change: 0,
+            isOldData: false,
+            daysAgo: 0
           };
         });
 
@@ -164,7 +174,11 @@ const MarketPrices = () => {
           marketLocation: 'Data unavailable',
           img: cropImages[name] || cropImages.Default,
           alt: name,
-          date: new Date().toLocaleDateString()
+          date: formatMarketDate(),
+          trend: 'stable',
+          change: 0,
+          isOldData: false,
+          daysAgo: 0
         }));
         setProducts(fallback);
       }
@@ -202,8 +216,13 @@ const MarketPrices = () => {
             marketLocation: found.marketLocation || 'Unknown',
             img: cropImages[cropName] || cropImages.Default,
             alt: cropName,
-            date: new Date().toLocaleDateString(),
-            isSearchResult: true
+            date: formatMarketDate(found.lastUpdated),
+            isSearchResult: true,
+            trend: found.trend || 'stable',
+            change: found.change || 0,
+            isOldData: found.isOldData || false,
+            daysAgo: found.daysAgo || 0,
+            note: found.note || found.error || null
           };
 
           setProducts(prev => {
@@ -224,8 +243,12 @@ const MarketPrices = () => {
             marketLocation: "No market data found",
             img: cropImages.Default,
             alt: cropName,
-            date: new Date().toLocaleDateString(),
-            isSearchResult: true
+            date: formatMarketDate(),
+            isSearchResult: true,
+            trend: 'stable',
+            change: 0,
+            isOldData: false,
+            daysAgo: 0
           };
 
           setProducts(prev => {
@@ -457,21 +480,38 @@ const MarketPrices = () => {
                   </div>
 
                   <div className="p-2 sm:p-4 space-y-2">
+                    {/* Only show old data indicator for actually old data */}
+                    {item.isOldData && item.daysAgo > 1 && (
+                      <div className="bg-orange-50 border border-orange-200 rounded-md p-2 mb-2">
+                        <div className="flex items-center gap-2 text-orange-700 text-xs">
+                          <span className="font-medium">⚠️ {item.daysAgo} days old data</span>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-green-600 text-lg flex items-center gap-2">
-                        {item.price}
-                        {/* Add a small indicator arrow based on trending price */}
-                        {index % 2 === 0 ?
-                          <span className="text-green-500 text-xs">↑</span> :
-                          <span className="text-red-500 text-xs">↓</span>
-                        }
-                      </span>
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{item.date}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-green-600 text-lg">
+                          {item.price}
+                        </span>
+                        {/* Price trend indicator */}
+                        {item.trend && item.trend !== 'stable' && (
+                          <span className={`text-sm font-bold ${item.trend === 'up' ? 'text-green-500' : 'text-red-500'
+                            }`}>
+                            {item.trend === 'up' ? '↗' : '↘'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-gray-500">
+                          {formatMarketDate(item.date)}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="text-xs text-gray-600 flex items-start gap-1 border-t border-gray-100 pt-2">
-                      <FaMapMarkerAlt className="text-gray-400 mt-0.5 flex-shrink-0" />
-                      <span>{item.marketLocation}</span>
+                    <div className="text-xs text-gray-600 mt-2">
+                      <FaMapMarkerAlt className="inline mr-1" />
+                      {item.marketLocation}
                     </div>
                   </div>
                 </div>

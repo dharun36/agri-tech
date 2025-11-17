@@ -15,7 +15,8 @@ import {
   FaEdit,
   FaExchangeAlt,
   FaCheck,
-  FaTasks
+  FaTasks,
+  FaRulerCombined
 } from 'react-icons/fa';
 
 /**
@@ -364,10 +365,15 @@ const ModernCropCard = ({ crop, onAddEvent, onViewDetails, onDeleteCrop, onUpdat
         </div>
 
         <div className="flex items-center gap-2">
-          <FaLeaf className="text-gray-400" />
+          <FaRulerCombined className="text-gray-400" />
           <div>
-            <p className="text-xs text-gray-500">{t('plants')}</p>
-            <p className="text-gray-700">{crop.plantCount || 1}</p>
+            <p className="text-xs text-gray-500">{t('area')}</p>
+            <p className="text-gray-700">
+              {crop.locationArea
+                ? `${crop.locationArea} ${crop.locationAreaUnit || 'units'}`
+                : 'N/A'
+              }
+            </p>
           </div>
         </div>
       </div>

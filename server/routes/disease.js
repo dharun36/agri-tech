@@ -25,7 +25,9 @@ router.post('/report', async (req, res) => {
   try {
     const { disease, description, location, bilingualData } = req.body;
 
-    console.log(`📢 Disease report received:`, { disease, description, location: location.coordinates });
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📢 Disease report: ${disease} at [${location.coordinates.join(', ')}]`);
+    }
 
     // Find users within 500km radius for testing (was 10km)
     const usersNearby = await User.find({
@@ -37,7 +39,7 @@ router.post('/report', async (req, res) => {
       }
     });
 
-    console.log(`📍 Found ${usersNearby.length} users within 500km of [${location.coordinates.join(', ')}]`);
+    console.log(`📍 Disease alert: ${disease} - notifying ${usersNearby.length} users`);
 
     // Create in-app notifications for each user
     let alerts = [];

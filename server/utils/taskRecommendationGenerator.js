@@ -481,6 +481,7 @@ async function generateAllUserTaskRecommendations(userId, options = {}) {
       // Enhanced options with crop-specific context
       const cropSpecificOptions = {
         ...options,
+        maxTasksPerDay: options.maxTasksPerDay || 5, // Limit to 5 tasks per day
         // Use AI generation only for the first crop to avoid rate limits
         useAIGeneration: process.env.GEMINI_API_KEY && results.length === 0,
         // Enhanced weather context
@@ -621,6 +622,66 @@ async function generateAIRecommendations(crop, user) {
     // Extract task titles for deduplication
     const existingTaskTitles = existingTasks.map(task => task.title.toLowerCase());
 
+    // Get recent activities for this crop (last 60 days for comprehensive context)
+    const Activity = require('../models/Activity');
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+    const recentActivities = await Activity.find({
+      crop: crop._id,
+      user: user._id,
+      date: { $gte: sixtyDaysAgo }
+    }).sort({ date: -1 }).limit(20); // Get last 20 activities for context
+
+    // Format activities for prompt
+    const activityHistory = recentActivities.map(activity => {
+      const activityDate = new Date(activity.date).toLocaleDateString();
+      return `${activityDate}: ${activity.title} (${activity.activityType}) - ${activity.description || 'No details'}`;
+    }).join('\n');
+
+    // Get crop's embedded event history for additional context
+    const cropEvents = [];
+
+    // Recent irrigation events
+    if (crop.irrigationHistory && crop.irrigationHistory.length > 0) {
+      const recentIrrigation = crop.irrigationHistory.slice(-3); // Last 3 irrigation events
+      recentIrrigation.forEach(event => {
+        const eventDate = new Date(event.date).toLocaleDateString();
+        cropEvents.push(`${eventDate}: Irrigation - ${event.method || 'Unknown method'}, ${event.amount || 'Unknown amount'} ${event.notes ? '(' + event.notes + ')' : ''}`);
+      });
+    }
+
+    // Recent fertilization events
+    if (crop.fertilizationHistory && crop.fertilizationHistory.length > 0) {
+      const recentFertilization = crop.fertilizationHistory.slice(-3);
+      recentFertilization.forEach(event => {
+        const eventDate = new Date(event.date).toLocaleDateString();
+        cropEvents.push(`${eventDate}: Fertilization - ${event.type || 'Unknown type'}, ${event.product || 'Unknown product'} ${event.notes ? '(' + event.notes + ')' : ''}`);
+      });
+    }
+
+    // Recent pest/disease events
+    if (crop.pestDiseaseHistory && crop.pestDiseaseHistory.length > 0) {
+      const recentPestDisease = crop.pestDiseaseHistory.slice(-3);
+      recentPestDisease.forEach(event => {
+        const eventDate = new Date(event.date).toLocaleDateString();
+        cropEvents.push(`${eventDate}: ${event.type || 'Issue'} - ${event.name || 'Unknown'}, Severity: ${event.severity || 'N/A'} ${event.treatment?.product ? 'Treated with: ' + event.treatment.product : ''}`);
+      });
+    }
+
+    // Recent growth records
+    if (crop.growthHistory && crop.growthHistory.length > 0) {
+      const recentGrowth = crop.growthHistory.slice(-3);
+      recentGrowth.forEach(event => {
+        const eventDate = new Date(event.date).toLocaleDateString();
+        cropEvents.push(`${eventDate}: Growth Record - Stage: ${event.stage || 'Unknown'}, Height: ${event.height || 'N/A'}, Health: ${event.healthRating || 'N/A'}/10`);
+      });
+    }
+
+    const cropEventHistory = cropEvents.length > 0 ? cropEvents.join('\n') : 'No recorded events in crop history';
+    const combinedActivityContext = `${activityHistory}${activityHistory && cropEventHistory ? '\n\n' : ''}${cropEventHistory}`;
+    const activityContextForPrompt = combinedActivityContext || 'No recent activities or events recorded';;
+
     // Get the generative model
     const model = genAI.getGenerativeModel({
       model: "gemini-pro"
@@ -640,8 +701,11 @@ async function generateAIRecommendations(crop, user) {
     const twoWeeksLater = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
 
     // Create a comprehensive and enhanced prompt for better results
+    const maxTasksPerDay = options.maxTasksPerDay || 5; // Default to 5 tasks maximum
     const prompt = `
-      You are an expert agricultural consultant with 20+ years of experience in crop management and sustainable farming practices. Generate 5-7 highly specific, actionable, and scientifically-backed agricultural tasks for a ${crop.name} crop.
+      You are an expert agricultural consultant with 20+ years of experience in crop management and sustainable farming practices. Generate a MAXIMUM of ${maxTasksPerDay} highly specific, actionable, and scientifically-backed agricultural tasks for a ${crop.name} crop.
+
+      IMPORTANT: Generate ONLY the most critical and essential tasks. Quality over quantity - focus on the highest impact activities that are most crucial for crop health and yield.
 
       === CROP ANALYSIS ===
       Crop: ${crop.name} (${crop.variety || 'Standard variety'})
@@ -669,13 +733,34 @@ async function generateAIRecommendations(crop, user) {
       === EXISTING TASKS TO AVOID ===
       Do not duplicate these existing pending tasks: ${existingTaskTitles.length > 0 ? existingTaskTitles.join(', ') : 'None'}
 
+      === RECENT CROP ACTIVITIES & HISTORY ===
+      Recent activities and events for this crop (last 60 days):
+      ${activityContextForPrompt}
+      
+      **Important**: Consider this activity history when generating tasks:
+      - Avoid recommending recently completed activities
+      - Build upon previous work (e.g., if fertilized recently, focus on other needs)
+      - Address any issues mentioned in pest/disease history
+      - Consider irrigation patterns and adjust watering recommendations
+      - Factor in growth stage progression from growth records
+      - Use treatment effectiveness data to improve future recommendations
+
       === OUTPUT REQUIREMENTS ===
-      Generate 5-7 tasks as a JSON array with these exact properties:
+      Generate MAXIMUM ${maxTasksPerDay} tasks as a JSON array with these exact properties:
+      CRITICAL: Return only the most essential tasks - prioritize quality over quantity!
+      Focus on the highest impact activities that are absolutely necessary for optimal crop health.
+      
       - title: Specific, actionable task title (avoid generic terms)
       - description: Detailed scientific explanation with step-by-step instructions, benefits, and timing rationale
       - category: One of [irrigation, fertilization, pest_control, disease_treatment, harvesting, planting, pruning, soil_management, weather_response, general]
       - dueDate: ISO date string (YYYY-MM-DD) - consider urgency and crop growth cycle
       - priority: One of [low, medium, high, urgent] based on impact on crop health and yield
+
+      TASK PRIORITIZATION ORDER:
+      1. **URGENT/CRITICAL**: Immediate threats to crop survival (disease, severe pest issues, drought stress)
+      2. **HIGH PRIORITY**: Time-sensitive activities for optimal growth (irrigation, fertilization at key stages)
+      3. **MEDIUM PRIORITY**: Important maintenance that supports healthy development
+      4. **LOW PRIORITY**: Only include if fewer than ${maxTasksPerDay} higher priority tasks exist
 
       === TASK FOCUS AREAS ===
       1. **Growth Stage Specific**: Tasks appropriate for current ${cropAgeInDays}-day-old ${crop.name}
@@ -685,6 +770,16 @@ async function generateAIRecommendations(crop, user) {
       5. **Resource Efficiency**: Water-smart and nutrient-efficient practices
       6. **Soil Health**: Long-term soil fertility and structure improvement
       7. **Weather Preparedness**: Tasks to prepare for seasonal weather changes
+      8. **Activity-Based Planning**: Use recent activity history to plan complementary tasks
+      9. **Issue Resolution**: Address any problems identified in pest/disease or growth records
+      10. **Timing Optimization**: Schedule tasks based on previous activity patterns and effectiveness
+
+      **Context Integration Guidelines**:
+      - If recent irrigation shows good soil moisture, focus on other maintenance
+      - If pest/disease issues were treated, schedule follow-up monitoring
+      - If fertilization was recent, consider micronutrient or organic supplements
+      - If growth records show stress, prioritize recovery and health restoration
+      - Use activity patterns to optimize timing (e.g., if user typically waters mornings)
 
       Return ONLY the JSON array, no additional text or explanations.
     `;

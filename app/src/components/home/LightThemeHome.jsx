@@ -991,11 +991,11 @@ const LightThemeHome = () => {
                   onChange={(e) => setExpense({ ...expense, category: e.target.value })}
                   className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option value="Seeds">{t('seeds') || 'Seeds'}</option>
-                  <option value="Fertilizer">{t('fertilizer') || 'Fertilizer'}</option>
-                  <option value="Pesticide">{t('pesticide') || 'Pesticide'}</option>
-                  <option value="Labor">{t('labor') || 'Labor'}</option>
-                  <option value="Equipment">{t('equipment') || 'Equipment'}</option>
+                  <option value="seeds">{t('seeds') || 'Seeds'}</option>
+                  <option value="fertilizer">{t('fertilizer') || 'Fertilizer'}</option>
+                  <option value="pesticide">{t('pesticide') || 'Pesticide'}</option>
+                  <option value="labor">{t('labor') || 'Labor'}</option>
+                  <option value="equipment">{t('equipment') || 'Equipment'}</option>
                   <option value="Irrigation">{t('irrigation') || 'Irrigation'}</option>
                   <option value="General">{t('general') || 'General'}</option>
                 </select>

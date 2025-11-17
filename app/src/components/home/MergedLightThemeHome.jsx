@@ -866,7 +866,7 @@ const MergedLightThemeHome = () => {
                 >
                   <option value="Fertilizer">{t('fertilizer')}</option>
                   <option value="Seed">{t('seed')}</option>
-                  <option value="Pesticide">{t('pesticide')}</option>
+                  <option value="pesticide">{t('pesticide')}</option>
                   <option value="Labor">{t('labor')}</option>
                   <option value="Equipment">{t('equipment')}</option>
                   <option value="Other">{t('other')}</option>

@@ -6,7 +6,9 @@ const taskSchema = new mongoose.Schema({
     ref: 'Crop',
     required: function () {
       // Only required for individual tasks, not for daily generation trackers
-      return this.generationType !== 'daily_generation_tracker';
+      // Allow null for general tasks that aren't crop-specific
+      return this.generationType !== 'daily_generation_tracker' &&
+        this.category !== 'general';
     }
   },
   user: {

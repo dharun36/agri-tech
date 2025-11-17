@@ -208,7 +208,7 @@ const QuickEventForm = ({ crop, eventType, onClose, onSuccess }) => {
                 <option value="NPK">{t('npk')}</option>
                 <option value="Urea">{t('urea')}</option>
                 <option value="Compost">{t('compost')}</option>
-                <option value="Other">{t('other')}</option>
+                <option value="other">{t('other')}</option>
               </select>
             </div>
             <div className="mb-3">
