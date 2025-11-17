@@ -96,23 +96,23 @@ const TaskItem = ({ task, onMarkDone, onMarkSkipped, disabled = false }) => {
   };
 
   return (
-    <div className={`border rounded-lg p-4 mb-3 shadow-sm ${getPriorityClass()} min-h-[120px] flex flex-col`}>
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex items-center flex-grow">
-          <span className="mr-2 w-5 h-5 flex items-center justify-center flex-shrink-0">{getCategoryIcon()}</span>
-          <h3 className="font-medium truncate">{task.title}</h3>
+    <div className={`border rounded-lg p-3 sm:p-4 mb-3 shadow-sm ${getPriorityClass()} min-h-[120px] flex flex-col`}>
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center flex-grow mr-2">
+          <span className="mr-2 w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center flex-shrink-0">{getCategoryIcon()}</span>
+          <h3 className="font-medium text-sm sm:text-base leading-tight">{task.title}</h3>
         </div>
         <span className="flex-shrink-0">{getStatusIcon()}</span>
       </div>
 
       {task.category && (
-        <div className="text-xs text-gray-600 mb-1">
+        <div className="text-xs text-gray-600 mb-2 bg-gray-50 px-2 py-1 rounded inline-block w-fit">
           {/* Use translation utility for category */}
           {translateCategory(task.category, 'translation')}
         </div>
       )}
 
-      <p className="text-sm mb-3 line-clamp-2 overflow-hidden flex-grow">
+      <p className="text-xs sm:text-sm mb-3 line-clamp-2 overflow-hidden flex-grow leading-relaxed text-gray-700">
         {task.crop
           ? translateTaskDescription(task.description, {
             crop: task.crop.name,
@@ -122,16 +122,16 @@ const TaskItem = ({ task, onMarkDone, onMarkSkipped, disabled = false }) => {
         }
       </p>
 
-      <div className="flex items-center justify-between text-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
         <div className="flex-shrink-0">
-          <span className="font-semibold">{t('due', { ns: 'tasks' })}: </span>
-          <span className={isToday(task.dueDate) ? 'font-bold text-orange-600' : ''}>
+          <span className="font-semibold text-gray-600">{t('due', { ns: 'tasks' })}: </span>
+          <span className={`${isToday(task.dueDate) ? 'font-bold text-orange-600' : 'text-gray-800'} bg-blue-50 px-2 py-1 rounded`}>
             {isToday(task.dueDate) ? t('today', { ns: 'tasks' }) : formatDueDate(task.dueDate)}
           </span>
         </div>
 
         {task.crop && (
-          <span className="bg-green-100 text-green-800 px-2 py-1 rounded ml-2 truncate max-w-[120px] flex-shrink-0">
+          <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs truncate max-w-[150px] flex-shrink-0">
             {/* Use translation utility for crop name */}
             {translateCropName(task.crop.name, 'translation')}
           </span>
@@ -139,37 +139,37 @@ const TaskItem = ({ task, onMarkDone, onMarkSkipped, disabled = false }) => {
       </div>
 
       {task.status === 'pending' && (
-        <div className="mt-3 flex justify-end space-x-2">
+        <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:justify-end">
           <button
             onClick={() => onMarkSkipped(task._id)}
             disabled={disabled}
-            className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded flex items-center text-sm"
+            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-800 rounded-md flex items-center justify-center text-sm font-medium transition-colors order-2 sm:order-1"
           >
-            <FaTimesCircle className="mr-1 w-3 h-3" />
+            <FaTimesCircle className="mr-2 w-3 h-3" />
             {t('skip', { ns: 'tasks' })}
           </button>
 
           <button
             onClick={() => onMarkDone(task._id)}
             disabled={disabled}
-            className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded flex items-center text-sm"
+            className="px-4 py-2 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-md flex items-center justify-center text-sm font-medium transition-colors order-1 sm:order-2"
           >
-            <FaCheckCircle className="mr-1 w-3 h-3" />
+            <FaCheckCircle className="mr-2 w-3 h-3" />
             {t('mark_done', { ns: 'tasks' })}
           </button>
         </div>
       )}
 
       {/* Always reserve space for completion info to prevent layout shifts */}
-      <div className="mt-2 text-xs text-right h-4">
+      <div className="mt-3 text-xs text-center sm:text-right h-4">
         {(task.status === 'done' || task.status === 'skipped') && task.completedDate && (
-          <>
+          <span className={`inline-block px-2 py-1 rounded text-xs ${task.status === 'done' ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-700'}`}>
             <span className="font-semibold">
               {task.status === 'done' ? t('completed', { ns: 'tasks' }) : t('skipped', { ns: 'tasks' })}:
             </span>
             {' '}
             {new Date(task.completedDate).toLocaleDateString()}
-          </>
+          </span>
         )}
       </div>
     </div>

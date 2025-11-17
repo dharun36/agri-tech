@@ -187,11 +187,11 @@ router.post('/google', async (req, res) => {
   }
 });
 
-// Complete registration for OAuth users (collect required fields like phone)
-// Body: { name, email, phone, profile_img }
+// Complete registration for OAuth users (collect required fields like phone and location)
+// Body: { name, email, phone, profile_img, location }
 router.post('/oauth/register', async (req, res) => {
   try {
-    const { name, email, phone, profile_img } = req.body || {};
+    const { name, email, phone, profile_img, location } = req.body || {};
     if (!name || !email || !phone) {
       return res.status(400).json({ message: 'name, email, phone are required' });
     }
@@ -204,7 +204,7 @@ router.post('/oauth/register', async (req, res) => {
     const randomPass = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
     const hash = await bcrypt.hash(randomPass, 10);
 
-    const user = await User.create({
+    const userData = {
       name,
       email,
       password: hash,
@@ -216,10 +216,27 @@ router.post('/oauth/register', async (req, res) => {
       soilType: 'Loam',
       primaryCrop: 'Corn',
       farmingExperience: 'Beginner'
-    });
+    };
+
+    // Add location data if provided
+    if (location && location.type === 'Point' && Array.isArray(location.coordinates)) {
+      userData.location = location;
+    }
+
+    const user = await User.create(userData);
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'supersecretkey', { expiresIn: '7d' });
-    return res.json({ token, user: { id: user._id, name: user.name, email: user.email, phone: user.phone, location: user.location, profile_img: user.profile_img } });
+    return res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        location: user.location,
+        profile_img: user.profile_img
+      }
+    });
   } catch (err) {
     console.error('OAuth register error:', err.message);
     return res.status(500).json({ message: 'Server error' });

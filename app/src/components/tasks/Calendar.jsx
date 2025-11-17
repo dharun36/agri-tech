@@ -100,12 +100,12 @@ const Legend = () => {
     { key: 'harvest', label: 'Harvest' },
   ];
   return (
-    <div className="flex flex-wrap items-center gap-3 p-2 rounded-md bg-white/60">
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3 p-2 rounded-md bg-white/60">
       {items.map(({ key, label }) => {
         const m = TYPE_META[key];
         return (
-          <div key={key} className="flex items-center gap-1 text-sm">
-            <span className={`inline-flex items-center justify-center w-6 h-6 rounded ${m.bg} ${m.color}`}>{m.icon}</span>
+          <div key={key} className="flex items-center gap-1 text-xs sm:text-sm">
+            <span className={`inline-flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded ${m.bg} ${m.color}`}>{m.icon}</span>
             <span className="text-gray-700">{label}</span>
           </div>
         );
@@ -120,7 +120,6 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isSmall, setIsSmall] = useState(false);
   const [filters, setFilters] = useState({ type: 'all', status: 'all', field: 'all' });
   const [selectedDay, setSelectedDay] = useState(null);
   const [showDayModal, setShowDayModal] = useState(false);
@@ -136,14 +135,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [demoMode, setDemoMode] = useState(false);
-  const [serverAvailable, setServerAvailable] = useState(null); // null = unknown, true = available, false = unavailable  // Responsive: detect small screens and switch to week view
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
-    const onChange = (e) => setIsSmall(e.matches);
-    setIsSmall(mq.matches);
-    mq.addEventListener?.('change', onChange);
-    return () => mq.removeEventListener?.('change', onChange);
-  }, []);
+  const [serverAvailable, setServerAvailable] = useState(null); // null = unknown, true = available, false = unavailable
 
   // Check server connectivity
   const checkServerConnectivity = useCallback(async () => {
@@ -190,11 +182,8 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
   const gridStart = useMemo(() => startOfWeek(monthStart), [monthStart]);
   const gridEnd = useMemo(() => endOfWeek(monthEnd), [monthEnd]);
 
-  const weekStart = useMemo(() => startOfWeek(new Date()), []);
-  const weekEnd = useMemo(() => endOfWeek(new Date()), []);
-
-  const visibleStart = useMemo(() => (isSmall ? weekStart : gridStart), [isSmall, weekStart, gridStart]);
-  const visibleEnd = useMemo(() => (isSmall ? weekEnd : gridEnd), [isSmall, weekEnd, gridEnd]);
+  const visibleStart = gridStart;
+  const visibleEnd = gridEnd;
 
   const days = useMemo(() => {
     const res = [];
@@ -548,7 +537,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
     const inMonth = day.getMonth() === currentMonth.getMonth();
     const today = isSameDay(day, new Date());
     const dayTasks = tasksByDate.get(key) || [];
-    const maxItems = isSmall ? 2 : 3;
+    const maxItems = 3; // Show 3 tasks on all screen sizes
     const visibleTasks = dayTasks.slice(0, maxItems);
     const hiddenCount = Math.max(0, dayTasks.length - visibleTasks.length);
 
@@ -557,25 +546,25 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
 
     return (
       <div
-        className={`group border p-2 min-h-[120px] overflow-hidden rounded hover:shadow-md cursor-pointer transition-all duration-200 hover:scale-105 hover:z-10 ${inMonth ? 'bg-white border-gray-200 hover:bg-gray-50' : 'bg-gray-50 border-gray-100 hover:bg-gray-100'
+        className={`group border p-1 sm:p-2 min-h-[80px] sm:min-h-[120px] overflow-hidden rounded hover:shadow-md cursor-pointer transition-all duration-200 hover:scale-105 hover:z-10 ${inMonth ? 'bg-white border-gray-200 hover:bg-gray-50' : 'bg-gray-50 border-gray-100 hover:bg-gray-100'
           } ${today ? 'border-2 border-green-500 bg-green-50 hover:bg-green-100' : ''
           } hover:border-gray-300`}
         onClick={() => { setSelectedDay(day); setShowDayModal(true); }}
       >
         {/* Day header */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-semibold ${inMonth ? 'text-gray-800' : 'text-gray-400'} ${today ? 'text-green-700' : ''}`}>
+        <div className="flex items-center justify-between mb-1 sm:mb-2">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <span className={`text-xs sm:text-sm font-semibold ${inMonth ? 'text-gray-800' : 'text-gray-400'} ${today ? 'text-green-700' : ''}`}>
               {day.getDate()}
             </span>
             {dayTasks.length > 0 && (
               <div className="flex items-center gap-1">
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${urgentTasks > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                <span className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded font-medium ${urgentTasks > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
                   }`}>
                   {dayTasks.length}
                 </span>
                 {completedTasks > 0 && (
-                  <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">
+                  <span className="text-[9px] sm:text-[10px] bg-green-100 text-green-700 px-1 sm:px-1.5 py-0.5 rounded font-medium">
                     ✓ {completedTasks}
                   </span>
                 )}
@@ -584,13 +573,13 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
-              {today && <span className="text-[9px] uppercase text-green-600 font-semibold bg-green-100 px-2 py-0.5 rounded">Today</span>}
+              {today && <span className="text-[8px] sm:text-[9px] uppercase text-green-600 font-semibold bg-green-100 px-1 sm:px-2 py-0.5 rounded hidden sm:inline">Today</span>}
               {urgentTasks > 0 && <span className="text-red-500 text-xs">🔥</span>}
             </div>
           </div>
         </div>
         {/* Tasks display */}
-        <div className="space-y-1 max-h-20 overflow-hidden">
+        <div className="space-y-1 max-h-12 sm:max-h-20 overflow-hidden">
           {visibleTasks.map((t, index) => {
             const m = getTypeMeta(t);
             const tooltip = [t.field || t.fieldName, t.crop || t.cropName].filter(Boolean).join(' · ');
@@ -601,14 +590,14 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
             return (
               <div key={t._id || t.id}
                 title={tooltip}
-                className={`group flex items-center gap-1 px-2 py-1 rounded text-xs ${isDone
+                className={`group flex items-center gap-1 px-1 sm:px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs ${isDone
                   ? 'opacity-60 line-through bg-gray-100'
                   : isSkipped
                     ? 'opacity-60 line-through bg-yellow-100'
                     : `${m.bg} hover:opacity-80 ${isUrgent ? 'border border-red-300' : ''}`
                   }`}
               >
-                <span className={`${m.color} text-sm`}>{m.icon}</span>
+                <span className={`${m.color} text-xs sm:text-sm`}>{m.icon}</span>
                 <span className={`flex-1 truncate font-medium ${isDone ? 'text-gray-500' : isSkipped ? 'text-yellow-600' : 'text-gray-800'
                   }`}>
                   {t.title || t.name || 'Task'}
@@ -616,7 +605,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
 
                 {/* Priority indicator */}
                 {isUrgent && !isDone && !isSkipped && (
-                  <span className="text-red-500 text-xs">!</span>
+                  <span className="text-red-500 text-[10px] sm:text-xs">!</span>
                 )}
 
                 {/* Action buttons */}
@@ -659,7 +648,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
           {/* Show more button */}
           {hiddenCount > 0 && (
             <div
-              className="w-full text-[10px] text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded text-center cursor-pointer border border-blue-200 transition-colors"
+              className="w-full text-[9px] sm:text-[10px] text-blue-700 bg-blue-50 hover:bg-blue-100 px-1 sm:px-2 py-0.5 sm:py-1 rounded text-center cursor-pointer border border-blue-200 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 setSelectedDay(day);
@@ -667,13 +656,13 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
               }}
               title={`View all ${dayTasks.length} tasks for this day`}
             >
-              <span className="font-medium">+{hiddenCount} more task{hiddenCount > 1 ? 's' : ''}</span>
+              <span className="font-medium">+{hiddenCount} more</span>
             </div>
           )}
         </div>
 
         {/* Hover overlay with quick actions */}
-        <div className={`absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1`}>
+        <div className={`absolute top-1 right-1 sm:top-2 sm:right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1`}>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -767,26 +756,26 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
   );
 
   return (
-    <div className="bg-white rounded-lg shadow border">
+    <div className="bg-white rounded-lg shadow border overflow-hidden">
       {/* Simple header */}
-      <div className="bg-white border-b border-gray-200 p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-green-100 p-3 rounded">
-              <FaCalendarAlt className="text-green-600 text-xl" />
+      <div className="bg-white border-b border-gray-200 p-3 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="bg-green-100 p-2 sm:p-3 rounded">
+              <FaCalendarAlt className="text-green-600 text-lg sm:text-xl" />
             </div>
             <div>
-              <h1 className="text-2xl font-semibold text-gray-800">
+              <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">
                 Farm Calendar
               </h1>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 text-xs sm:text-sm">
                 Manage your agricultural tasks and schedule
               </p>
             </div>
           </div>
 
           {/* Action controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-end sm:self-auto">
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded transition-colors ${showFilters ? 'bg-gray-200' : ''
@@ -811,41 +800,43 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
         </div>
 
         {/* Simple month navigation */}
-        <div className="mt-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setCurrentMonth((m) => addMonths(m, -1))}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded"
-            >
-              ◀
-            </button>
-            <button
-              onClick={() => setCurrentMonth(startOfMonth(new Date()))}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-medium"
-            >
-              Today
-            </button>
-            <button
-              onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded"
-            >
-              ▶
-            </button>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentMonth((m) => addMonths(m, -1))}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded flex-shrink-0"
+              >
+                ◀
+              </button>
+              <button
+                onClick={() => setCurrentMonth(startOfMonth(new Date()))}
+                className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 sm:px-4 rounded font-medium text-sm sm:text-base"
+              >
+                Today
+              </button>
+              <button
+                onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded flex-shrink-0"
+              >
+                ▶
+              </button>
+            </div>
 
-            <div className="ml-4">
-              <h2 className="text-xl font-semibold text-gray-800">
+            <div className="sm:ml-4">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
                 {currentMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
               </h2>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 text-xs sm:text-sm">
                 {visibleStart.toLocaleDateString()} – {visibleEnd.toLocaleDateString()}
               </p>
             </div>
           </div>
 
-          <div className="text-gray-800">
+          <div className="text-gray-800 self-end sm:self-auto">
             <div className="text-right">
-              <div className="text-sm text-gray-600">Total Tasks</div>
-              <div className="text-2xl font-semibold">{normalizedTasks.length}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Total Tasks</div>
+              <div className="text-xl sm:text-2xl font-semibold">{normalizedTasks.length}</div>
             </div>
           </div>
         </div>
@@ -853,7 +844,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
 
       {/* Error/Demo mode banner */}
       {error && (
-        <div className={`mx-6 mt-4 p-3 rounded-lg border ${error.includes('demo mode') || error.includes('Server not available')
+        <div className={`mx-3 sm:mx-6 mt-4 p-3 rounded-lg border ${error.includes('demo mode') || error.includes('Server not available')
           ? 'bg-blue-50 border-blue-200 text-blue-800'
           : 'bg-red-50 border-red-200 text-red-800'
           }`}>
@@ -867,10 +858,10 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
       )}
 
       {/* Filters and Legend section */}
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-gray-800">Task Categories</h3>
-          <div className="text-sm text-gray-500">
+      <div className="px-3 sm:px-6 py-4 border-b border-gray-200">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Task Categories</h3>
+          <div className="text-xs sm:text-sm text-gray-500">
             {normalizedTasks.filter(t => t.done || t.status === 'done').length} of {normalizedTasks.length} completed
           </div>
         </div>
@@ -880,13 +871,13 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
         {/* Collapsible filters */}
         {showFilters && (
           <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:items-center gap-3 lg:gap-4">
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Type:</label>
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Type:</label>
                 <select
                   value={filters.type}
                   onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value }))}
-                  className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="flex-1 border border-gray-300 rounded-md px-2 sm:px-3 py-1 text-xs sm:text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   <option value="all">All types</option>
                   {uniqueTypes.map((t) => (
@@ -896,11 +887,11 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
               </div>
 
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Status:</label>
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Status:</label>
                 <select
                   value={filters.status}
                   onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-                  className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="flex-1 border border-gray-300 rounded-md px-2 sm:px-3 py-1 text-xs sm:text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   <option value="all">All statuses</option>
                   <option value="pending">Pending</option>
@@ -910,12 +901,12 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
               </div>
 
               {uniqueFields.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Field:</label>
+                <div className="flex items-center gap-2 col-span-1 sm:col-span-2 lg:col-span-1">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Field:</label>
                   <select
                     value={filters.field}
                     onChange={(e) => setFilters((f) => ({ ...f, field: e.target.value }))}
-                    className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="flex-1 border border-gray-300 rounded-md px-2 sm:px-3 py-1 text-xs sm:text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
                     <option value="all">All fields</option>
                     {uniqueFields.map((f) => (
@@ -954,12 +945,12 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
 
       {/* New Task Modal */}
       {showNewTaskModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             {/* Modal header */}
-            <div className="bg-white border-b border-gray-200 p-6">
+            <div className="bg-white border-b border-gray-200 p-4 sm:p-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-gray-800">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-800">
                   Add New Task
                 </h3>
                 <button
@@ -975,7 +966,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
             </div>
 
             {/* Modal content */}
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Task Title</label>
                 <input
@@ -998,7 +989,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
                   <select
@@ -1042,20 +1033,20 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
             </div>
 
             {/* Modal footer */}
-            <div className="bg-gray-50 px-6 py-4 flex items-center justify-end gap-3 border-t border-gray-200">
+            <div className="bg-gray-50 px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 border-t border-gray-200">
               <button
                 onClick={() => {
                   setShowNewTaskModal(false);
                   setNewTask({ title: '', description: '', priority: 'medium', type: 'general', dueDate: '' });
                 }}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors"
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors order-2 sm:order-1"
               >
                 Cancel
               </button>
               <button
                 onClick={createNewTask}
                 disabled={!newTask.title.trim()}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors order-1 sm:order-2"
               >
                 Create Task
               </button>
@@ -1066,14 +1057,14 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
 
       {/* Simple day modal */}
       {showDayModal && selectedDay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
           <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setShowDayModal(false)} />
-          <div className="relative bg-white w-full max-w-2xl rounded-lg shadow-xl overflow-hidden">
+          <div className="relative bg-white w-full max-w-2xl rounded-lg shadow-xl overflow-hidden max-h-[95vh]">
             {/* Modal header */}
-            <div className="bg-white border-b border-gray-200 p-6">
-              <div className="flex items-center justify-between">
+            <div className="bg-white border-b border-gray-200 p-4 sm:p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-800">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-800">
                     {selectedDay.toLocaleDateString('en-US', {
                       weekday: 'long',
                       year: 'numeric',
@@ -1081,11 +1072,11 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
                       day: 'numeric'
                     })}
                   </h3>
-                  <p className="text-gray-600 text-sm mt-1">
+                  <p className="text-gray-600 text-xs sm:text-sm mt-1">
                     {(tasksByDate.get(formatISODate(selectedDay)) || []).length} tasks scheduled
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-end sm:self-auto">
                   <button
                     onClick={() => {
                       const year = selectedDay.getFullYear();
@@ -1095,7 +1086,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
                       setNewTask(prev => ({ ...prev, dueDate: formattedDate }));
                       setShowNewTaskModal(true);
                     }}
-                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm font-medium"
+                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs sm:text-sm font-medium"
                   >
                     + Add Task
                   </button>
@@ -1110,7 +1101,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
             </div>
 
             {/* Modal content */}
-            <div className="p-6 max-h-[70vh] overflow-y-auto">
+            <div className="p-4 sm:p-6 max-h-[60vh] sm:max-h-[70vh] overflow-y-auto">
               {(tasksByDate.get(formatISODate(selectedDay)) || []).length === 0 ? (
                 <div className="text-center py-8">
                   <FaCalendarPlus className="text-gray-300 text-4xl mb-4 mx-auto" />
@@ -1209,15 +1200,15 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
             </div>
 
             {/* Modal footer */}
-            <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
-              <div className="text-sm text-gray-600">
+            <div className="bg-gray-50 px-4 sm:px-6 py-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-t border-gray-200">
+              <div className="text-xs sm:text-sm text-gray-600">
                 {(tasksByDate.get(formatISODate(selectedDay)) || []).filter(t => t.done || t.status === 'done').length} completed
                 {' · '}
                 {(tasksByDate.get(formatISODate(selectedDay)) || []).filter(t => !(t.done || t.status === 'done')).length} pending
               </div>
               <button
                 onClick={() => setShowDayModal(false)}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 self-end sm:self-auto"
               >
                 Close
               </button>

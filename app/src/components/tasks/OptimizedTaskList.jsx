@@ -346,66 +346,68 @@ const OptimizedTaskList = ({ cropId = null, refreshTrigger = 0 }) => {
   }, [tasks, filterCategory]);
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 min-h-[400px]">
+    <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 min-h-[400px] m-2 sm:m-0">
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold flex items-center">
-          <FaTasks className="mr-2 text-green-600 w-5 h-5" />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+        <h2 className="text-lg sm:text-xl font-bold flex items-center">
+          <FaTasks className="mr-2 text-green-600 w-4 h-4 sm:w-5 sm:h-5" />
           {t('crop_tasks', { ns: 'tasks' })}
         </h2>
 
         <button
           onClick={handleGenerateRecommendations}
           disabled={isGeneratingAI || loading}
-          className={`flex items-center px-3 py-1 rounded-md text-sm transition ${isGeneratingAI || loading
+          className={`flex items-center px-3 py-2 rounded-md text-xs sm:text-sm transition w-full sm:w-auto justify-center ${isGeneratingAI || loading
             ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-            : 'bg-green-600 text-white hover:bg-green-700'
+            : 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
             }`}
         >
-          <FaRobot className="mr-1 w-4 h-4" />
-          {isGeneratingAI
-            ? t('generating', { ns: 'tasks' })
-            : t('generate_ai_recommendations', { ns: 'tasks' })
-          }
+          <FaRobot className="mr-1 w-3 h-3 sm:w-4 sm:h-4" />
+          <span className="truncate">
+            {isGeneratingAI
+              ? t('generating', { ns: 'tasks' })
+              : t('generate_ai_recommendations', { ns: 'tasks' })
+            }
+          </span>
         </button>
       </div>
 
-      {/* Tab Navigation - Fixed height to prevent layout shifts */}
-      <div className="flex border-b mb-4 h-[41px]">
+      {/* Tab Navigation - Mobile responsive */}
+      <div className="flex border-b mb-4 min-h-[45px] overflow-x-auto">
         <button
-          className={`px-4 py-2 border-b-2 ${activeTab === 'today' ? 'border-green-500 text-green-600' : 'border-transparent'}`}
+          className={`flex-1 px-2 sm:px-4 py-3 border-b-2 min-w-fit transition-colors ${activeTab === 'today' ? 'border-green-500 text-green-600 font-medium' : 'border-transparent hover:text-green-600'}`}
           onClick={() => setActiveTab('today')}
         >
-          <span className="flex items-center">
-            <FaTasks className="mr-1 w-4 h-4" />
+          <span className="flex items-center justify-center text-xs sm:text-sm">
+            <FaTasks className="mr-1 w-3 h-3 sm:w-4 sm:h-4" />
             {t('today', { ns: 'tasks' })}
           </span>
         </button>
 
         <button
-          className={`px-4 py-2 border-b-2 ${activeTab === 'upcoming' ? 'border-green-500 text-green-600' : 'border-transparent'}`}
+          className={`flex-1 px-2 sm:px-4 py-3 border-b-2 min-w-fit transition-colors ${activeTab === 'upcoming' ? 'border-green-500 text-green-600 font-medium' : 'border-transparent hover:text-green-600'}`}
           onClick={() => setActiveTab('upcoming')}
         >
-          <span className="flex items-center">
-            <FaCalendarAlt className="mr-1 w-4 h-4" />
+          <span className="flex items-center justify-center text-xs sm:text-sm">
+            <FaCalendarAlt className="mr-1 w-3 h-3 sm:w-4 sm:h-4" />
             {t('upcoming', { ns: 'tasks' })}
           </span>
         </button>
 
         <button
-          className={`px-4 py-2 border-b-2 ${activeTab === 'history' ? 'border-green-500 text-green-600' : 'border-transparent'}`}
+          className={`flex-1 px-2 sm:px-4 py-3 border-b-2 min-w-fit transition-colors ${activeTab === 'history' ? 'border-green-500 text-green-600 font-medium' : 'border-transparent hover:text-green-600'}`}
           onClick={() => setActiveTab('history')}
         >
-          <span className="flex items-center">
-            <FaHistory className="mr-1 w-4 h-4" />
+          <span className="flex items-center justify-center text-xs sm:text-sm">
+            <FaHistory className="mr-1 w-3 h-3 sm:w-4 sm:h-4" />
             {t('history', { ns: 'tasks' })}
           </span>
         </button>
       </div>
 
       {/* Category Filter */}
-      <div className="mb-4 flex items-center">
-        <span className="text-sm text-gray-600 mr-2 flex items-center">
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-2">
+        <span className="text-xs sm:text-sm text-gray-600 flex items-center flex-shrink-0">
           <FaFilter className="mr-1 w-3 h-3" />
           {t('filter', { ns: 'tasks' })}:
         </span>
@@ -413,7 +415,7 @@ const OptimizedTaskList = ({ cropId = null, refreshTrigger = 0 }) => {
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="border rounded px-2 py-1 text-sm"
+          className="border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 w-full sm:w-auto"
         >
           <option value="all">{t('all_categories', { ns: 'tasks' })}</option>
           <option value="irrigation">{t('irrigation', { ns: 'tasks' })}</option>
