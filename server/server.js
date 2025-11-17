@@ -68,8 +68,8 @@ app.use('/api/market', require('./routes/market'));
 app.use('/api/prices', require('./routes/prices'));
 // Dynamic translations for AI-generated content
 app.use('/api/translate', require('./routes/translate'));
-// Use simple, clean task API
-app.use('/api/tasks', require('./routes/simpleTasks'));
+// Use full task API with daily tasks support
+app.use('/api/tasks', require('./routes/tasks'));
 
 // Simple task generation endpoint
 app.post('/api/tasks/generate', async (req, res) => {

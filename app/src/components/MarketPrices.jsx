@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FaSearch, FaFilter, FaSyncAlt, FaLeaf, FaMapMarkerAlt, FaRupeeSign } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { API_BASE_URL, buildApiUrl } from '../config/api';
+import { formatMarketDate } from '../utils/dateUtils';
 
 // Get API key from environment variables
 const GOV_API_KEY = import.meta.env.VITE_GOV_API_KEY;
@@ -52,19 +53,6 @@ const alternativeImages = {
   Vegetables: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='100%' height='100%' fill='%23059669'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='20' fill='%23ffffff'>Vegetables</text></svg>",
   Fruits: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='100%' height='100%' fill='%23dc2626'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='20' fill='%23ffffff'>Fruits</text></svg>",
   Grains: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='100%' height='100%' fill='%23d97706'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='20' fill='%23ffffff'>Grains</text></svg>"
-};
-
-// Unique date formatting function
-const formatUniqueDate = (dateString) => {
-  if (!dateString) return new Date().toLocaleDateString('en-GB');
-
-  const date = new Date(dateString);
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-
-  // Format: DD/MM/YYYY (European style as shown in image)
-  return `${day}/${month}/${year}`;
 };
 
 const MarketPrices = () => {
@@ -171,7 +159,8 @@ const MarketPrices = () => {
             date: new Date().toLocaleDateString(),
             trend: 'stable',
             change: 0,
-            isOldData: false
+            isOldData: false,
+            daysAgo: 0
           };
         });
 
@@ -185,10 +174,11 @@ const MarketPrices = () => {
           marketLocation: 'Data unavailable',
           img: cropImages[name] || cropImages.Default,
           alt: name,
-          date: formatUniqueDate(),
+          date: formatMarketDate(),
           trend: 'stable',
           change: 0,
-          isOldData: false
+          isOldData: false,
+          daysAgo: 0
         }));
         setProducts(fallback);
       }
@@ -226,7 +216,7 @@ const MarketPrices = () => {
             marketLocation: found.marketLocation || 'Unknown',
             img: cropImages[cropName] || cropImages.Default,
             alt: cropName,
-            date: formatUniqueDate(found.lastUpdated),
+            date: formatMarketDate(found.lastUpdated),
             isSearchResult: true,
             trend: found.trend || 'stable',
             change: found.change || 0,
@@ -253,11 +243,12 @@ const MarketPrices = () => {
             marketLocation: "No market data found",
             img: cropImages.Default,
             alt: cropName,
-            date: formatUniqueDate(),
+            date: formatMarketDate(),
             isSearchResult: true,
             trend: 'stable',
             change: 0,
-            isOldData: false
+            isOldData: false,
+            daysAgo: 0
           };
 
           setProducts(prev => {
@@ -489,21 +480,12 @@ const MarketPrices = () => {
                   </div>
 
                   <div className="p-2 sm:p-4 space-y-2">
-                    {/* Old data warning with enhanced date display */}
-                    {item.isOldData && (
-                      <div className="bg-orange-50 border border-orange-200 rounded-md p-3 mb-3">
-                        <div className="flex items-center gap-2 text-orange-700 text-sm">
-                          <span className="font-semibold">⚠️ Previous Data</span>
-                          <span className="bg-orange-100 px-2 py-1 rounded-full text-xs font-medium">
-                            {item.daysAgo} {item.daysAgo === 1 ? 'day' : 'days'} ago
-                          </span>
+                    {/* Only show old data indicator for actually old data */}
+                    {item.isOldData && item.daysAgo > 1 && (
+                      <div className="bg-orange-50 border border-orange-200 rounded-md p-2 mb-2">
+                        <div className="flex items-center gap-2 text-orange-700 text-xs">
+                          <span className="font-medium">⚠️ {item.daysAgo} days old data</span>
                         </div>
-                        <div className="text-orange-600 text-xs mt-1 font-medium">
-                          Last updated: {item.date}
-                        </div>
-                        {item.note && (
-                          <div className="text-orange-600 text-xs mt-2 bg-orange-100 p-2 rounded">{item.note}</div>
-                        )}
                       </div>
                     )}
 
@@ -512,43 +494,24 @@ const MarketPrices = () => {
                         <span className="font-bold text-green-600 text-lg">
                           {item.price}
                         </span>
-
                         {/* Price trend indicator */}
                         {item.trend && item.trend !== 'stable' && (
-                          <div className="flex items-center gap-1">
-                            {item.trend === 'up' ? (
-                              <span className="text-green-500 text-sm font-bold">↗</span>
-                            ) : (
-                              <span className="text-red-500 text-sm font-bold">↘</span>
-                            )}
-                            {item.change > 0 && (
-                              <span className={`text-xs font-medium ${item.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                                }`}>
-                                {item.change}%
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Stable price indicator */}
-                        {item.trend === 'stable' && item.price !== 'N/A' && (
-                          <span className="text-gray-500 text-sm">→</span>
+                          <span className={`text-sm font-bold ${item.trend === 'up' ? 'text-green-500' : 'text-red-500'
+                            }`}>
+                            {item.trend === 'up' ? '↗' : '↘'}
+                          </span>
                         )}
                       </div>
-
                       <div className="text-right">
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${item.isOldData
-                          ? 'text-orange-600 bg-orange-100'
-                          : 'text-gray-600 bg-gray-100'
-                          }`}>
-                          {formatUniqueDate(item.date)}
+                        <span className="text-xs text-gray-500">
+                          {formatMarketDate(item.date)}
                         </span>
                       </div>
                     </div>
 
-                    <div className="text-xs text-gray-600 flex items-start gap-1 border-t border-gray-100 pt-2">
-                      <FaMapMarkerAlt className="text-gray-400 mt-0.5 flex-shrink-0" />
-                      <span>{item.marketLocation}</span>
+                    <div className="text-xs text-gray-600 mt-2">
+                      <FaMapMarkerAlt className="inline mr-1" />
+                      {item.marketLocation}
                     </div>
                   </div>
                 </div>

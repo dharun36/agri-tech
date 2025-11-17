@@ -129,15 +129,16 @@ router.get('/prices', async (req, res) => {
 
           if (recentPrice) {
             const trend = await getPriceTrend(commodity, recentPrice.price, district);
-            const daysAgo = Math.floor((new Date() - recentPrice.date) / (1000 * 60 * 60 * 24));
+            const daysAgo = Math.floor((new Date() - new Date(recentPrice.date)) / (1000 * 60 * 60 * 24));
+            const isOldData = daysAgo > 1; // Consider data old if more than 1 day
 
             return {
               commodity,
-              price: `₹${recentPrice.price} per quintal`,
+              price: `₹${Math.round(recentPrice.price / 100)} per kg`,
               marketLocation: `${recentPrice.market}, ${recentPrice.city}, ${recentPrice.state}`,
               trend: trend.trend,
               change: trend.change,
-              isOldData: daysAgo > 0,
+              isOldData: isOldData,
               daysAgo: daysAgo,
               lastUpdated: recentPrice.date.toLocaleDateString(),
               raw: {
@@ -154,7 +155,8 @@ router.get('/prices', async (req, res) => {
             price: 'N/A',
             marketLocation: 'No data available',
             trend: 'stable',
-            isOldData: false
+            isOldData: false,
+            daysAgo: 0
           };
         } catch (error) {
           console.error(`Error fetching ${commodity} from database:`, error);
@@ -197,21 +199,22 @@ router.get('/prices', async (req, res) => {
           const recentPrice = await getRecentPriceFromDB(commodity, district);
           if (recentPrice) {
             const trend = await getPriceTrend(commodity, recentPrice.price, district);
-            const daysAgo = Math.floor((new Date() - recentPrice.date) / (1000 * 60 * 60 * 24));
+            const daysAgo = Math.floor((new Date() - new Date(recentPrice.date)) / (1000 * 60 * 60 * 24));
+            const isOldData = daysAgo > 1; // Consider data old if more than 1 day
 
             return {
               commodity,
-              price: `₹${recentPrice.price} per quintal`,
+              price: `₹${Math.round(recentPrice.price / 100)} per kg`,
               marketLocation: `${recentPrice.market}, ${recentPrice.city}, ${recentPrice.state}`,
               trend: trend.trend,
               change: trend.change,
-              isOldData: true,
+              isOldData: isOldData,
               daysAgo: daysAgo,
               lastUpdated: recentPrice.date.toLocaleDateString(),
               error: `API Status ${r.status} - showing cached data`
             };
           }
-          return { commodity, error: `Status ${r.status}`, price: 'N/A', marketLocation: 'No data available' };
+          return { commodity, error: `Status ${r.status}`, price: 'N/A', marketLocation: 'No data available', trend: 'stable', isOldData: false, daysAgo: 0 };
         }
 
         const j = await r.json();
@@ -226,7 +229,8 @@ router.get('/prices', async (req, res) => {
             marketLocation: `${rec.market || ''}${rec.district ? `, ${rec.district}` : ''}${rec.state ? `, ${rec.state}` : ''}`.replace(/^,\s*/, ''),
             trend: trend.trend,
             change: trend.change,
-            isOldData: false,
+            isOldData: false, // Fresh data from API
+            daysAgo: 0, // Fresh data
             lastUpdated: new Date().toLocaleDateString(),
             raw: rec
           };
@@ -242,15 +246,16 @@ router.get('/prices', async (req, res) => {
           const recentPrice = await getRecentPriceFromDB(commodity, district);
           if (recentPrice) {
             const trend = await getPriceTrend(commodity, recentPrice.price, district);
-            const daysAgo = Math.floor((new Date() - recentPrice.date) / (1000 * 60 * 60 * 24));
+            const daysAgo = Math.floor((new Date() - new Date(recentPrice.date)) / (1000 * 60 * 60 * 24));
+            const isOldData = daysAgo > 1; // Consider data old if more than 1 day
 
             return {
               commodity,
-              price: `₹${recentPrice.price} per quintal`,
+              price: `₹${Math.round(recentPrice.price / 100)} per kg`,
               marketLocation: `${recentPrice.market}, ${recentPrice.city}, ${recentPrice.state}`,
               trend: trend.trend,
               change: trend.change,
-              isOldData: true,
+              isOldData: isOldData,
               daysAgo: daysAgo,
               lastUpdated: recentPrice.date.toLocaleDateString(),
               note: 'No current data available - showing previous data'
@@ -263,21 +268,22 @@ router.get('/prices', async (req, res) => {
         const recentPrice = await getRecentPriceFromDB(commodity, district);
         if (recentPrice) {
           const trend = await getPriceTrend(commodity, recentPrice.price, district);
-          const daysAgo = Math.floor((new Date() - recentPrice.date) / (1000 * 60 * 60 * 24));
+          const daysAgo = Math.floor((new Date() - new Date(recentPrice.date)) / (1000 * 60 * 60 * 24));
+          const isOldData = daysAgo > 1; // Consider data old if more than 1 day
 
           return {
             commodity,
-            price: `₹${recentPrice.price} per quintal`,
+            price: `₹${Math.round(recentPrice.price / 100)} per kg`,
             marketLocation: `${recentPrice.market}, ${recentPrice.city}, ${recentPrice.state}`,
             trend: trend.trend,
             change: trend.change,
-            isOldData: true,
+            isOldData: isOldData,
             daysAgo: daysAgo,
             lastUpdated: recentPrice.date.toLocaleDateString(),
             error: `${err.message} - showing cached data`
           };
         }
-        return { commodity, price: 'N/A', marketLocation: 'Data unavailable', error: err.message, trend: 'stable' };
+        return { commodity, price: 'N/A', marketLocation: 'Data unavailable', error: err.message, trend: 'stable', isOldData: false, daysAgo: 0 };
       }
     })); res.json({ results, source: 'government_api' });
   } catch (error) {

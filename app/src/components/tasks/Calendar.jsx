@@ -483,7 +483,8 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
       const taskData = {
         ...newTask,
         dueDate: newTask.dueDate || (selectedDay ? formatISODate(selectedDay) : formatISODate(new Date())),
-        status: 'pending'
+        status: 'pending',
+        source: 'user_created'
       };
 
       const res = await fetch(`${API_BASE_URL}/api/tasks`, {

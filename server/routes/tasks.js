@@ -769,6 +769,7 @@ router.post('/', async (req, res) => {
       description,
       priority,
       category,
+      type, // Support both 'category' and 'type' for compatibility
       dueDate,
       recommendedTimeframe,
       source,
@@ -776,19 +777,36 @@ router.post('/', async (req, res) => {
       resources
     } = req.body;
 
-    // Verify crop exists and belongs to the user
-    const crop = await Crop.findOne({ _id: cropId, user: req.user._id });
-    if (!crop) {
-      return res.status(404).json({ message: 'Crop not found or access denied' });
+    // Use category or type, whichever is provided
+    const categoryMapping = {
+      'sowing': 'planting',
+      'fertilizer': 'fertilization',
+      'pesticide': 'pest_control',
+      'harvest': 'harvesting',
+      'irrigation': 'irrigation',
+      'pruning': 'pruning',
+      'general': 'general'
+    };
+
+    const rawCategory = category || type || 'general';
+    const taskCategory = categoryMapping[rawCategory] || rawCategory;
+
+    // If crop is provided, verify it exists and belongs to the user
+    let crop = null;
+    if (cropId) {
+      crop = await Crop.findOne({ _id: cropId, user: req.user._id });
+      if (!crop) {
+        return res.status(404).json({ message: 'Crop not found or access denied' });
+      }
     }
 
     const task = new Task({
-      crop: cropId,
+      crop: cropId || null, // Allow null for general tasks
       user: req.user._id,
       title,
-      description,
+      description: description || title, // Use title as description if not provided
       priority,
-      category,
+      category: taskCategory,
       dueDate,
       recommendedTimeframe,
       source,
@@ -798,8 +816,10 @@ router.post('/', async (req, res) => {
 
     await task.save();
 
-    // Populate the crop reference in the response
-    await task.populate('crop', 'name variety status');
+    // Populate the crop reference in the response only if crop exists
+    if (cropId) {
+      await task.populate('crop', 'name variety status');
+    }
 
     res.status(201).json(task);
   } catch (error) {
