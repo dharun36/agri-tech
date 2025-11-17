@@ -158,8 +158,6 @@ const generateTaskTitle = (eventType, eventData) => {
       return `Growth Check: ${eventData.stage || 'Record measurements'}`;
     case 'harvest':
       return `Harvest: ${eventData.yield ? `${eventData.yield} units` : 'Collect crops'}`;
-    case 'weather':
-      return `Weather Action: ${eventData.eventType || 'Prepare for conditions'}`;
     case 'cost':
       return `Expense: ${eventData.category} - ₹${eventData.amount || '0'}`;
     case 'labor':
