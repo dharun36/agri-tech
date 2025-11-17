@@ -6,6 +6,7 @@
  */
 
 const express = require('express');
+const mongoose = require('mongoose');
 const auth = require('../middleware/auth');
 // Use dynamic import for fetch since node-fetch v3 is ESM only
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
@@ -31,8 +32,14 @@ Available actions:
 - REMOVE_CROP(actual_crop_name) - Remove an existing crop (example: REMOVE_CROP(tomato))
 - LIST_CROPS() - Show all crops
 - GET_WEATHER(actual_location) - Get weather for specific location (example: GET_WEATHER(Mumbai))
+- CREATE_TASK(task_title, task_description, crop_name) - Create a farming task (example: CREATE_TASK(Water plants, Check soil moisture, tomato))
+- LIST_TASKS(status) - Show tasks (status: today, upcoming, all) (example: LIST_TASKS(today))
+- COMPLETE_TASK(task_id) - Mark a task as complete (example: COMPLETE_TASK(12345))
+- LIST_ACTIVITIES(crop_name) - Show activities for a crop (example: LIST_ACTIVITIES(tomato))
+- ADD_ACTIVITY(crop_name, activity_title, activity_description, activity_type) - Record farming activity (example: ADD_ACTIVITY(tomato, Applied fertilizer, Used NPK 10-10-10, maintenance))
+- GET_MARKET_PRICES(crop_name) - Check market prices for crops (example: GET_MARKET_PRICES(tomato))
 
-IMPORTANT: Only use ACTION format when you have the actual specific information. If users ask to add a crop but don't specify which crop, ask them what crop they want to add instead of using ACTION format.`;
+IMPORTANT: Only use ACTION format when you have the actual specific information. If users ask to perform actions but don't provide enough details, ask them for the missing information instead of using ACTION format.`;
 
 /**
  * Execute backend API calls based on detected actions
@@ -63,6 +70,30 @@ async function executeAction(action, userId, authToken) {
         return await listCropsAPI(userId, authToken, baseURL);
       case 'GET_WEATHER':
         return await getWeatherAPI(params[0], userId, authToken, baseURL);
+      case 'CREATE_TASK':
+        if (!params[0]) {
+          return { success: false, message: '📝 Please specify what task you want to create. For example: "Create task to water tomatoes"', requiresInput: true };
+        }
+        return await createTaskAPI(params[0], params[1], params[2], userId, authToken, baseURL);
+      case 'LIST_TASKS':
+        return await listTasksAPI(params[0] || 'all', userId, authToken, baseURL);
+      case 'COMPLETE_TASK':
+        if (!params[0]) {
+          return { success: false, message: '✅ Please specify which task you want to complete. For example: "Complete task 1"', requiresInput: true };
+        }
+        return await completeTaskAPI(params[0], userId, authToken, baseURL);
+      case 'LIST_ACTIVITIES':
+        return await listActivitiesAPI(params[0], userId, authToken, baseURL);
+      case 'ADD_ACTIVITY':
+        if (!params[0] || !params[1]) {
+          return { success: false, message: '📊 Please specify crop name and activity details. For example: "Record fertilizer activity for tomatoes"', requiresInput: true };
+        }
+        return await addActivityAPI(params[0], params[1], params[2], params[3], userId, authToken, baseURL);
+      case 'GET_MARKET_PRICES':
+        if (!params[0]) {
+          return { success: false, message: '💰 Please specify which crop prices you want to check. For example: "Check tomato prices"', requiresInput: true };
+        }
+        return await getMarketPricesAPI(params[0], userId, authToken, baseURL);
       default:
         return null;
     }
@@ -234,6 +265,389 @@ function getFarmingTip(weatherData) {
   }
 }
 
+/**
+ * Create a new farming task
+ */
+async function createTaskAPI(title, description, cropName, userId, authToken, baseURL) {
+  try {
+    let cropId = null;
+    
+    // If crop name is provided, find the crop ID
+    if (cropName && cropName.trim()) {
+      const cropsResponse = await fetch(`${baseURL}/api/crops`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      
+      if (cropsResponse.ok) {
+        const crops = await cropsResponse.json();
+        const targetCrop = crops.find(crop => 
+          crop.name.toLowerCase().includes(cropName.toLowerCase())
+        );
+        if (targetCrop) {
+          cropId = targetCrop._id;
+        }
+      }
+    }
+
+    const taskData = {
+      title: title.trim(),
+      description: description?.trim() || title.trim(),
+      ...(cropId && { crop: cropId }),
+      priority: 'medium',
+      category: 'general',
+      dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
+      status: 'pending'
+    };
+
+    const response = await fetch(`${baseURL}/api/tasks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify(taskData)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to create task: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return {
+      success: true,
+      message: `📝 Successfully created task: "${title}"${cropName ? ` for ${cropName}` : ''}!\n\n⏰ Due: ${new Date(taskData.dueDate).toLocaleDateString()}\n💡 You can view all your tasks by saying "show my tasks"`,
+      data: result
+    };
+  } catch (error) {
+    console.error('Create task API error:', error);
+    return { success: false, message: 'Failed to create task: ' + error.message };
+  }
+}
+
+/**
+ * List farming tasks
+ */
+async function listTasksAPI(status, userId, authToken, baseURL) {
+  try {
+    let endpoint = `${baseURL}/api/tasks`;
+    
+    switch (status.toLowerCase()) {
+      case 'today':
+        endpoint = `${baseURL}/api/tasks/today`;
+        break;
+      case 'upcoming':
+        endpoint = `${baseURL}/api/tasks/upcoming`;
+        break;
+      case 'completed':
+      case 'done':
+        endpoint = `${baseURL}/api/tasks/history`;
+        break;
+    }
+
+    const response = await fetch(endpoint, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch tasks: ${response.statusText}`);
+    }
+
+    const tasks = await response.json();
+    
+    if (!Array.isArray(tasks) || tasks.length === 0) {
+      return {
+        success: true,
+        message: `📋 No ${status === 'all' ? '' : status + ' '}tasks found.\n\n💡 You can create a new task by saying "Create task to water tomatoes"`,
+        data: []
+      };
+    }
+
+    const taskList = tasks.slice(0, 10).map((task, index) => {
+      const dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date';
+      const cropInfo = task.crop?.name ? ` (${task.crop.name})` : '';
+      return `${index + 1}. ${task.title}${cropInfo} - Due: ${dueDate} - ${task.status}`;
+    }).join('\n');
+
+    return {
+      success: true,
+      message: `📋 Your ${status === 'all' ? '' : status + ' '}tasks (${Math.min(tasks.length, 10)} of ${tasks.length}):\n\n${taskList}${tasks.length > 10 ? '\n\n... and more in the app' : ''}`,
+      data: tasks
+    };
+  } catch (error) {
+    console.error('List tasks API error:', error);
+    return { success: false, message: 'Failed to fetch tasks: ' + error.message };
+  }
+}
+
+/**
+ * Complete a farming task
+ */
+async function completeTaskAPI(taskIdentifier, userId, authToken, baseURL) {
+  try {
+    // First get tasks to find the one to complete
+    const tasksResponse = await fetch(`${baseURL}/api/tasks`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+
+    if (!tasksResponse.ok) {
+      throw new Error('Failed to fetch tasks');
+    }
+
+    const tasks = await tasksResponse.json();
+    let targetTask = null;
+
+    // Find task by ID or by partial title match
+    if (mongoose.Types.ObjectId.isValid(taskIdentifier)) {
+      targetTask = tasks.find(task => task._id === taskIdentifier);
+    } else {
+      // Try to find by number (1, 2, 3) or partial title
+      const taskNumber = parseInt(taskIdentifier);
+      if (!isNaN(taskNumber) && taskNumber > 0 && taskNumber <= tasks.length) {
+        targetTask = tasks[taskNumber - 1];
+      } else {
+        targetTask = tasks.find(task => 
+          task.title.toLowerCase().includes(taskIdentifier.toLowerCase())
+        );
+      }
+    }
+
+    if (!targetTask) {
+      return {
+        success: false,
+        message: `❌ Could not find task "${taskIdentifier}".\n\nAvailable tasks:\n${tasks.slice(0, 5).map((task, index) => `${index + 1}. ${task.title}`).join('\n')}`
+      };
+    }
+
+    const response = await fetch(`${baseURL}/api/tasks/${targetTask._id}/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        feedback: 'Completed via chatbot',
+        effectiveness: 'good'
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to complete task: ${response.statusText}`);
+    }
+
+    return {
+      success: true,
+      message: `✅ Successfully completed task: "${targetTask.title}"\n\n🎉 Great work! Keep up with your farming activities!`,
+      data: await response.json()
+    };
+  } catch (error) {
+    console.error('Complete task API error:', error);
+    return { success: false, message: 'Failed to complete task: ' + error.message };
+  }
+}
+
+/**
+ * List activities for a crop or all activities
+ */
+async function listActivitiesAPI(cropName, userId, authToken, baseURL) {
+  try {
+    let activities = [];
+
+    if (cropName && cropName.trim()) {
+      // Get specific crop activities
+      const cropsResponse = await fetch(`${baseURL}/api/crops`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      
+      if (cropsResponse.ok) {
+        const crops = await cropsResponse.json();
+        const targetCrop = crops.find(crop => 
+          crop.name.toLowerCase().includes(cropName.toLowerCase())
+        );
+        
+        if (targetCrop) {
+          const activitiesResponse = await fetch(`${baseURL}/api/activities/crop/${targetCrop._id}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          });
+          
+          if (activitiesResponse.ok) {
+            const activitiesData = await activitiesResponse.json();
+            activities = activitiesData.activities || [];
+          }
+        }
+      }
+    } else {
+      // Get all user activities (we'll need to implement this endpoint)
+      const activitiesResponse = await fetch(`${baseURL}/api/activities`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      
+      if (activitiesResponse.ok) {
+        const activitiesData = await activitiesResponse.json();
+        activities = activitiesData.activities || [];
+      }
+    }
+
+    if (activities.length === 0) {
+      return {
+        success: true,
+        message: `📊 No activities found${cropName ? ` for ${cropName}` : ''}.\n\n💡 You can record activities by saying "Record fertilizer activity for tomatoes"`,
+        data: []
+      };
+    }
+
+    const activityList = activities.slice(0, 10).map((activity, index) => {
+      const date = activity.date ? new Date(activity.date).toLocaleDateString() : 'Unknown date';
+      return `${index + 1}. ${activity.title} - ${date} (${activity.activityType})`;
+    }).join('\n');
+
+    return {
+      success: true,
+      message: `📊 Activities${cropName ? ` for ${cropName}` : ''} (${Math.min(activities.length, 10)} of ${activities.length}):\n\n${activityList}${activities.length > 10 ? '\n\n... and more in the app' : ''}`,
+      data: activities
+    };
+  } catch (error) {
+    console.error('List activities API error:', error);
+    return { success: false, message: 'Failed to fetch activities: ' + error.message };
+  }
+}
+
+/**
+ * Add a new farming activity
+ */
+async function addActivityAPI(cropName, title, description, activityType, userId, authToken, baseURL) {
+  try {
+    // Find the crop
+    const cropsResponse = await fetch(`${baseURL}/api/crops`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+
+    if (!cropsResponse.ok) {
+      throw new Error('Failed to fetch crops');
+    }
+
+    const crops = await cropsResponse.json();
+    const targetCrop = crops.find(crop => 
+      crop.name.toLowerCase().includes(cropName.toLowerCase())
+    );
+
+    if (!targetCrop) {
+      return {
+        success: false,
+        message: `❌ Could not find crop "${cropName}".\nAvailable crops: ${crops.map(c => c.name).join(', ') || 'None'}`
+      };
+    }
+
+    const activityData = {
+      cropId: targetCrop._id,
+      title: title.trim(),
+      description: description?.trim() || title.trim(),
+      activityType: activityType?.trim() || 'general',
+      date: new Date().toISOString()
+    };
+
+    const response = await fetch(`${baseURL}/api/activities`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify(activityData)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to create activity: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return {
+      success: true,
+      message: `📊 Successfully recorded activity: "${title}" for ${targetCrop.name}!\n\n📅 Date: ${new Date().toLocaleDateString()}\n💡 You can view all activities by saying "show activities for ${targetCrop.name}"`,
+      data: result
+    };
+  } catch (error) {
+    console.error('Add activity API error:', error);
+    return { success: false, message: 'Failed to create activity: ' + error.message };
+  }
+}
+
+/**
+ * Get market prices for crops
+ */
+async function getMarketPricesAPI(cropName, userId, authToken, baseURL) {
+  try {
+    const response = await fetch(`${baseURL}/api/market/prices/${encodeURIComponent(cropName)}`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+
+    if (!response.ok) {
+      // If specific endpoint fails, try general market endpoint
+      const generalResponse = await fetch(`${baseURL}/api/market/prices`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      
+      if (generalResponse.ok) {
+        const allPrices = await generalResponse.json();
+        const cropPrices = allPrices.filter(price => 
+          price.crop_name?.toLowerCase().includes(cropName.toLowerCase())
+        );
+        
+        if (cropPrices.length > 0) {
+          const priceInfo = cropPrices.slice(0, 3).map(price => 
+            `${price.market || 'Market'}: ₹${price.min_price}-₹${price.max_price}/quintal`
+          ).join('\n');
+          
+          return {
+            success: true,
+            message: `💰 Current market prices for ${cropName}:\n\n${priceInfo}\n\n📈 Prices may vary by location and quality`,
+            data: cropPrices
+          };
+        }
+      }
+      
+      return {
+        success: true,
+        message: `💰 Sorry, current market prices for "${cropName}" are not available.\n\n💡 You can check prices for common crops like wheat, rice, tomato, onion`,
+        data: []
+      };
+    }
+
+    const priceData = await response.json();
+    
+    if (!priceData || (Array.isArray(priceData) && priceData.length === 0)) {
+      return {
+        success: true,
+        message: `💰 No recent price data found for "${cropName}".\n\n💡 You can check prices for other crops or try again later`,
+        data: []
+      };
+    }
+
+    // Format price data
+    let priceMessage = `💰 Market prices for ${cropName}:\n\n`;
+    
+    if (Array.isArray(priceData)) {
+      priceMessage += priceData.slice(0, 5).map(price => 
+        `📍 ${price.market || price.city || 'Market'}: ₹${price.min_price || price.price}-${price.max_price || price.price}/quintal`
+      ).join('\n');
+    } else {
+      priceMessage += `📍 Average Price: ₹${priceData.price || 'N/A'}/quintal`;
+    }
+    
+    priceMessage += '\n\n📈 Prices may vary by location and quality\n💡 Consider market trends when planning sales';
+
+    return {
+      success: true,
+      message: priceMessage,
+      data: priceData
+    };
+  } catch (error) {
+    console.error('Get market prices API error:', error);
+    return { 
+      success: false, 
+      message: `Failed to fetch market prices: ${error.message}\n\n💡 You can try checking prices for common crops like wheat, rice, tomato` 
+    };
+  }
+}
+
 
 
 /**
@@ -395,6 +809,135 @@ router.post('/', async (req, res) => {
           actionResult = await executeAction('GET_WEATHER()', userId, authToken);
         }
 
+        if (actionResult) {
+          finalMessage += '\n\n' + actionResult.message;
+        }
+      } else if (lowerMessage.includes('task')) {
+        // Handle task-related requests
+        if (lowerMessage.includes('create') || lowerMessage.includes('add')) {
+          const taskPatterns = [
+            /(?:create|add)\s+task\s+(?:to\s+)?(.+)/i,
+            /(?:create|add)\s+(.+)\s+task/i,
+            /task\s+(?:to\s+)?(.+)/i
+          ];
+          
+          let taskTitle = null;
+          for (const pattern of taskPatterns) {
+            const match = message.match(pattern);
+            if (match && match[1]) {
+              taskTitle = match[1].trim();
+              break;
+            }
+          }
+          
+          if (taskTitle) {
+            actionResult = await executeAction(`CREATE_TASK(${taskTitle})`, userId, authToken);
+          } else {
+            actionResult = await executeAction('CREATE_TASK()', userId, authToken);
+          }
+        } else if (lowerMessage.includes('complete') || lowerMessage.includes('done')) {
+          const completePatterns = [
+            /(?:complete|done|finish)\s+task\s+(\d+|.+)/i,
+            /task\s+(\d+|.+)\s+(?:complete|done|finish)/i
+          ];
+          
+          let taskId = null;
+          for (const pattern of completePatterns) {
+            const match = message.match(pattern);
+            if (match && match[1]) {
+              taskId = match[1].trim();
+              break;
+            }
+          }
+          
+          if (taskId) {
+            actionResult = await executeAction(`COMPLETE_TASK(${taskId})`, userId, authToken);
+          } else {
+            actionResult = await executeAction('COMPLETE_TASK()', userId, authToken);
+          }
+        } else if (lowerMessage.includes('list') || lowerMessage.includes('show')) {
+          let status = 'all';
+          if (lowerMessage.includes('today')) status = 'today';
+          else if (lowerMessage.includes('upcoming')) status = 'upcoming';
+          else if (lowerMessage.includes('completed') || lowerMessage.includes('done')) status = 'completed';
+          
+          actionResult = await executeAction(`LIST_TASKS(${status})`, userId, authToken);
+        } else {
+          actionResult = await executeAction('LIST_TASKS(all)', userId, authToken);
+        }
+        
+        if (actionResult) {
+          finalMessage += '\n\n' + actionResult.message;
+        }
+      } else if (lowerMessage.includes('activity') || lowerMessage.includes('activities')) {
+        // Handle activity-related requests
+        if (lowerMessage.includes('add') || lowerMessage.includes('record') || lowerMessage.includes('create')) {
+          const activityPatterns = [
+            /(?:record|add|create)\s+(.+)\s+activity\s+for\s+(\w+)/i,
+            /(?:record|add|create)\s+activity\s+(.+)\s+for\s+(\w+)/i,
+            /applied\s+(.+)\s+to\s+(\w+)/i,
+            /fertilized\s+(\w+)\s+with\s+(.+)/i
+          ];
+          
+          let activityTitle = null;
+          let cropName = null;
+          
+          for (const pattern of activityPatterns) {
+            const match = message.match(pattern);
+            if (match) {
+              if (pattern.source.includes('fertilized')) {
+                cropName = match[1];
+                activityTitle = `Applied ${match[2]}`;
+              } else {
+                activityTitle = match[1];
+                cropName = match[2];
+              }
+              break;
+            }
+          }
+          
+          if (activityTitle && cropName) {
+            actionResult = await executeAction(`ADD_ACTIVITY(${cropName}, ${activityTitle})`, userId, authToken);
+          } else {
+            actionResult = await executeAction('ADD_ACTIVITY()', userId, authToken);
+          }
+        } else {
+          const cropMatch = message.match(/activities?\s+for\s+(\w+)/i);
+          const cropName = cropMatch ? cropMatch[1] : null;
+          
+          if (cropName) {
+            actionResult = await executeAction(`LIST_ACTIVITIES(${cropName})`, userId, authToken);
+          } else {
+            actionResult = await executeAction('LIST_ACTIVITIES()', userId, authToken);
+          }
+        }
+        
+        if (actionResult) {
+          finalMessage += '\n\n' + actionResult.message;
+        }
+      } else if (lowerMessage.includes('price') || lowerMessage.includes('market')) {
+        // Handle market price requests
+        const pricePatterns = [
+          /(?:price|market)\s+(?:of\s+|for\s+)?(\w+)/i,
+          /(\w+)\s+(?:price|market)/i,
+          /check\s+(\w+)\s+prices?/i
+        ];
+        
+        let cropName = null;
+        for (const pattern of pricePatterns) {
+          const match = message.match(pattern);
+          if (match && match[1] && !['current', 'latest', 'today'].includes(match[1].toLowerCase())) {
+            cropName = match[1];
+            break;
+          }
+        }
+        
+        if (cropName) {
+          actionResult = await executeAction(`GET_MARKET_PRICES(${cropName})`, userId, authToken);
+        } else {
+          actionResult = await executeAction('GET_MARKET_PRICES()', userId, authToken);
+        }
+        
         if (actionResult) {
           finalMessage += '\n\n' + actionResult.message;
         }
