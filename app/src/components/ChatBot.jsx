@@ -167,35 +167,38 @@ const ChatBot = ({ isOpen, onClose }) => {
   // Don't render if not open
   if (!isOpen) return null;
 
+  // Don't render if not open
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md h-[600px] flex flex-col m-4">
+    <div className="fixed bottom-20 right-6 z-50 w-96 h-[500px] flex flex-col">
+      <div className="bg-white rounded-2xl shadow-2xl h-full flex flex-col border border-gray-200">
         {/* Header */}
-        <div className="bg-green-600 text-white p-4 rounded-t-2xl flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="bg-white bg-opacity-20 p-2 rounded-full">
-              <FaSeedling className="text-xl" />
+        <div className="bg-green-600 text-white p-3 rounded-t-2xl flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="bg-white bg-opacity-20 p-1.5 rounded-full">
+              <FaSeedling className="text-sm" />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Farming Assistant</h3>
-              <p className="text-green-100 text-sm">
+              <h3 className="font-semibold text-sm">Farming Assistant</h3>
+              <p className="text-green-100 text-xs">
                 {isTyping ? 'Thinking...' : isLoading ? 'Processing...' : 'Online'}
               </p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1">
             <button
               onClick={clearChat}
-              className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-full transition-colors"
+              className="text-white hover:bg-white hover:bg-opacity-20 p-1.5 rounded-full transition-colors"
               title="Clear chat"
             >
-              <FaComments />
+              <FaComments className="text-sm" />
             </button>
             <button
               onClick={onClose}
-              className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-full transition-colors"
+              className="text-white hover:bg-white hover:bg-opacity-20 p-1.5 rounded-full transition-colors"
             >
-              <FaTimes />
+              <FaTimes className="text-sm" />
             </button>
           </div>
         </div>
@@ -275,12 +278,12 @@ const MessageBubble = ({ message }) => {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${isUser
-          ? 'bg-green-600 text-white'
-          : isError
-            ? 'bg-red-50 text-red-800 border border-red-200'
-            : isSuggestion
-              ? 'bg-blue-50 text-blue-800 border border-blue-200'
-              : 'bg-gray-100 text-gray-800'
+        ? 'bg-green-600 text-white'
+        : isError
+          ? 'bg-red-50 text-red-800 border border-red-200'
+          : isSuggestion
+            ? 'bg-blue-50 text-blue-800 border border-blue-200'
+            : 'bg-gray-100 text-gray-800'
         }`}>
         {/* Message content */}
         <div
@@ -317,13 +320,13 @@ const MessageBubble = ({ message }) => {
  */
 const TypingIndicator = () => (
   <div className="flex justify-start">
-    <div className="bg-gray-100 px-4 py-2 rounded-2xl">
+    <div className="bg-gray-100 px-3 py-2 rounded-xl">
       <div className="flex items-center space-x-2">
-        <FaRobot className="text-green-600" />
+        <FaRobot className="text-green-600 text-sm" />
         <div className="flex space-x-1">
-          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
+          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
         </div>
       </div>
     </div>
@@ -360,7 +363,7 @@ const SuggestedMessages = ({ onSelect }) => {
 const QuickActionButton = ({ text, onClick }) => (
   <button
     onClick={onClick}
-    className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-full transition-colors"
+    className="bg-green-50 hover:bg-green-100 text-green-700 px-2 py-1 rounded-lg text-xs transition-colors border border-green-200"
   >
     {text}
   </button>
