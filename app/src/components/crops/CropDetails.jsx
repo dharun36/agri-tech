@@ -378,55 +378,59 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
+    <div className="max-w-4xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
       {/* Back button */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4">
         <Button
           onClick={handleBackToDashboard}
           variant="secondary"
+          className="w-full sm:w-auto"
         >
           <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
           {t('back_to_dashboard')}
         </Button>
 
-        <Button
-          onClick={handleGoToTasks}
-          variant="primary"
-          className="bg-green-600 hover:bg-green-700"
-        >
-          <FaTasks className="mr-2" />
-          {t('crop_tasks_and_recommendations', { ns: 'tasks' })}
-        </Button>
-
-        <Button
-          onClick={isEditing ? handleSaveEdit : handleStartEdit}
-          variant={isEditing ? "primary" : "secondary"}
-          className={isEditing ? "bg-blue-600 hover:bg-blue-700" : ""}
-          disabled={loading}
-        >
-          {isEditing ? (
-            <>
-              <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
-              {t('save')}
-            </>
-          ) : (
-            <>
-              <FontAwesomeIcon icon={faEdit} className="mr-2" />
-              {t('edit')}
-            </>
-          )}
-        </Button>
-
-        {isEditing && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
           <Button
-            onClick={handleCancelEdit}
-            variant="secondary"
-            className="bg-gray-500 hover:bg-gray-600 text-white"
+            onClick={handleGoToTasks}
+            variant="primary"
+            className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
           >
-            <FontAwesomeIcon icon={faTimes} className="mr-2" />
-            {t('cancel')}
+            <FaTasks className="mr-2" />
+            <span className="hidden sm:inline">{t('crop_tasks_and_recommendations', { ns: 'tasks' })}</span>
+            <span className="sm:hidden">{t('Tasks & Recommendations')}</span>
           </Button>
-        )}
+
+          <Button
+            onClick={isEditing ? handleSaveEdit : handleStartEdit}
+            variant={isEditing ? "primary" : "secondary"}
+            className={`w-full sm:w-auto ${isEditing ? "bg-blue-600 hover:bg-blue-700" : ""}`}
+            disabled={loading}
+          >
+            {isEditing ? (
+              <>
+                <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
+                {t('save')}
+              </>
+            ) : (
+              <>
+                <FontAwesomeIcon icon={faEdit} className="mr-2" />
+                {t('edit')}
+              </>
+            )}
+          </Button>
+
+          {isEditing && (
+            <Button
+              onClick={handleCancelEdit}
+              variant="secondary"
+              className="bg-gray-500 hover:bg-gray-600 text-white w-full sm:w-auto"
+            >
+              <FontAwesomeIcon icon={faTimes} className="mr-2" />
+              {t('cancel')}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Success message */}
@@ -450,14 +454,14 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
       )}
 
       {/* Crop header */}
-      <div className="bg-white border border-green-200 shadow-md rounded-lg p-6 mb-6">
-        <div className="flex items-center">
-          <div className="bg-green-100 p-3 rounded-full text-green-600 mr-4">
-            <FontAwesomeIcon icon={faSeedling} size="2x" />
+      <div className="bg-white border border-green-200 shadow-md rounded-lg p-4 sm:p-6 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="bg-green-100 p-2 sm:p-3 rounded-full text-green-600 self-start">
+            <FontAwesomeIcon icon={faSeedling} size="2x" className="sm:text-2xl text-xl" />
           </div>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">{crop.name}</h1>
-            <div className="text-gray-600">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-1">{crop.name}</h1>
+            <div className="text-sm sm:text-base text-gray-600">
               {crop.variety ? `${crop.variety} · ` : ''}
               {t('status')}: <span className="text-green-600 font-medium">{t(crop.status.toLowerCase())}</span>
             </div>
@@ -466,10 +470,10 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
       </div>
 
       {/* Basic crop information */}
-      <Card className="mb-6">
-        <h2 className="text-xl font-bold mb-4">{t('crop_information')}</h2>
+      <Card className="mb-6 p-4 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-bold mb-4">{t('crop_information')}</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <div>
             <div className="mb-4">
               <div className="flex items-center text-gray-500 mb-1">
@@ -577,7 +581,7 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
                 {t('area')}
               </div>
               {isEditing ? (
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="number"
                     value={editedCrop.locationArea}
@@ -682,7 +686,7 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
             {t('growing_conditions')}
           </div>
           <div className="mb-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <div className="text-sm text-gray-500">{t('previous_crop')}</div>
                 <div>{crop.previousCrop || 'N/A'}</div>
@@ -720,6 +724,35 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
 
       {/* Crop Status History component */}
       <CropStatusHistory crop={crop} onAddEvent={handleAddEvent} />
+
+      {/* Floating Edit Button for Mobile */}
+      <div className="fixed bottom-6 right-6 sm:hidden z-50">
+        <Button
+          onClick={isEditing ? handleSaveEdit : handleStartEdit}
+          variant={isEditing ? "primary" : "secondary"}
+          className={`rounded-full w-14 h-14 p-0 shadow-lg ${isEditing ? "bg-blue-600 hover:bg-blue-700" : "bg-green-600 hover:bg-green-700 text-white"}`}
+          disabled={loading}
+        >
+          {isEditing ? (
+            <FontAwesomeIcon icon={faCheckCircle} className="text-xl" />
+          ) : (
+            <FontAwesomeIcon icon={faEdit} className="text-xl" />
+          )}
+        </Button>
+      </div>
+
+      {/* Floating Cancel Button for Mobile (when editing) */}
+      {isEditing && (
+        <div className="fixed bottom-6 right-24 sm:hidden z-50">
+          <Button
+            onClick={handleCancelEdit}
+            variant="secondary"
+            className="rounded-full w-12 h-12 p-0 shadow-lg bg-red-500 hover:bg-red-600 text-white"
+          >
+            <FontAwesomeIcon icon={faTimes} className="text-lg" />
+          </Button>
+        </div>
+      )}
 
       {/* Event form (conditionally rendered) */}
       {activeEventForm && (

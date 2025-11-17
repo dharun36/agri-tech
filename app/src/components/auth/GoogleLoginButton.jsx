@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 // Lightweight Google Identity Services integration without extra deps
-// Props: onSuccess(userAndToken), onNeedsRegistration(suggested), onError(message)
-export default function GoogleLoginButton({ onSuccess, onNeedsRegistration, onError }) {
+// Props: onSuccess(userAndToken), onNeedsRegistration(suggested), onError(message), isSignup(boolean)
+export default function GoogleLoginButton({ onSuccess, onNeedsRegistration, onError, isSignup = false }) {
   const divRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -73,12 +73,12 @@ export default function GoogleLoginButton({ onSuccess, onNeedsRegistration, onEr
         theme: 'outline',
         size: 'large',
         shape: 'rectangular',
-        text: 'signin_with'
+        text: isSignup ? 'signup_with' : 'signin_with'
       });
     } catch (e) {
       onError && onError(e.message);
     }
-  }, [ready, onSuccess, onNeedsRegistration, onError]);
+  }, [ready, onSuccess, onNeedsRegistration, onError, isSignup]);
 
   return (
     <div className="mt-4 w-full flex flex-col items-center">
