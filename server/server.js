@@ -66,8 +66,6 @@ app.use('/api/activities', require('./routes/activities'));
 app.use('/api/market', require('./routes/market'));
 // Government API crop prices
 app.use('/api/prices', require('./routes/prices'));
-// Dynamic translations for AI-generated content
-app.use('/api/translate', require('./routes/translate'));
 // Use full task API with daily tasks support
 app.use('/api/tasks', require('./routes/tasks'));
 // Farming assistant chatbot
