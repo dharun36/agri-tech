@@ -4,8 +4,6 @@ import './App.css'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import DetectDisease from './components/DetectDisease'
-import Home from './components/Home'
-import ModernHome from './components/ModernHome'
 import LightThemeHome from './components/home/LightThemeHome'
 import CropRecommendation from './components/CropRecommendation'
 import MarketPrices from './components/MarketPrices'
@@ -14,12 +12,10 @@ import ChatbotDemo from './components/ChatbotDemo'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import ModernLandingPage from './components/ModernLandingPage';
 import GovSchemes from './components/GovSchemes'
-import MergedLightThemeHome from './components/home/MergedLightThemeHome';
 import Login from './components/auth/Login'
 import Signup from './components/auth/Signup'
 import Profile from './components/Profile'
 import CropDetails from './components/crops/CropDetails'
-import CropRouter from './components/crops/CropRouter'
 import CropTaskSelector from './components/tasks/CropTaskSelector'
 import TaskDashboard from './components/tasks/TaskDashboard'
 // Import task detail component  
@@ -64,9 +60,7 @@ function App() {
           <main className="main" style={{ flex: '1', display: 'flex', flexDirection: 'column' }}>
             <Routes>
               <Route path="/home" element={<LightThemeHome />} />
-              <Route path="/dark-home" element={<ModernHome />} />
               <Route path="/disease-detection" element={<DetectDisease />} />
-              <Route path="/merged-home" element={<MergedLightThemeHome />} />
               <Route path="/crop-recommendation" element={<CropRecommendation />} />
               <Route path="/market-prices" element={<MarketPrices />} />
               <Route path="/government-schemes" element={<GovSchemes />} />

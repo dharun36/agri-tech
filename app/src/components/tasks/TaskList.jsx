@@ -3,43 +3,43 @@ import { useTranslation } from 'react-i18next';
 import TaskItem from './TaskItem';
 import TaskSkeleton from './TaskSkeleton';
 import TaskRecommendationsModal from './TaskRecommendationsModal';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { generateTaskRecommendations } from '../../utils/taskRecommendationGenerator';
+import { toast } from 'react-toastify';
 import {
   FaTasks,
   FaCalendarAlt,
   FaHistory,
   FaFilter,
-  FaSync,
-  FaSpinner,
   FaRobot,
   FaExclamationTriangle
 } from 'react-icons/fa';
-import { generateTaskRecommendations } from '../../utils/taskRecommendationGenerator';
+
+// Get API key from environment variables
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + import.meta.env.VITE_GEMINI_API_KEY;
 
 // Memoized task item component to prevent unnecessary re-renders
 const MemoizedTaskItem = memo(TaskItem);
 
 /**
- * Task list component that displays today's tasks, upcoming tasks, and task history
- * Now with AI-powered task recommendations using the Gemini API
+ * Optimized Task list component that displays today's tasks, upcoming tasks, and task history
+ * Features:
+ * - AI-powered task recommendations using the Gemini API
+ * - Performance optimizations with useCallback and useMemo
+ * - Better error handling and loading states
+ * - Memoized components to prevent unnecessary re-renders
  */
 const TaskList = ({ cropId = null, refreshTrigger = 0 }) => {
   const { t } = useTranslation(['translation', 'tasks']);
   const [activeTab, setActiveTab] = useState('today');
   const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [recommendedTasks, setRecommendedTasks] = useState([]);
   const [showRecommendationsModal, setShowRecommendationsModal] = useState(false);
 
-  // Keep track of previous tasks for smooth transitions
-  const [prevTasks, setPrevTasks] = useState([]);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-
-  // Fetch tasks based on active tab and filters - using useCallback for performance
+  // Cache the fetch tasks function to prevent recreating it on each render
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     setError(null);
