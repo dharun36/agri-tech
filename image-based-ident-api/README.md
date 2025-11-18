@@ -20,7 +20,7 @@ pip install -r requirements.txt
 ```python
 uvicorn main:app --host=0.0.0.0 --port=8000
 ```
-This command will start the server on http://localhost:10000. You can change the host and port values according to your requirements.
+This command will start the server on http://localhost:8000. You can change the host and port values according to your requirements.
 
 2) Once the server is running, you can test the API using any HTTP client, such as Postman. The API has the following two endpoints:
 
