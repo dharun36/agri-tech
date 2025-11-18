@@ -11,6 +11,7 @@ import {
   FaHistory,
   FaFilter,
   FaRobot,
+  FaSpinner,
   FaExclamationTriangle
 } from 'react-icons/fa';
 
@@ -288,9 +289,6 @@ const TaskList = ({ cropId = null, refreshTrigger = 0 }) => {
 
   return (
     <div className="bg-white rounded-lg shadow p-4 min-h-[400px]">
-      {/* Toast notifications */}
-      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
-
       {/* Task Recommendations Modal */}
       <TaskRecommendationsModal
         isOpen={showRecommendationsModal}
