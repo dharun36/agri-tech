@@ -6,7 +6,8 @@
     "prestart": "node setup-uploads.js",
     "start": "node server.js",
     "predev": "node setup-uploads.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "build": "cd ../app && npm install && npm run build && cp -r dist ../server/ || xcopy dist ..\\server\\dist\\ /E /I /Y"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
