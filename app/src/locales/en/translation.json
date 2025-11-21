@@ -5,7 +5,6 @@
   "this_page_demonstrates_custom_title": "This page demonstrates how to use custom page titles directly in components.",
   "developer_note": "Developer Note",
   "page_title_usage_note": "This component demonstrates how to use the PageTitle component directly in a page component when you need more control over the title placement or styling.",
-  
   "navigation": {
     "home": "Home",
     "dashboard": "Dashboard",
@@ -23,7 +22,6 @@
     "login": "Login",
     "register": "Register"
   },
-
   "common": {
     "loading": "Loading...",
     "error": "Error",
@@ -62,7 +60,6 @@
     "you": "You",
     "assistant": "Assistant"
   },
-
   "home": {
     "welcome": "Welcome to AgroTech",
     "subtitle": "Your Smart Farming Assistant",
@@ -72,7 +69,7 @@
     "features": {
       "disease_detection": "Disease Detection",
       "disease_detection_desc": "Identify plant diseases using AI image recognition",
-      "crop_recommendation": "Smart Crop Recommendations", 
+      "crop_recommendation": "Smart Crop Recommendations",
       "crop_recommendation_desc": "Get personalized crop suggestions based on your location and soil",
       "weather_analysis": "Weather Analysis",
       "weather_analysis_desc": "Real-time weather updates and farming insights",
@@ -84,10 +81,9 @@
       "government_schemes_desc": "Discover farming subsidies and support programs"
     }
   },
-
   "auth": {
     "login": "Login",
-    "register": "Register", 
+    "register": "Register",
     "email": "Email",
     "password": "Password",
     "name": "Name",
@@ -104,7 +100,6 @@
     "login_error": "Login failed",
     "register_error": "Registration failed"
   },
-
   "dashboard": {
     "title": "Dashboard",
     "overview": "Overview",
@@ -115,7 +110,6 @@
     "crop_status": "Crop Status",
     "alerts": "Alerts"
   },
-
   "disease_detection": {
     "title": "Disease Detection",
     "subtitle": "Upload plant image for AI diagnosis",
@@ -132,13 +126,12 @@
     "supported_formats": "Supported formats: JPG, PNG",
     "max_file_size": "Max file size: 10MB"
   },
-
   "crop_recommendation": {
     "title": "Crop Recommendation",
     "subtitle": "Get personalized crop suggestions",
     "soil_type": "Soil Type",
     "climate": "Climate",
-    "season": "Season", 
+    "season": "Season",
     "area": "Area (acres)",
     "get_recommendations": "Get Recommendations",
     "recommended_crops": "Recommended Crops",
@@ -147,7 +140,6 @@
     "growing_season": "Growing Season",
     "water_requirement": "Water Requirement"
   },
-
   "market_prices": {
     "title": "Market Prices",
     "subtitle": "Latest crop prices in your area",
@@ -162,7 +154,6 @@
     "price_trend": "Price Trend",
     "avg_price": "Average Price"
   },
-
   "weather": {
     "title": "Weather",
     "current_weather": "Current Weather",
@@ -178,9 +169,8 @@
     "tomorrow": "Tomorrow",
     "week": "7-Day Forecast"
   },
-
   "tasks": {
-    "tasks":"Tasks",
+    "tasks": "Tasks",
     "title": "Tasks",
     "today_tasks": "Today's Tasks",
     "daily_activities": "Daily activities",
@@ -278,7 +268,6 @@
     "expected_harvest": "Expected harvest",
     "processing_crop_operation": "Processing crop operation..."
   },
-
   "crops": {
     "title": "My Crops",
     "add_crop": "Add Crop",
@@ -322,11 +311,10 @@
     "crop_status_history": "Crop Status History",
     "no_data_available": "No data available"
   },
-
   "alerts": {
     "title": "Alerts",
     "weather_alerts": "Weather Alerts",
-    "disease_alerts": "Disease Alerts", 
+    "disease_alerts": "Disease Alerts",
     "task_alerts": "Task Alerts",
     "price_alerts": "Price Alerts",
     "no_alerts": "No alerts at this time",
@@ -334,14 +322,13 @@
     "mark_all_read": "Mark All as Read",
     "alert_settings": "Alert Settings"
   },
-
   "profile": {
     "title": "Profile",
     "personal_info": "Personal Information",
     "farm_details": "Farm Details",
     "settings": "Settings",
     "name": "Name",
-    "email": "Email", 
+    "email": "Email",
     "phone": "Phone",
     "location": "Location",
     "farm_size": "Farm Size",
@@ -354,12 +341,11 @@
     "save_changes": "Save Changes",
     "profile_updated": "Profile updated successfully"
   },
-
   "government_schemes": {
     "title": "Government Schemes",
     "subtitle": "Available farming subsidies and support programs",
     "scheme_name": "Scheme Name",
-    "description": "Description", 
+    "description": "Description",
     "eligibility": "Eligibility",
     "benefits": "Benefits",
     "how_to_apply": "How to Apply",
@@ -368,7 +354,6 @@
     "learn_more": "Learn More",
     "no_schemes": "No schemes available for your location"
   },
-
   "calendar": {
     "farm_calendar": "Farm Calendar",
     "manage_tasks_schedule": "Manage your agricultural tasks and schedule",
@@ -385,13 +370,11 @@
     "pesticide": "Pesticide",
     "harvest": "Harvest"
   },
-
   "language": {
     "switch_to_english": "Switch to English",
     "switch_to_tamil": "Switch to Tamil",
     "switch_to_hindi": "Switch to Hindi"
   },
-
   "chatbot": {
     "title": "AgriTech Assistant",
     "placeholder": "Ask me about farming, crops, diseases...",
@@ -401,7 +384,6 @@
     "welcome": "Hello! I'm your AgriTech Assistant. How can I help you today?",
     "open": "Open farming assistant chat"
   },
-
   "fixed_task_descriptions": {
     "crops": {
       "crop_rice": "Rice",
@@ -432,14 +414,13 @@
     },
     "diseases": {
       "disease_blast": "Blast",
-      "disease_blight": "Blight", 
+      "disease_blight": "Blight",
       "disease_rust": "Rust",
       "disease_powdery_mildew": "Powdery Mildew",
       "disease_leaf_spot": "Leaf Spot",
       "disease_root_rot": "Root Rot"
     }
   },
-  
   "fixed_task_descriptions": {
     "water_your_crops_today": "Water your crops today",
     "apply_fertilizer": "Apply fertilizer",
@@ -908,7 +889,6 @@
   "suggested_action": "Suggested Action",
   "add_expense": "Add Expense",
   "more_actions": "More Actions",
-  
   "page_titles": {
     "home": "Home",
     "tasks": "Farm Tasks",

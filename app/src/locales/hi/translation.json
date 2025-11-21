@@ -163,7 +163,6 @@
   "common": {
     "close": "बंद करें"
   },
-  
   "calendar": {
     "farm_calendar": "खेत कैलेंडर",
     "manage_tasks_schedule": "अपने कृषि कार्यों और कार्यक्रम का प्रबंधन करें",
@@ -180,7 +179,6 @@
     "pesticide": "कीटनाशक",
     "harvest": "फसल कटाई"
   },
-  
   "crops": {
     "seed_source": "बीज स्रोत",
     "previous_crop": "पिछली फसल",
@@ -207,7 +205,6 @@
     "crop_status_history": "फसल स्थिति इतिहास",
     "no_data_available": "कोई डेटा उपलब्ध नहीं"
   },
-  
   "weather": "मौसम",
   "local_forecast": "आपका स्थानीय पूर्वानुमान",
   "my_crops": "मेरी फसलें",

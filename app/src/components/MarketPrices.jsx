@@ -65,9 +65,14 @@ const MarketPrices = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [districts, setDistricts] = useState([
     'All',
-    // Tamil Nadu
-    'Erode', 'Chennai', 'Coimbatore', 'Madurai', 'Salem', 'Thanjavur', 'Trichy', 'Tirunelveli', 'Karur', 'Vellore',
-
+    // Tamil Nadu districts only
+    'Ariyalur', 'Chengalpattu', 'Chennai', 'Coimbatore', 'Cuddalore', 'Dharmapuri',
+    'Dindigul', 'Erode', 'Kallakurichi', 'Kanchipuram', 'Kanyakumari', 'Karur',
+    'Krishnagiri', 'Madurai', 'Mayiladuthurai', 'Nagapattinam', 'Namakkal', 'Nilgiris',
+    'Perambalur', 'Pudukkottai', 'Ramanathapuram', 'Ranipet', 'Salem', 'Sivaganga',
+    'Tenkasi', 'Thanjavur', 'Theni', 'Thoothukudi', 'Tiruchirappalli', 'Trichy',
+    'Tirunelveli', 'Tirupathur', 'Tiruppur', 'Tiruvallur', 'Tiruvannamalai',
+    'Tiruvarur', 'Vellore', 'Viluppuram', 'Virudhunagar'
   ]);
   const [showUserCrops, setShowUserCrops] = useState(true);
 

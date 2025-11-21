@@ -206,7 +206,7 @@ const ChatBot = ({ isOpen, onClose }) => {
         ta: "🌱 வணக்கம்! நான் உங்கள் விவசாய உதவியாளர். நான் உங்களுக்கு பயிர்களை நிர்வகிக்க, வானிலையை சரிபார்க்க, உர பயன்பாடுகளை கண்காணிக்க மற்றும் பலவற்றிற்கு உதவ முடியும். இன்று நீங்கள் என்ன செய்ய விரும்புகிறீர்கள்?",
         hi: "🌱 नमस्ते! मैं आपका खेती सहायक हूं। मैं फसलों के प्रबंधन, मौसम की जांच, उर्वरक अनुप्रयोगों को ट्रैक करने और बहुत कुछ में आपकी मदद कर सकता हूं। आज आप क्या करना चाहेंगे?"
       };
-      
+
       setMessages([{
         id: 'welcome',
         role: 'assistant',
@@ -636,13 +636,13 @@ const TypingIndicator = () => (
 const SuggestedMessages = ({ onSelect }) => {
   const { i18n } = useTranslation();
   const suggestions = getSuggestedMessages(i18n.language);
-  
+
   const labels = {
     en: '💡 Try asking:',
     ta: '💡 கேட்க முயற்சிக்கவும்:',
     hi: '💡 पूछने का प्रयास करें:'
   };
-  
+
   return (
     <div className="space-y-2 md:space-y-3">
       <div className="text-center">

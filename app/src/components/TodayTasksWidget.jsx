@@ -575,7 +575,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                     <FaCheck className="w-4 h-4" />
                   ) : (
                     <FaTimes className="w-4 h-4" />
-                  )}                  
+                  )}
                   {completionModal.type === 'complete' ? t('tasks:complete_task_title') : t('tasks:skip_task_title')}
                 </button>
               </div>

@@ -26,20 +26,20 @@ const commonTranslations = {
     'Harvest': '{crop} அறுவடை செய்யவும்',
     'Prune': '{crop} கிளைகளை வெட்டவும்',
     'Inspect': '{crop} ஐ ஆய்வு செய்யவும்',
-    
+
     // Time periods
     'today': 'இன்று',
     'tomorrow': 'நாளை',
     'this week': 'இந்த வாரம்',
     'next week': 'அடுத்த வாரம்',
     'overdue': 'தாமதமானது',
-    
+
     // Priority
     'URGENT': 'அவசர',
     'HIGH': 'உயர்',
     'MEDIUM': 'நடுத்தர',
     'LOW': 'குறைந்த',
-    
+
     // Status
     'IRRIGATION_NEEDED': 'நீர்ப்பாசனம் தேவை',
     'FERTILIZATION_DUE': 'உரமிடல் நேரம்',
@@ -59,7 +59,7 @@ const commonTranslations = {
     'WEATHER_RESPONSE': 'मौसम प्रतिक्रिया',
     'GENERAL': 'सामान्य',
     'WEED_MANAGEMENT': 'खरपतवार प्रबंधन',
-    
+
     // Common phrases
     'Water your': 'अपनी {crop} को पानी दें',
     'Apply fertilizer to': '{crop} में उर्वरक डालें',
@@ -111,37 +111,37 @@ const cropTranslations = {
  */
 function translateTaskDescription(description, cropName, targetLocale) {
   if (!description || targetLocale === 'en') return description;
-  
+
   const translations = commonTranslations[targetLocale];
   const crops = cropTranslations[targetLocale];
-  
+
   if (!translations) return description;
-  
+
   // Translate crop name
   const translatedCrop = crops[cropName] || cropName;
-  
+
   // Try to find matching pattern
   for (const [pattern, translation] of Object.entries(translations)) {
     if (description.includes(pattern) || description.toLowerCase().includes(pattern.toLowerCase())) {
       return translation.replace('{crop}', translatedCrop);
     }
   }
-  
+
   // Fallback: translate known words
   let translated = description;
-  
+
   // Replace crop name
   if (cropName && crops[cropName]) {
     translated = translated.replace(new RegExp(cropName, 'gi'), crops[cropName]);
   }
-  
+
   // Replace common words
   Object.entries(translations).forEach(([en, local]) => {
     if (!en.includes('{crop}')) {
       translated = translated.replace(new RegExp(en, 'gi'), local);
     }
   });
-  
+
   return translated;
 }
 
@@ -150,32 +150,32 @@ function translateTaskDescription(description, cropName, targetLocale) {
  */
 function translateTask(task, targetLocale = 'en') {
   if (!task || targetLocale === 'en') return task;
-  
+
   const translated = { ...task };
-  
+
   // Preserve crop name in English (never translate crop names)
   if (task.crop?.name) {
     translated.cropName = task.crop.name;
   } else if (task.cropName) {
     translated.cropName = task.cropName;
   }
-  
+
   // Translate description
   if (task.description) {
     const cropName = task.crop?.name || task.cropName;
     translated.description = translateTaskDescription(task.description, cropName, targetLocale);
   }
-  
+
   // Translate category
   if (task.category && commonTranslations[targetLocale]?.[task.category]) {
     translated.categoryTranslated = commonTranslations[targetLocale][task.category];
   }
-  
+
   // Translate priority
   if (task.priority && commonTranslations[targetLocale]?.[task.priority]) {
     translated.priorityTranslated = commonTranslations[targetLocale][task.priority];
   }
-  
+
   return translated;
 }
 
@@ -184,7 +184,7 @@ function translateTask(task, targetLocale = 'en') {
  */
 function translateTasks(tasks, targetLocale = 'en') {
   if (!Array.isArray(tasks) || targetLocale === 'en') return tasks;
-  
+
   return tasks.map(task => translateTask(task, targetLocale));
 }
 
@@ -198,19 +198,19 @@ async function translateObject(content, sourceLocale = 'en', targetLocale = 'ta'
   if (targetLocale === 'en' || targetLocale === sourceLocale) {
     return { translated: content, engine: 'none' };
   }
-  
+
   // If content is a task or array of tasks, use task translation
   if (Array.isArray(content)) {
     return { translated: translateTasks(content, targetLocale), engine: 'pattern-matching' };
   } else if (content.description || content.category) {
     return { translated: translateTask(content, targetLocale), engine: 'pattern-matching' };
   }
-  
+
   // For other objects, return as-is (can be extended with API integration)
   return { translated: content, engine: 'mock' };
 }
 
-module.exports = { 
+module.exports = {
   translateObject,
   translateTask,
   translateTasks,

@@ -46,27 +46,87 @@ const getPriceTrend = async (commodity, currentPrice, district) => {
 };
 
 // Helper function to get most recent price from database
+// Priority: 1) Selected district, 2) Nearby districts, 3) Any Tamil Nadu district
+// NOTE: This function ONLY searches within Tamil Nadu state
 const getRecentPriceFromDB = async (commodity, district) => {
   try {
-    let filter = { 
-      crop_name: commodity.toLowerCase(),
-      price: { $gt: 0 } // Only get valid prices
+    const cropName = commodity.toLowerCase();
+
+    // Define nearby districts for common Tamil Nadu districts
+    const nearbyDistricts = {
+      'Karur': ['Karur', 'Erode', 'Salem', 'Namakkal', 'Trichy', 'Tiruchirappalli'],
+      'Erode': ['Erode', 'Karur', 'Salem', 'Coimbatore', 'Namakkal'],
+      'Salem': ['Salem', 'Erode', 'Karur', 'Namakkal', 'Dharmapuri'],
+      'Coimbatore': ['Coimbatore', 'Erode', 'Tiruppur', 'Dindigul'],
+      'Trichy': ['Trichy', 'Tiruchirappalli', 'Karur', 'Thanjavur', 'Ariyalur'],
+      'Tiruchirappalli': ['Tiruchirappalli', 'Trichy', 'Karur', 'Thanjavur', 'Ariyalur'],
+      'Chennai': ['Chennai', 'Kanchipuram', 'Tiruvallur', 'Chengalpattu'],
+      'Madurai': ['Madurai', 'Dindigul', 'Theni', 'Sivaganga'],
+      'Thanjavur': ['Thanjavur', 'Trichy', 'Tiruchirappalli', 'Ariyalur', 'Mayiladuthurai'],
+      'Tirunelveli': ['Tirunelveli', 'Tenkasi', 'Thoothukudi', 'Kanyakumari'],
+      'Vellore': ['Vellore', 'Tirupathur', 'Ranipet', 'Krishnagiri']
     };
-    
+
+    let recentPrice = null;
+
+    // Step 1: Try exact district match if specified (within Tamil Nadu only)
     if (district && district !== 'All') {
-      filter.city = new RegExp(district, 'i');
+      const filter = {
+        crop_name: cropName,
+        city: new RegExp(district, 'i'),
+        state: 'Tamil Nadu',  // Only Tamil Nadu
+        price: { $gt: 0 }
+      };
+      console.log(`🔍 Searching DB for ${commodity} in ${district}, Tamil Nadu`);
+      recentPrice = await CropPrice.findOne(filter).sort({ date: -1 }).limit(1);
+
+      if (recentPrice) {
+        console.log(`✅ Found cached price for ${commodity} in ${district}: ₹${recentPrice.price / 100} (${recentPrice.date.toLocaleDateString()})`);
+        return recentPrice;
+      }
     }
 
-    console.log(`🔍 Searching DB for ${commodity} in ${district || 'any location'}`);
+    // Step 2: Try nearby districts if district is specified and has nearby areas (Tamil Nadu only)
+    if (district && district !== 'All' && nearbyDistricts[district]) {
+      console.log(`⚠️ No data for ${commodity} in ${district}, searching nearby Tamil Nadu areas...`);
 
-    const recentPrice = await CropPrice.findOne(filter)
-      .sort({ date: -1 })
-      .limit(1);
+      for (const nearbyDistrict of nearbyDistricts[district]) {
+        if (nearbyDistrict === district) continue; // Already checked
 
-    if (recentPrice) {
-      console.log(`✅ Found cached price for ${commodity}: ₹${recentPrice.price / 100} from ${recentPrice.date.toLocaleDateString()}`);
-    } else {
-      console.log(`❌ No cached price found for ${commodity}`);
+        const filter = {
+          crop_name: cropName,
+          city: new RegExp(nearbyDistrict, 'i'),
+          state: 'Tamil Nadu',  // Only Tamil Nadu
+          price: { $gt: 0 }
+        };
+
+        recentPrice = await CropPrice.findOne(filter).sort({ date: -1 }).limit(1);
+
+        if (recentPrice) {
+          console.log(`✅ Found cached price for ${commodity} in nearby ${recentPrice.city}: ₹${recentPrice.price / 100} (${recentPrice.date.toLocaleDateString()})`);
+          return recentPrice;
+        }
+      }
+    }
+
+    // Step 3: Fall back to any district in Tamil Nadu
+    if (!recentPrice) {
+      console.log(`⚠️ No data in specified/nearby areas, searching all Tamil Nadu districts...`);
+      const filter = {
+        crop_name: cropName,
+        state: 'Tamil Nadu',  // Only Tamil Nadu
+        price: { $gt: 0 }
+      };
+      recentPrice = await CropPrice.findOne(filter).sort({ date: -1 }).limit(1);
+
+      if (recentPrice) {
+        console.log(`✅ Found cached price for ${commodity} in ${recentPrice.city}, Tamil Nadu: ₹${recentPrice.price / 100} (${recentPrice.date.toLocaleDateString()})`);
+        return recentPrice;
+      }
+    }
+
+    if (!recentPrice) {
+      console.log(`❌ No cached price found for ${commodity} in Tamil Nadu`);
     }
 
     return recentPrice;

@@ -19,7 +19,7 @@ const translationMap = {
   'Please': 'தயவுசெய்து',
   'Sorry': 'மன்னிக்கவும்',
   'Try asking': 'கேட்க முயற்சிக்கவும்',
-  
+
   // Chatbot specific phrases
   "I'm your farming assistant": 'நான் உங்கள் விவசாய உதவியாளர்',
   'farming assistant': 'விவசாய உதவியாளர்',
@@ -31,7 +31,7 @@ const translationMap = {
   'and more': 'மேலும் பல',
   'What would you like to do today': 'இன்று நீங்கள் என்ன செய்ய விரும்புகிறீர்கள்',
   'would you like': 'நீங்கள் விரும்புகிறீர்களா',
-  
+
   // Action Results
   'Added': 'சேர்க்கப்பட்டது',
   'Removed': 'அகற்றப்பட்டது',
@@ -43,7 +43,7 @@ const translationMap = {
   'Successfully': 'வெற்றிகரமாக',
   'Failed': 'தோல்வி',
   'Error': 'பிழை',
-  
+
   // Farming Terms - Crops
   'crop': 'பயிர்',
   'crops': 'பயிர்கள்',
@@ -53,7 +53,7 @@ const translationMap = {
   'plants': 'செடிகள்',
   'seed': 'விதை',
   'seeds': 'விதைகள்',
-  
+
   // Specific Crops
   'tomato': 'தக்காளி',
   'tomatoes': 'தக்காளி',
@@ -79,7 +79,7 @@ const translationMap = {
   'carrot': 'கேரட்',
   'beans': 'பீன்ஸ்',
   'peas': 'பட்டாணி',
-  
+
   // Farming Activities
   'water': 'நீர்',
   'watering': 'நீர் பாய்ச்சுதல்',
@@ -100,7 +100,7 @@ const translationMap = {
   'control': 'கட்டுப்பாடு',
   'organic': 'இயற்கை',
   'chemical': 'இரசாயன',
-  
+
   // Soil and Environment
   'soil': 'மண்',
   'weather': 'வானிலை',
@@ -109,7 +109,7 @@ const translationMap = {
   'temperature': 'வெப்பநிலை',
   'humidity': 'ஈரப்பதம்',
   'wind': 'காற்று',
-  
+
   // Time
   'today': 'இன்று',
   'tomorrow': 'நாளை',
@@ -123,14 +123,14 @@ const translationMap = {
   'weeks': 'வாரங்கள்',
   'month': 'மாதம்',
   'months': 'மாதங்கள்',
-  
+
   // Tasks
   'task': 'பணி',
   'tasks': 'பணிகள்',
   'work': 'வேலை',
   'activity': 'நடவடிக்கை',
   'activities': 'நடவடிக்கைகள்',
-  
+
   // Questions
   'What': 'என்ன',
   'When': 'எப்போது',
@@ -139,7 +139,7 @@ const translationMap = {
   'How': 'எப்படி',
   'Which': 'எது',
   'Who': 'யார்',
-  
+
   // Common Verbs
   'add': 'சேர்க்க',
   'remove': 'அகற்ற',
@@ -153,7 +153,7 @@ const translationMap = {
   'can': 'முடியும்',
   'should': 'வேண்டும்',
   'must': 'கண்டிப்பாக',
-  
+
   // Market & Prices
   'price': 'விலை',
   'prices': 'விலைகள்',
@@ -161,14 +161,14 @@ const translationMap = {
   'sell': 'விற்க',
   'buy': 'வாங்க',
   'cost': 'செலவு',
-  
+
   // Numbers (for common phrases)
   'one': 'ஒன்று',
   'two': 'இரண்டு',
   'three': 'மூன்று',
   'four': 'நான்கு',
   'five': 'ஐந்து',
-  
+
   // Additional helpful phrases
   'farming assistant': 'விவசாய உதவியாளர்',
   'your farm': 'உங்கள் பண்ணை',
@@ -198,19 +198,19 @@ const translationMap = {
  */
 export function translateToTamil(text) {
   if (!text || typeof text !== 'string') return text;
-  
+
   let translatedText = text;
-  
+
   // Sort by length (longest first) to avoid partial replacements
   const sortedEntries = Object.entries(translationMap).sort((a, b) => b[0].length - a[0].length);
-  
+
   // Replace each English word/phrase with Tamil equivalent
   sortedEntries.forEach(([english, tamil]) => {
     // Case-insensitive word boundary match
     const regex = new RegExp(`\\b${escapeRegex(english)}\\b`, 'gi');
     translatedText = translatedText.replace(regex, tamil);
   });
-  
+
   return translatedText;
 }
 
@@ -219,15 +219,15 @@ export function translateToTamil(text) {
  */
 export function translateFromTamil(text) {
   if (!text || typeof text !== 'string') return text;
-  
+
   let translatedText = text;
-  
+
   // Reverse map - Tamil to English
   Object.entries(translationMap).forEach(([english, tamil]) => {
     const regex = new RegExp(escapeRegex(tamil), 'g');
     translatedText = translatedText.replace(regex, english);
   });
-  
+
   return translatedText;
 }
 
@@ -246,17 +246,17 @@ export function isTamil(text) {
  */
 export function translateResponse(text, userLanguage) {
   if (!text) return text;
-  
+
   // If user language is Tamil and text is in English, translate
   if (userLanguage === 'ta' && !isTamil(text)) {
     return translateToTamil(text);
   }
-  
+
   // If user language is English and text is in Tamil, translate
   if (userLanguage === 'en' && isTamil(text)) {
     return translateFromTamil(text);
   }
-  
+
   return text;
 }
 
@@ -285,7 +285,7 @@ export function getSuggestedMessages(language) {
       'இன்று என் கோதுமைக்கு உரம் இட்டேன்'
     ]
   };
-  
+
   return suggestions[language] || suggestions.en;
 }
 
