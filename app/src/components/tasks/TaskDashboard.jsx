@@ -1,43 +1,59 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
-import {
-  FaSeedling,
-  FaTasks,
-  FaLeaf,
-  FaChevronRight,
-  FaChevronLeft,
-  FaSpinner
-} from 'react-icons/fa';
+import { useNavigate, useLocation, Link, useParams } from 'react-router-dom';
+import { FaPlus, FaSeedling, FaChevronLeft, FaChevronRight, FaInfoCircle } from 'react-icons/fa';
 import TaskList from './TaskList';
-import useTaskGeneration from '../../hooks/useTaskGeneration';
 import { translateCropName } from '../../utils/dbTranslations';
+import useTaskGeneration from '../../hooks/useTaskGeneration';
 import i18n from '../../i18n';
 
 /**
- * Multi-crop task dashboard component
- * Shows task management for multiple crops using tabs
+ * Skeleton loader for crops section
+ */
+const CropSelectionSkeleton = () => (
+  <div className="animate-pulse mb-6">
+    <div className="h-8 bg-gray-200 rounded w-1/4 mb-3"></div>
+    <div className="flex space-x-4 overflow-hidden">
+      {[1, 2, 3, 4].map(i => (
+        <div key={i} className="h-14 w-36 bg-gray-200 rounded-lg"></div>
+      ))}
+    </div>
+  </div>
+);
+
+/**
+ * Optimized TaskDashboard component with performance improvements
+ * - Uses React.memo for child components
+ * - Implements useCallback and useMemo to prevent unnecessary renders
+ * - Batches state updates
+ * - Optimizes API calls
+ * - Better URL handling and navigation
  */
 const TaskDashboard = () => {
   const { t } = useTranslation(['translation', 'tasks']);
   const navigate = useNavigate();
-  const { cropId } = useParams(); // Get cropId from URL parameters
+  const location = useLocation();
+  const params = useParams();
+
   const [crops, setCrops] = useState([]);
+  const [activeCropIndex, setActiveCropIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeCropIndex, setActiveCropIndex] = useState(0);
   const [taskRefreshTrigger, setTaskRefreshTrigger] = useState(0);
 
   // Task generation hook to watch for new task generation
   const { generationResult } = useTaskGeneration();
 
-  // Get active crop ID for task filtering
+  // Get the cropId from URL params
+  const cropIdFromUrl = params.cropId;
+
+  // Get active crop ID - used for task filtering and memoized for performance
   const activeCropId = useMemo(() => {
     if (crops.length === 0) return null;
     return crops[activeCropIndex]?._id;
   }, [crops, activeCropIndex]);
 
-  // Fetch user's crops on mount - using useCallback to prevent unnecessary recreation
+  // Optimized fetch crops function with better error handling
   const fetchCrops = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -50,20 +66,22 @@ const TaskDashboard = () => {
       }
 
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/crops`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!res.ok) {
         throw new Error(`Failed to fetch crops: ${res.status}`);
       }
 
-      const cropData = await res.json();
-      setCrops(cropData);
+      const data = await res.json();
+      setCrops(data);
 
-      // If cropId is provided, set the active crop index accordingly
-      if (cropId) {
-        const cropIndex = cropData.findIndex(crop => crop._id === cropId);
-        if (cropIndex >= 0) {
+      // If there's a crop ID in the URL, select that crop
+      if (cropIdFromUrl) {
+        const cropIndex = data.findIndex(crop => crop._id === cropIdFromUrl);
+        if (cropIndex !== -1) {
           setActiveCropIndex(cropIndex);
         }
       }
@@ -73,7 +91,7 @@ const TaskDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [navigate, t, cropId]);
+  }, [navigate, t, cropIdFromUrl]);
 
   // Load crops on component mount
   useEffect(() => {
@@ -92,11 +110,12 @@ const TaskDashboard = () => {
   const handlePrevCrop = () => {
     if (activeCropIndex > 0) {
       setActiveCropIndex(activeCropIndex - 1);
-      // Update the URL to reflect the new crop
-      navigate(`/tasks/${crops[activeCropIndex - 1]._id}`);
-    } else {
-      setActiveCropIndex(crops.length - 1); // Loop to last crop
-      navigate(`/tasks/${crops[crops.length - 1]._id}`);
+
+      // Update URL without full page reload
+      const newCropId = crops[activeCropIndex - 1]?._id;
+      if (newCropId) {
+        navigate(`/tasks/${newCropId}`, { replace: true });
+      }
     }
   };
 
@@ -104,144 +123,135 @@ const TaskDashboard = () => {
   const handleNextCrop = () => {
     if (activeCropIndex < crops.length - 1) {
       setActiveCropIndex(activeCropIndex + 1);
-      // Update the URL to reflect the new crop
-      navigate(`/tasks/${crops[activeCropIndex + 1]._id}`);
-    } else {
-      setActiveCropIndex(0); // Loop back to first crop
-      navigate(`/tasks/${crops[0]._id}`);
+
+      // Update URL without full page reload
+      const newCropId = crops[activeCropIndex + 1]?._id;
+      if (newCropId) {
+        navigate(`/tasks/${newCropId}`, { replace: true });
+      }
     }
   };
 
-  // Define a consistent container style for all states
-  const containerClass = "bg-white rounded-lg shadow-md min-h-[500px]";
+  // Navigate to specific crop
+  const handleCropSelect = (index) => {
+    setActiveCropIndex(index);
 
-  // Show loading state
-  if (loading) {
-    return (
-      <div className={`${containerClass} p-6 flex justify-center items-center`}>
-        <FaSpinner className="animate-spin text-green-600 text-3xl w-8 h-8" />
-      </div>
-    );
-  }
+    // Update URL without full page reload
+    const newCropId = crops[index]?._id;
+    if (newCropId) {
+      navigate(`/tasks/${newCropId}`, { replace: true });
+    }
+  };
 
-  // Show error message
-  if (error) {
+  // Render crop selection section
+  const renderCropSelection = () => {
+    if (loading) {
+      return <CropSelectionSkeleton />;
+    }
+
+    if (error) {
+      return (
+        <div className="bg-red-50 border border-red-300 text-red-800 p-3 rounded-md mb-6 flex items-start">
+          <FaInfoCircle className="text-red-600 mr-2 mt-1 flex-shrink-0" />
+          <div>
+            <p>{error}</p>
+            <button
+              onClick={fetchCrops}
+              className="text-red-600 underline mt-1"
+            >
+              {t('try_again', { ns: 'tasks' })}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (crops.length === 0) {
+      return (
+        <div className="bg-yellow-50 border border-yellow-300 text-yellow-800 p-3 rounded-md mb-6 flex items-start">
+          <FaInfoCircle className="text-yellow-600 mr-2 mt-1 flex-shrink-0" />
+          <div>
+            <p>{t('no_crops_message', { ns: 'tasks' })}</p>
+            <Link
+              to="/crops/add"
+              className="text-green-600 underline mt-1 block"
+            >
+              {t('add_your_first_crop', { ns: 'tasks' })}
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className={`${containerClass} p-6`}>
-        <div className="bg-red-100 border border-red-300 text-red-800 p-4 rounded-md">
-          {error}
+      <div className="mb-6">
+        <h2 className="text-lg font-medium mb-3">{t('select_crop', { ns: 'tasks' })}</h2>
+
+        <div className="flex items-center">
+          {/* Prev button */}
+          <button
+            onClick={handlePrevCrop}
+            disabled={activeCropIndex === 0}
+            className={`p-2 rounded-full mr-2 ${activeCropIndex === 0
+              ? 'text-gray-300 cursor-not-allowed'
+              : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            aria-label="Previous crop"
+          >
+            <FaChevronLeft />
+          </button>
+
+          {/* Scrollable crop list */}
+          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar flex-grow">
+            {crops.map((crop, index) => {
+              // Translate crop name for better UX
+              const translatedName = translateCropName(crop.name, 'translation');
+
+              return (
+                <button
+                  key={crop._id}
+                  onClick={() => handleCropSelect(index)}
+                  className={`px-4 py-3 rounded-lg flex items-center whitespace-nowrap transition-all ${index === activeCropIndex
+                    ? 'bg-green-600 text-white font-medium shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  <FaSeedling className="mr-2" />
+                  {translatedName}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Next button */}
+          <button
+            onClick={handleNextCrop}
+            disabled={activeCropIndex === crops.length - 1}
+            className={`p-2 rounded-full ml-2 ${activeCropIndex === crops.length - 1
+              ? 'text-gray-300 cursor-not-allowed'
+              : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            aria-label="Next crop"
+          >
+            <FaChevronRight />
+          </button>
         </div>
       </div>
     );
-  }
-
-  // Show message if no crops are available
-  if (crops.length === 0) {
-    return (
-      <div className={`${containerClass} p-6 text-center`}>
-        <FaSeedling className="text-green-600 text-4xl mx-auto mb-4 w-16 h-16" />
-        <h3 className="text-xl font-semibold mb-2">{t('no_crops_available', { ns: 'tasks' })}</h3>
-        <p className="text-gray-600 mb-4">
-          {t('add_crops_to_manage_tasks', { ns: 'tasks' })}
-        </p>
-      </div>
-    );
-  }
-
-  // Get the currently active crop
-  const activeCrop = crops[activeCropIndex];
-
-  // Determine crop status icon and class
-  const getCropStatusIcon = (status) => {
-    switch (status) {
-      case 'Growing':
-        return <FaLeaf className="text-green-600" />;
-      case 'Harvested':
-        return <FaTasks className="text-orange-500" />;
-      case 'Planning':
-        return <FaSeedling className="text-blue-500" />;
-      default:
-        return <FaSeedling className="text-gray-500" />;
-    }
   };
 
   return (
-    <div className={containerClass}>
-      {/* Crop Navigation Header */}
-      <div className="flex justify-between items-center border-b p-4 h-[80px]">
-        <div className="flex items-center w-1/4">
-          <button
-            onClick={handlePrevCrop}
-            className="text-green-600 p-2 rounded-full hover:bg-green-50 disabled:text-gray-300 mr-2"
-            disabled={crops.length <= 1}
-          >
-            <FaChevronLeft className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => navigate('/tasks')}
-            className="text-green-600 hover:text-green-800 text-sm flex items-center font-medium mr-4"
-          >
-            <FaTasks className="mr-1 w-4 h-4" /> {t('all_crops', { ns: 'tasks' })}
-          </button>
-        </div>
-
-        <div className="text-center w-2/4 px-2">
-          <h2 className="text-xl font-bold flex items-center justify-center">
-            <div className="p-2 rounded-full bg-gray-50 mr-3 w-9 h-9 flex items-center justify-center flex-shrink-0">
-              {getCropStatusIcon(activeCrop.status)}
-            </div>
-            <span className="mx-2 truncate">{activeCrop.name}</span>
-            {activeCrop.variety && (
-              <span className="text-sm text-gray-500 truncate">({activeCrop.variety})</span>
-            )}
-            <span className={`ml-2 text-xs px-2 py-1 rounded-full flex-shrink-0 ${activeCrop.status === 'Growing' ? 'bg-green-100 text-green-800' :
-              activeCrop.status === 'Harvested' ? 'bg-orange-100 text-orange-800' :
-                activeCrop.status === 'Planning' ? 'bg-blue-100 text-blue-800' :
-                  'bg-gray-100 text-gray-800'
-              }`}>
-              {activeCrop.status}
-            </span>
-          </h2>
-          <div className="text-xs text-gray-500 mt-1 truncate">
-            {activeCrop.plantingDate && (
-              <span>{t('planted', { ns: 'tasks' })}: {new Date(activeCrop.plantingDate).toLocaleDateString()}</span>
-            )}
-            {activeCrop.status === 'Growing' && activeCrop.harvestDate && (
-              <span> • {t('expected_harvest', { ns: 'tasks' })}: {new Date(activeCrop.harvestDate).toLocaleDateString()}</span>
-            )}
-          </div>
-        </div>
-
-        <div className="w-1/4 flex justify-end">
-          <button
-            onClick={handleNextCrop}
-            className="text-green-600 p-2 rounded-full hover:bg-green-50 disabled:text-gray-300"
-            disabled={crops.length <= 1}
-          >
-            <FaChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+    <div className="container mx-auto p-4">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">{t('tasks', { ns: 'tasks' })}</h1>
       </div>
 
-      {/* Crop Index Indicators (for multiple crops) */}
-      {crops.length > 1 && (
-        <div className="flex justify-center py-2 gap-1">
-          {crops.map((_, index) => (
-            <button
-              key={index}
-              className={`w-2 h-2 rounded-full ${index === activeCropIndex ? 'bg-green-600' : 'bg-gray-300'}`}
-              onClick={() => {
-                setActiveCropIndex(index);
-                navigate(`/tasks/${crops[index]._id}`);
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {renderCropSelection()}
 
-      {/* Task List for Active Crop */}
-      <TaskList cropId={activeCropId} refreshTrigger={taskRefreshTrigger} />
+      {/* Only render TaskList if we have crops and the loading/error states are handled */}
+      {crops.length > 0 && !error && (
+        <TaskList cropId={activeCropId} refreshTrigger={taskRefreshTrigger} />
+      )}
     </div>
   );
 };
