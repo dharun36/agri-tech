@@ -118,7 +118,6 @@ function validateConfig() {
     console.warn('⚠️ Missing required environment variables:', missing.join(', '));
   }
 
-  // Warn about missing optional but recommended variables
   const recommended = [
     'HUGGING_FACE_TOKEN',
     'SMTP_USER',

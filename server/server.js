@@ -15,7 +15,7 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174","https://ai-farming-assistant.vercel.app/","agri-tech-app-hv70.onrender.com"], // Multiple frontend URLs
+    origin: ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174", "https://ai-farming-assistant.vercel.app/", "agri-tech-app-hv70.onrender.com"], // Multiple frontend URLs
     methods: ["GET", "POST"]
   }
 });
@@ -171,7 +171,13 @@ app.post('/api/weather-analysis', async (req, res) => {
 // If a frontend build exists in ../app/dist or ../app/build, serve it (SPA fallback)
 const fs = require('fs');
 const pathStatic = require('path');
-const possibleBuildDirs = [pathStatic.join(__dirname, '..', 'app', 'dist'), pathStatic.join(__dirname, '..', 'app', 'build')];
+const possibleBuildDirs = [
+  pathStatic.join(__dirname, '..', 'app', 'dist'),
+  pathStatic.join(__dirname, '..', 'app', 'build'),
+  pathStatic.join(__dirname, 'dist'),
+  pathStatic.join(__dirname, 'build'),
+  pathStatic.join(__dirname, 'public')
+];
 const existing = possibleBuildDirs.find(d => fs.existsSync(d));
 
 if (existing) {
@@ -180,15 +186,22 @@ if (existing) {
 
   // SPA fallback: return index.html for any unknown GET route (must be after API routes)
   app.get('*', (req, res) => {
+    // Don't serve index.html for API routes
+    if (req.url.startsWith('/api/')) {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
+
     const indexPath = pathStatic.join(existing, 'index.html');
     if (fs.existsSync(indexPath)) {
+      console.log(`SPA fallback: serving index.html for ${req.url}`);
       return res.sendFile(indexPath);
     }
     return res.status(404).send('Frontend build not found');
   });
 } else {
+  console.log('No frontend build found. Checked:', possibleBuildDirs);
   // Fallback route when no frontend build is found
-  app.get('/', (req, res) => res.send('AgriTech Simple API Running'));
+  app.get('/', (req, res) => res.send('AgriTech Simple API Running - No frontend build found'));
 }
 
 // Socket.io connection handling

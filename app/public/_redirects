@@ -1,0 +1,3 @@
+# Handle client-side routing for React Router
+# This tells the server to serve index.html for all routes that don't match static files
+/*    /index.html   200
