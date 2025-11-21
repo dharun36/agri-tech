@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation, Link, useParams } from 'react-router-dom';
 import { FaPlus, FaSeedling, FaChevronLeft, FaChevronRight, FaInfoCircle } from 'react-icons/fa';
-import OptimizedTaskList from './OptimizedTaskList';
+import TaskList from './TaskList';
 import { translateCropName } from '../../utils/dbTranslations';
 import useTaskGeneration from '../../hooks/useTaskGeneration';
 import i18n from '../../i18n';
@@ -259,7 +259,7 @@ const OptimizedTaskDashboard = () => {
 
       {/* Only render TaskList if we have crops and the loading/error states are handled */}
       {crops.length > 0 && !error && (
-        <OptimizedTaskList cropId={activeCropId} refreshTrigger={taskRefreshTrigger} />
+        <TaskList cropId={activeCropId} refreshTrigger={taskRefreshTrigger} />
       )}
     </div>
   );

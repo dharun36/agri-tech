@@ -8,15 +8,7 @@ import { useTranslation } from 'react-i18next'
 const LanguageSwitcher = () => {
   const { i18n, t } = useTranslation();
 
-  // Keep Lingo.dev locale cookie in sync so build-time dictionaries load correctly
-  const setLingoLocale = (locale) => {
-    try {
-      const maxAge = 60 * 60 * 24 * 365; // 1 year
-      document.cookie = `lingo-locale=${locale}; path=/; max-age=${maxAge}`;
-    } catch {
-      // ignore cookie errors
-    }
-  };
+  // Language switching functionality
 
   // Handle language with region codes (en-US, etc)
   const currentLang = i18n.language.startsWith('en')
@@ -32,8 +24,6 @@ const LanguageSwitcher = () => {
     i18n.changeLanguage(lng);
     try { localStorage.setItem('i18nextLng', lng); } catch { }
     if (typeof document !== 'undefined') document.documentElement.lang = lng;
-    // Sync with Lingo.dev so compiler-provided dictionaries switch too
-    setLingoLocale(lng);
   }
 
   return (

@@ -98,7 +98,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
           console.log(`📋 Retrieved ${data.tasks.length} daily tasks`, data);
           let tasks = data.tasks || [];
 
-          // Runtime translation for AI-generated content using Lingo.dev SDK via backend
+          // Translation functionality disabled
           // Only translate when user's language is not English
           const lng = localStorage.getItem('i18nextLng') || 'en';
           if (lng && lng !== 'en') {
