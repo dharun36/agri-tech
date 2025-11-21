@@ -1,4 +1,8 @@
 {
+  "today_tasks": "आज के कार्य",
+  "daily_activities": "दैनिक गतिविधियां",
+  "done": "पूर्ण",
+  "no_crop": "कोई फसल नहीं",
   "crop_tasks": "फसल कार्य",
   "crop_tasks_and_recommendations": "फसल कार्य और सिफारिशें",
   "select_crop_for_tasks": "कार्यों का प्रबंधन करने के लिए फसल चुनें",

@@ -160,7 +160,7 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
               className={`flex items-center ${collapsed ? 'justify-center' : 'px-4'} py-3 ${isActive('/calendar') ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'}`}
             >
               <FaCalendarAlt className={`${collapsed ? 'text-xl' : 'text-lg mr-3'}`} />
-              {!collapsed && <span>Calendar</span>}
+              {!collapsed && <span>{t('navigation.calendar')}</span>}
             </Link>
           </li>
           <li>
@@ -178,7 +178,7 @@ const VerticalHeader = ({ collapsed: propCollapsed }) => {
               className={`flex items-center ${collapsed ? 'justify-center' : 'px-4'} py-3 ${isActive('/tasks') ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'}`}
             >
               <FaTasks className={`${collapsed ? 'text-xl' : 'text-lg mr-3'}`} />
-              {!collapsed && <span>{t('tasks.tasks')}</span>}
+              {!collapsed && <span>{t('navigation.tasks')}</span>}
             </Link>
           </li>
         </ul>

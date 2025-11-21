@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FaCalendarAlt, FaPlus, FaEye, FaEdit, FaTrash, FaTasks, FaFilter, FaCalendarPlus } from 'react-icons/fa';
 import { API_BASE_URL } from '../../config/api';
 
@@ -92,12 +93,13 @@ const getTypeKey = (task) => (task.type || task.category || 'general');
 const getTypeMeta = (task) => TYPE_META[getTypeKey(task)] || TYPE_META.general;
 
 const Legend = () => {
+  const { t } = useTranslation();
   const items = [
-    { key: 'sowing', label: 'Sowing' },
-    { key: 'irrigation', label: 'Irrigation' },
-    { key: 'fertilizer', label: 'Fertilizer' },
-    { key: 'pesticide', label: 'Pesticide' },
-    { key: 'harvest', label: 'Harvest' },
+    { key: 'sowing', label: t('calendar.sowing') },
+    { key: 'irrigation', label: t('calendar.irrigation') },
+    { key: 'fertilizer', label: t('calendar.fertilizer') },
+    { key: 'pesticide', label: t('calendar.pesticide') },
+    { key: 'harvest', label: t('calendar.harvest') },
   ];
   return (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3 p-2 rounded-md bg-white/60">
@@ -116,6 +118,7 @@ const Legend = () => {
 
 // Calendar component
 const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
+  const { t } = useTranslation();
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(initialDate));
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -524,13 +527,22 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
       setNewTask({ title: '', description: '', priority: 'medium', type: 'general', dueDate: '' });
     }
   }, [newTask, selectedDay, demoMode, serverAvailable, checkServerConnectivity]);  // UI helpers
-  const DayHeader = () => (
-    <div className="grid grid-cols-7 text-xs font-semibold text-gray-600">
-      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-        <div key={d} className="px-2 py-1 text-center">{d}</div>
-      ))}
-    </div>
-  );
+  const DayHeader = () => {
+    const dayNames = {
+      en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      ta: ['ஞா', 'தி', 'செ', 'பு', 'வி', 'வெ', 'ச'],
+      hi: ['रवि', 'सोम', 'मंगल', 'बुध', 'गुरु', 'शुक्र', 'शनि']
+    };
+    const days = dayNames[t('current_language')] || dayNames.en;
+    
+    return (
+      <div className="grid grid-cols-7 text-xs font-semibold text-gray-600">
+        {days.map((d, i) => (
+          <div key={i} className="px-2 py-1 text-center">{d}</div>
+        ))}
+      </div>
+    );
+  };
 
   const DayCell = ({ day }) => {
     const key = formatISODate(day);
@@ -766,10 +778,10 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">
-                Farm Calendar
+                {t('calendar.farm_calendar')}
               </h1>
               <p className="text-gray-600 text-xs sm:text-sm">
-                Manage your agricultural tasks and schedule
+                {t('calendar.manage_tasks_schedule')}
               </p>
             </div>
           </div>
@@ -791,10 +803,10 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
                 setShowNewTaskModal(true);
               }}
               className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-medium flex items-center gap-2 transition-colors"
-              title="Add new task"
+              title={t('calendar.add_new_task')}
             >
               <FaPlus className="w-4 h-4" />
-              Add Task
+              {t('calendar.add_task')}
             </button>
           </div>
         </div>
@@ -813,7 +825,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
                 onClick={() => setCurrentMonth(startOfMonth(new Date()))}
                 className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 sm:px-4 rounded font-medium text-sm sm:text-base"
               >
-                Today
+                {t('calendar.today')}
               </button>
               <button
                 onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
@@ -835,7 +847,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
 
           <div className="text-gray-800 self-end sm:self-auto">
             <div className="text-right">
-              <div className="text-xs sm:text-sm text-gray-600">Total Tasks</div>
+              <div className="text-xs sm:text-sm text-gray-600">{t('calendar.total_tasks')}</div>
               <div className="text-xl sm:text-2xl font-semibold">{normalizedTasks.length}</div>
             </div>
           </div>
@@ -860,9 +872,9 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
       {/* Filters and Legend section */}
       <div className="px-3 sm:px-6 py-4 border-b border-gray-200">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Task Categories</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800">{t('calendar.task_categories')}</h3>
           <div className="text-xs sm:text-sm text-gray-500">
-            {normalizedTasks.filter(t => t.done || t.status === 'done').length} of {normalizedTasks.length} completed
+            {normalizedTasks.filter(t => t.done || t.status === 'done').length} {t('calendar.of')} {normalizedTasks.length} {t('calendar.completed')}
           </div>
         </div>
 

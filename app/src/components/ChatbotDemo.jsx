@@ -6,10 +6,12 @@
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChatActions, useChatIntegration, ChatPrompts } from '../api/chat';
 import { FaRobot, FaSeedling, FaCloudRain, FaTractor } from 'react-icons/fa';
 
 const ChatbotDemo = () => {
+  const { t } = useTranslation();
   const { sendMessage, quickActions, isLoading, lastResponse, error, clearError } = useChatIntegration();
   const [testMessage, setTestMessage] = useState('');
   const [responses, setResponses] = useState([]);
@@ -61,20 +63,20 @@ const ChatbotDemo = () => {
       <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
         <div className="flex items-center space-x-3 mb-6">
           <FaRobot className="text-3xl text-green-600" />
-          <h1 className="text-2xl font-bold text-gray-800">Farming Assistant Chatbot Demo</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{t('chatbot.title')} {t('common.demo', 'Demo')}</h1>
         </div>
 
         {/* Test Message Input */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Test Custom Message
+            {t('common.test', 'Test')} {t('common.message', 'Custom Message')}
           </label>
           <div className="flex space-x-2">
             <input
               type="text"
               value={testMessage}
               onChange={(e) => setTestMessage(e.target.value)}
-              placeholder="Type your message here..."
+              placeholder={t('chatbot.placeholder')}
               className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
               onKeyPress={(e) => e.key === 'Enter' && handleSendTest()}
             />
@@ -83,7 +85,7 @@ const ChatbotDemo = () => {
               disabled={isLoading || !testMessage.trim()}
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50"
             >
-              Send
+              {t('chatbot.send')}
             </button>
           </div>
         </div>
@@ -158,17 +160,17 @@ const ChatbotDemo = () => {
         {isLoading && (
           <div className="flex items-center justify-center py-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-            <span className="ml-2 text-gray-600">Processing...</span>
+            <span className="ml-2 text-gray-600">{t('common.processing')}</span>
           </div>
         )}
       </div>
 
       {/* Responses */}
       <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Chat Responses</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-4">{t('chatbot.title')} {t('common.responses', 'Responses')}</h2>
 
         {responses.length === 0 ? (
-          <p className="text-gray-500 italic">No responses yet. Try sending a message or using quick actions!</p>
+          <p className="text-gray-500 italic">{t('common.no_responses')}</p>
         ) : (
           <div className="space-y-4 max-h-96 overflow-y-auto">
             {responses.map((item, index) => (
@@ -176,11 +178,11 @@ const ChatbotDemo = () => {
                 <div className="mb-2">
                   <span className="text-sm text-gray-500">{item.timestamp}</span>
                   <div className="bg-blue-50 px-3 py-2 rounded mt-1">
-                    <strong>You:</strong> {item.message}
+                    <strong>{t('common.you')}:</strong> {item.message}
                   </div>
                 </div>
                 <div className="bg-green-50 px-3 py-2 rounded">
-                  <strong>Assistant:</strong> {item.response}
+                  <strong>{t('common.assistant')}:</strong> {item.response}
                 </div>
               </div>
             ))}

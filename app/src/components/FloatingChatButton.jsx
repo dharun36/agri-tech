@@ -6,10 +6,12 @@
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FaComments, FaSeedling } from 'react-icons/fa';
 import ChatBot from './ChatBot';
 
 const FloatingChatButton = () => {
+  const { t } = useTranslation();
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   const toggleChat = () => {
@@ -23,7 +25,7 @@ const FloatingChatButton = () => {
         <button
           onClick={toggleChat}
           className="bg-green-600 hover:bg-green-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-green-300"
-          aria-label="Open farming assistant chat"
+          aria-label={t('chatbot.open', 'Open farming assistant chat')}
         >
           <div className="relative">
             {isChatOpen ? (

@@ -1,4 +1,8 @@
 {
+  "today_tasks": "Today's Tasks",
+  "daily_activities": "Daily activities",
+  "done": "Done",
+  "no_crop": "No crop assigned",
   "crop_tasks": "Crop Tasks",
   "crop_tasks_and_recommendations": "Crop Tasks & Recommendations",
   "select_crop": "Select Crop",

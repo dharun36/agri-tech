@@ -23,9 +23,10 @@ import {
   FaStop
 } from 'react-icons/fa';
 import chatService from '../services/chatService';
+import { translateResponse, getSuggestedMessages } from '../utils/chatTranslator';
 
 const ChatBot = ({ isOpen, onClose }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -200,15 +201,21 @@ const ChatBot = ({ isOpen, onClose }) => {
   // Initialize chat with welcome message
   useEffect(() => {
     if (messages.length === 0) {
+      const welcomeMessages = {
+        en: "🌱 Hello! I'm your farming assistant. I can help you manage crops, check weather, track fertilizer applications, and more. What would you like to do today?",
+        ta: "🌱 வணக்கம்! நான் உங்கள் விவசாய உதவியாளர். நான் உங்களுக்கு பயிர்களை நிர்வகிக்க, வானிலையை சரிபார்க்க, உர பயன்பாடுகளை கண்காணிக்க மற்றும் பலவற்றிற்கு உதவ முடியும். இன்று நீங்கள் என்ன செய்ய விரும்புகிறீர்கள்?",
+        hi: "🌱 नमस्ते! मैं आपका खेती सहायक हूं। मैं फसलों के प्रबंधन, मौसम की जांच, उर्वरक अनुप्रयोगों को ट्रैक करने और बहुत कुछ में आपकी मदद कर सकता हूं। आज आप क्या करना चाहेंगे?"
+      };
+      
       setMessages([{
         id: 'welcome',
         role: 'assistant',
-        content: "🌱 Hello! I'm your farming assistant. I can help you manage crops, check weather, track fertilizer applications, and more. What would you like to do today?",
+        content: welcomeMessages[i18n.language] || welcomeMessages.en,
         timestamp: new Date().toISOString(),
         isWelcome: true
       }]);
     }
-  }, []);
+  }, [i18n.language]);
 
   /**
    * Start voice recording
@@ -288,17 +295,21 @@ const ChatBot = ({ isOpen, onClose }) => {
     setShowSuggestions(false);
 
     try {
-      // Send message to chat service with location data
+      // Send message to chat service with location data and user language
       const response = await chatService.sendMessage(userMessage.content, {
         userLocation: userLocation,
-        locationError: locationError
+        locationError: locationError,
+        userLanguage: i18n.language // Pass current language
       });
+
+      // Translate response to user's language
+      const translatedMessage = translateResponse(response.message, i18n.language);
 
       // Create assistant message
       const assistantMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: response.message,
+        content: translatedMessage,
         timestamp: response.timestamp,
         success: response.success,
         functionCalls: response.functionCalls || [],
@@ -623,12 +634,19 @@ const TypingIndicator = () => (
  * Suggested messages component
  */
 const SuggestedMessages = ({ onSelect }) => {
-  const suggestions = chatService.getSuggestedMessages();
-
+  const { i18n } = useTranslation();
+  const suggestions = getSuggestedMessages(i18n.language);
+  
+  const labels = {
+    en: '💡 Try asking:',
+    ta: '💡 கேட்க முயற்சிக்கவும்:',
+    hi: '💡 पूछने का प्रयास करें:'
+  };
+  
   return (
     <div className="space-y-2 md:space-y-3">
       <div className="text-center">
-        <p className="text-xs md:text-sm font-medium text-gray-600 bg-gray-100 inline-block px-2 md:px-3 py-1 rounded-full">💡 Try asking:</p>
+        <p className="text-xs md:text-sm font-medium text-gray-600 bg-gray-100 inline-block px-2 md:px-3 py-1 rounded-full">{labels[i18n.language] || labels.en}</p>
       </div>
       <div className="grid grid-cols-1 gap-1.5 md:gap-2">
         {suggestions.slice(0, 4).map((suggestion, index) => (

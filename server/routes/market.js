@@ -48,14 +48,26 @@ const getPriceTrend = async (commodity, currentPrice, district) => {
 // Helper function to get most recent price from database
 const getRecentPriceFromDB = async (commodity, district) => {
   try {
-    let filter = { crop_name: commodity.toLowerCase() };
-    if (district) {
+    let filter = { 
+      crop_name: commodity.toLowerCase(),
+      price: { $gt: 0 } // Only get valid prices
+    };
+    
+    if (district && district !== 'All') {
       filter.city = new RegExp(district, 'i');
     }
+
+    console.log(`🔍 Searching DB for ${commodity} in ${district || 'any location'}`);
 
     const recentPrice = await CropPrice.findOne(filter)
       .sort({ date: -1 })
       .limit(1);
+
+    if (recentPrice) {
+      console.log(`✅ Found cached price for ${commodity}: ₹${recentPrice.price / 100} from ${recentPrice.date.toLocaleDateString()}`);
+    } else {
+      console.log(`❌ No cached price found for ${commodity}`);
+    }
 
     return recentPrice;
   } catch (error) {
@@ -191,6 +203,7 @@ router.get('/prices', async (req, res) => {
     };
 
     const results = await Promise.all(commodityList.map(async (commodity) => {
+      console.log(`\n🔍 Fetching price for: ${commodity}`);
       const q = `https://api.data.gov.in/resource/${DATA_ID}?api-key=${GOV_KEY}&format=json&filters[commodity]=${encodeURIComponent(commodity)}${district ? `&filters[district]=${encodeURIComponent(district)}` : ''}&limit=1`;
       try {
         const r = await fetchWithTimeout(q, 8000);
@@ -243,11 +256,14 @@ router.get('/prices', async (req, res) => {
           return result;
         } else {
           // No data from API, try database
+          console.log(`⚠️ No API data for ${commodity}, checking database...`);
           const recentPrice = await getRecentPriceFromDB(commodity, district);
           if (recentPrice) {
             const trend = await getPriceTrend(commodity, recentPrice.price, district);
             const daysAgo = Math.floor((new Date() - new Date(recentPrice.date)) / (1000 * 60 * 60 * 24));
             const isOldData = daysAgo > 1; // Consider data old if more than 1 day
+
+            console.log(`✅ Using cached data for ${commodity} (${daysAgo} days old)`);
 
             return {
               commodity,
@@ -261,6 +277,7 @@ router.get('/prices', async (req, res) => {
               note: 'No current data available - showing previous data'
             };
           }
+          console.log(`❌ No cached data available for ${commodity}`);
           return { commodity, price: 'N/A', marketLocation: 'No data', trend: 'stable' };
         }
       } catch (err) {

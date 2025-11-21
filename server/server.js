@@ -75,6 +75,8 @@ app.use('/api/prices', require('./routes/prices'));
 app.use('/api/tasks', require('./routes/tasks'));
 // Farming assistant chatbot
 app.use('/api/chat', require('./routes/chat'));
+// Translation API for AI-generated content
+app.use('/api/translate', require('./routes/translate'));
 
 // Simple task generation endpoint
 app.post('/api/tasks/generate', async (req, res) => {

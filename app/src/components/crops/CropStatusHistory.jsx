@@ -213,23 +213,22 @@ const CropStatusHistory = React.memo(({ crop, onAddEvent }) => {
   // Get label for the add button based on active tab
   const getAddButtonLabel = () => {
     switch (activeTab) {
-      case 'irrigation': return 'Add Irrigation';
-      case 'fertilization': return 'Add Fertilization';
-      case 'pestDisease': return 'Add Pest/Disease';
-      case 'growth': return 'Add Growth Record';
-      case 'harvest': return 'Add Harvest';
-
-      case 'cost': return 'Add Cost';
-      case 'labor': return 'Add Labor';
-      case 'note': return 'Add Note';
-      case 'activity': return 'Add Activity';
-      default: return 'Add Event';
+      case 'irrigation': return t('crops.add_irrigation');
+      case 'fertilization': return t('crops.add_fertilization');
+      case 'pestDisease': return t('crops.add_pest_disease');
+      case 'growth': return t('crops.add_growth_record');
+      case 'harvest': return t('crops.add_harvest');
+      case 'cost': return t('crops.add_cost');
+      case 'labor': return t('crops.add_labor');
+      case 'note': return t('crops.add_note');
+      case 'activity': return t('crops.add_activity');
+      default: return t('crops.add_event');
     }
   };
 
   return (
     <Card className="mb-6">
-      <h2 className="text-xl font-bold mb-4">{t('crop_status_history')}</h2>
+      <h2 className="text-xl font-bold mb-4">{t('crops.crop_status_history')}</h2>
 
       {/* Tab navigation */}
       <div className="flex flex-wrap gap-2 mb-4 overflow-x-auto pb-2">
@@ -237,56 +236,56 @@ const CropStatusHistory = React.memo(({ crop, onAddEvent }) => {
           active={activeTab === 'irrigation'}
           onClick={() => setActiveTab('irrigation')}
           icon={EventTypeIcons.irrigation}
-          label={t('irrigation')}
+          label={t('crops.irrigation')}
         />
         <TabButton
           active={activeTab === 'fertilization'}
           onClick={() => setActiveTab('fertilization')}
           icon={EventTypeIcons.fertilization}
-          label={t('fertilization')}
+          label={t('crops.fertilization')}
         />
         <TabButton
           active={activeTab === 'pestDisease'}
           onClick={() => setActiveTab('pestDisease')}
           icon={EventTypeIcons.pestDisease}
-          label={t('pests_diseases')}
+          label={t('crops.pests_diseases')}
         />
         <TabButton
           active={activeTab === 'growth'}
           onClick={() => setActiveTab('growth')}
           icon={EventTypeIcons.growth}
-          label={t('growth')}
+          label={t('crops.growth')}
         />
         <TabButton
           active={activeTab === 'harvest'}
           onClick={() => setActiveTab('harvest')}
           icon={EventTypeIcons.harvest}
-          label={t('harvest')}
+          label={t('crops.harvest')}
         />
 
         <TabButton
           active={activeTab === 'cost'}
           onClick={() => setActiveTab('cost')}
           icon={EventTypeIcons.cost}
-          label={t('costs')}
+          label={t('crops.costs')}
         />
         <TabButton
           active={activeTab === 'labor'}
           onClick={() => setActiveTab('labor')}
           icon={EventTypeIcons.labor}
-          label={t('labor')}
+          label={t('crops.labor')}
         />
         <TabButton
           active={activeTab === 'note'}
           onClick={() => setActiveTab('note')}
           icon={EventTypeIcons.note}
-          label={t('notes')}
+          label={t('crops.notes')}
         />
         <TabButton
           active={activeTab === 'activity'}
           onClick={() => setActiveTab('activity')}
           icon={EventTypeIcons.activity}
-          label={t('activities')}
+          label={t('crops.activities')}
         />
       </div>
 
@@ -294,7 +293,7 @@ const CropStatusHistory = React.memo(({ crop, onAddEvent }) => {
       <div className="mb-4">
         {getActiveData().length === 0 ? (
           <div className="text-gray-500 text-center py-6">
-            {t('no_data_available')}
+            {t('crops.no_data_available')}
           </div>
         ) : (
           <div className="border-l-2 border-green-300 pl-4 ml-2">
