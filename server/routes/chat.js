@@ -70,6 +70,87 @@ Tamil Translations for Common Farming Terms (for reference only, use English in 
 IMPORTANT: Only use ACTION format when you have the actual specific information. If users ask to perform actions but don't provide enough details, ask them for the missing information instead of using ACTION format. Always use English terms in ACTION commands for backend consistency, but respond in user's preferred language.`;
 
 /**
+ * Translate English text to Tamil (reverse of translateTamilToEnglish)
+ */
+async function translateEnglishToTamil(text) {
+  try {
+    // If Google Translate API key is available, use it
+    if (process.env.GOOGLE_TRANSLATE_API_KEY) {
+      const response = await fetch('https://translation.googleapis.com/language/translate/v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: process.env.GOOGLE_TRANSLATE_API_KEY,
+          q: text,
+          source: 'en',
+          target: 'ta',
+          format: 'text'
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const translatedText = result.data?.translations?.[0]?.translatedText;
+        if (translatedText) {
+          console.log(`English->Tamil: "${text}" -> "${translatedText}"`);
+          return translatedText;
+        }
+      }
+    }
+
+    // Fallback: Basic English to Tamil dictionary for common responses
+    const englishToTamilMap = {
+      'Hello': 'வணக்கம்',
+      'Thank you': 'நன்றி',
+      'Welcome': 'வரவேற்கிறோம்',
+      'Yes': 'ஆம்',
+      'No': 'இல்லை',
+      'Good': 'நல்ல',
+      'Bad': 'மோசம்',
+      'Help': 'உதவி',
+      'Added': 'சேர்க்கப்பட்டது',
+      'Removed': 'அகற்றப்பட்டது',
+      'Created': 'உருவாக்கப்பட்டது',
+      'Updated': 'புதுப்பிக்கப்பட்டது',
+      'Completed': 'முடிந்தது',
+      'Success': 'வெற்றி',
+      'Failed': 'தோல்வி',
+      'Error': 'பிழை',
+      'crop': 'பயிர்',
+      'farm': 'பண்ணை',
+      'water': 'நீர்',
+      'soil': 'மண்',
+      'weather': 'வானிலை',
+      'task': 'பணி',
+      'plant': 'செடி',
+      'seed': 'விதை',
+      'fertilizer': 'உரம்',
+      'harvest': 'அறுவடை',
+      'tomato': 'தக்காளி',
+      'onion': 'வெங்காயம்',
+      'rice': 'நெல்',
+      'wheat': 'கோதுமை',
+      'corn': 'சோளம்',
+      'today': 'இன்று',
+      'temperature': 'வெப்பநிலை',
+      'humidity': 'ஈரப்பதம்'
+    };
+
+    // Simple word replacement for basic translation
+    let translatedText = text;
+    Object.entries(englishToTamilMap).forEach(([english, tamil]) => {
+      const regex = new RegExp(`\\b${english}\\b`, 'gi');
+      translatedText = translatedText.replace(regex, tamil);
+    });
+
+    return translatedText;
+  } catch (error) {
+    console.error('English to Tamil translation error:', error);
+    return text; // Return original on error
+  }
+}
+
+/**
  * Detect if text contains Tamil language
  */
 function detectTamilLanguage(text) {
@@ -894,7 +975,7 @@ async function getMarketPricesAPI(cropName, userId, authToken, baseURL) {
  */
 router.post('/', async (req, res) => {
   try {
-    const { message, conversationHistory = [], userLocation, locationError } = req.body;
+    const { message, conversationHistory = [], userLocation, locationError, userLanguage = 'en' } = req.body;
     const userId = req.user._id;
     const authToken = req.headers.authorization?.replace('Bearer ', '');
 
@@ -915,12 +996,12 @@ router.post('/', async (req, res) => {
 
     // Store original message for response language detection
     const originalMessage = message;
-    const isTamilMessage = detectTamilLanguage(originalMessage);
+    const isTamilMessage = detectTamilLanguage(originalMessage) || userLanguage === 'ta';
 
     // Translate Tamil input to English for consistent backend processing
     const translatedMessage = await translateTamilToEnglish(message);
 
-    console.log(`Processing message - Original: "${originalMessage}" | Translated: "${translatedMessage}"`);
+    console.log(`Processing message - Original: "${originalMessage}" | Translated: "${translatedMessage}" | User Language: ${userLanguage}`);
 
     // Add location context to the prompt if available
     let locationContext = '';
@@ -1205,14 +1286,23 @@ router.post('/', async (req, res) => {
       }
     }
 
+    // Translate response to user's language if needed
+    let responseMessage = finalMessage.trim();
+    if (userLanguage === 'ta' && !detectTamilLanguage(responseMessage)) {
+      // Translate English response to Tamil
+      responseMessage = await translateEnglishToTamil(responseMessage);
+      console.log(`Translated response to Tamil for user`);
+    }
+
     res.json({
       success: true,
-      message: finalMessage.trim(),
+      message: responseMessage,
       conversationId: `${userId}_${Date.now()}`,
       timestamp: new Date().toISOString(),
       originalMessage: originalMessage, // Store original Tamil input
       translatedMessage: translatedMessage, // Store English translation
       isTranslated: isTamilMessage, // Flag indicating if translation occurred
+      responseLanguage: userLanguage,
       ...(actionResult && { actionExecuted: true, actionResult })
     });
 

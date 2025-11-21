@@ -20,7 +20,7 @@ class ChatService {
   /**
    * Send a message to the chatbot and get response
    * @param {string} message - User message
-   * @param {Object} options - Additional options (userLocation, locationError, etc.)
+   * @param {Object} options - Additional options (userLocation, locationError, userLanguage, etc.)
    * @returns {Promise<Object>} - Chat response
    */
   async sendMessage(message, options = {}) {
@@ -31,6 +31,9 @@ class ChatService {
       if (!token) {
         throw new Error('Authentication required. Please log in.');
       }
+
+      // Get current language from localStorage or options
+      const userLanguage = options.userLanguage || localStorage.getItem('i18nextLng') || 'en';
 
       const response = await fetch(`${this.apiBaseUrl}/api/chat`, {
         method: 'POST',
@@ -43,6 +46,7 @@ class ChatService {
           conversationHistory: this.conversationHistory.slice(-10), // Limit history
           userLocation: options.userLocation, // Include user location
           locationError: options.locationError, // Include location error if any
+          userLanguage: userLanguage, // Include user's preferred language
           ...options
         })
       });

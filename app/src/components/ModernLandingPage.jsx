@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export default function ModernLandingPage() {
+  const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem('token'));
   const navigate = useNavigate();
@@ -58,11 +60,11 @@ export default function ModernLandingPage() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/home" className="font-medium hover:text-green-600 transition-colors">Home</Link>
-            <Link to="/disease-detection" className="font-medium hover:text-green-600 transition-colors">Plant Detection</Link>
-            <Link to="/crop-recommendation" className="font-medium hover:text-green-600 transition-colors">Crop Advisor</Link>
-            <Link to="/market-prices" className="font-medium hover:text-green-600 transition-colors">Market</Link>
-            <Link to="/alerts" className="font-medium hover:text-green-600 transition-colors">Alerts</Link>
+            <Link to="/home" className="font-medium hover:text-green-600 transition-colors">{t('navigation.home')}</Link>
+            <Link to="/disease-detection" className="font-medium hover:text-green-600 transition-colors">{t('navigation.disease_detection')}</Link>
+            <Link to="/crop-recommendation" className="font-medium hover:text-green-600 transition-colors">{t('navigation.crop_recommendation')}</Link>
+            <Link to="/market-prices" className="font-medium hover:text-green-600 transition-colors">{t('navigation.market_prices')}</Link>
+            <Link to="/alerts" className="font-medium hover:text-green-600 transition-colors">{t('navigation.alerts')}</Link>
             {!loggedIn ? (
               <Link to="/login" className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full font-medium transition-colors">
                 Sign In
@@ -82,11 +84,11 @@ export default function ModernLandingPage() {
         {isMenuOpen && (
           <div className="md:hidden mt-4 bg-white pb-4">
             <div className="flex flex-col space-y-2 px-4">
-              <Link to="/" className="py-2 hover:text-green-600" onClick={() => setIsMenuOpen(false)}>Home</Link>
-              <Link to="/disease-detection" className="py-2 hover:text-green-600" onClick={() => setIsMenuOpen(false)}>Plant Detection</Link>
-              <Link to="/crop-recommendation" className="py-2 hover:text-green-600" onClick={() => setIsMenuOpen(false)}>Crop Advisor</Link>
-              <Link to="/market-prices" className="py-2 hover:text-green-600" onClick={() => setIsMenuOpen(false)}>Market</Link>
-              <Link to="/alerts" className="py-2 hover:text-green-600" onClick={() => setIsMenuOpen(false)}>Alerts</Link>
+              <Link to="/" className="py-2 hover:text-green-600" onClick={() => setIsMenuOpen(false)}>{t('navigation.home')}</Link>
+              <Link to="/disease-detection" className="py-2 hover:text-green-600" onClick={() => setIsMenuOpen(false)}>{t('navigation.disease_detection')}</Link>
+              <Link to="/crop-recommendation" className="py-2 hover:text-green-600" onClick={() => setIsMenuOpen(false)}>{t('navigation.crop_recommendation')}</Link>
+              <Link to="/market-prices" className="py-2 hover:text-green-600" onClick={() => setIsMenuOpen(false)}>{t('navigation.market_prices')}</Link>
+              <Link to="/alerts" className="py-2 hover:text-green-600" onClick={() => setIsMenuOpen(false)}>{t('navigation.alerts')}</Link>
 
               {!loggedIn ? (
                 <Link
@@ -98,7 +100,7 @@ export default function ModernLandingPage() {
                 </Link>
               ) : (
                 <button
-                  className="border border-red-600 text-white py-2 px-4 rounded-full text-center mt-2"
+                  className="border border-red-600 text-red-600 py-2 px-4 rounded-full text-center mt-2"
                   onClick={() => {
                     setIsMenuOpen(false);
                     handleLogout();

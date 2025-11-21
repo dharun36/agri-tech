@@ -22,14 +22,19 @@ logger = logging.getLogger("plant-disease-api")
 app = FastAPI(title="Plant Disease Classifier")
 
 origins = [
-    "*"
+    "https://ai-farming-assistant.vercel.app",
+    "https://ai-farming-assistant-git-b2-dharuns-projects-7c3d278a.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:5000",
+    "https://agri-tech-app-hv70.onrender.com"
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -242,6 +247,10 @@ async def startup_event():
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, load_model_sync, model_dir)
 
+@app.get('/')
+async def root():
+    return {"message": "Plant Disease API is running", "status": "ok"}
+
 @app.get('/ping')
 async def ping():
     return {"message": "ok"}
@@ -286,19 +295,25 @@ def read_file_as_image(data) -> np.ndarray:
 async def predict(
     file: UploadFile = File(...)
 ):
+    logger.info(f"Received prediction request for file: {file.filename}")
+    
     raw = await file.read()
     if not raw:
+        logger.error("Uploaded file is empty")
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
     img = read_file_as_image(raw)
+    logger.info("Image processed successfully")
 
     # Ensure model is loaded
     if MODEL is None:
-        # Model not available yet
+        logger.error("Model is not loaded")
         raise HTTPException(status_code=503, detail="Model is not loaded yet. Try again later.")
 
     try:
+        logger.info("Running prediction...")
         predictions = MODEL(img)
+        logger.info("Prediction completed successfully")
     except Exception as e:
         logger.exception(f"Error running prediction: {e}")
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
@@ -312,6 +327,7 @@ async def predict(
 
     class_probs = np.array(class_probs)
     if class_probs.ndim != 2:
+        logger.error(f"Unexpected prediction shape: {class_probs.shape}")
         raise HTTPException(status_code=500, detail=f"Unexpected prediction shape: {class_probs.shape}")
 
     probs = class_probs[0]
@@ -324,7 +340,10 @@ async def predict(
     class_name = usable_names[class_index]
     confidence = float(probs[class_index])
 
-    return {"class_name": class_name, "class_index": class_index, "confidence": confidence}
+    result = {"class_name": class_name, "class_index": class_index, "confidence": confidence}
+    logger.info(f"Prediction result: {result}")
+    
+    return result
 
 if __name__ == "__main__":
     # When running directly (or in many hosting environments), bind to 0.0.0.0

@@ -1,4 +1,22 @@
 {
+  "current_language": "hi",
+  "navigation": {
+    "home": "होम",
+    "dashboard": "डैशबोर्ड",
+    "profile": "प्रोफ़ाइल",
+    "tasks": "खेती कार्य",
+    "calendar": "कैलेंडर",
+    "crops": "फसलें",
+    "market_prices": "बाज़ार मूल्य",
+    "weather": "मौसम",
+    "disease_detection": "रोग पहचान",
+    "crop_recommendation": "फसल सिफारिशें",
+    "government_schemes": "सरकारी योजनाएँ",
+    "alerts": "अलर्ट",
+    "logout": "लॉग आउट",
+    "login": "लॉग इन",
+    "register": "रजिस्टर"
+  },
   "database_content": {
     "crops": {
       "crop_rice": "चावल",
@@ -145,6 +163,51 @@
   "common": {
     "close": "बंद करें"
   },
+  
+  "calendar": {
+    "farm_calendar": "खेत कैलेंडर",
+    "manage_tasks_schedule": "अपने कृषि कार्यों और कार्यक्रम का प्रबंधन करें",
+    "add_task": "कार्य जोड़ें",
+    "add_new_task": "नया कार्य जोड़ें",
+    "today": "आज",
+    "task_categories": "कार्य श्रेणियां",
+    "of": "में से",
+    "completed": "पूर्ण",
+    "total_tasks": "कुल कार्य",
+    "sowing": "बुवाई",
+    "irrigation": "सिंचाई",
+    "fertilizer": "उर्वरक",
+    "pesticide": "कीटनाशक",
+    "harvest": "फसल कटाई"
+  },
+  
+  "crops": {
+    "seed_source": "बीज स्रोत",
+    "previous_crop": "पिछली फसल",
+    "soil_type": "मिट्टी का प्रकार",
+    "crop_details": "फसल विवरण",
+    "irrigation": "सिंचाई",
+    "fertilization": "उर्वरक",
+    "pests_diseases": "कीट और रोग",
+    "growth": "वृद्धि",
+    "harvest": "फसल कटाई",
+    "costs": "लागत",
+    "labor": "श्रम",
+    "activities": "गतिविधियां",
+    "add_irrigation": "सिंचाई जोड़ें",
+    "add_fertilization": "उर्वरक जोड़ें",
+    "add_pest_disease": "कीट/रोग जोड़ें",
+    "add_growth_record": "वृद्धि रिकॉर्ड जोड़ें",
+    "add_harvest": "फसल कटाई जोड़ें",
+    "add_cost": "लागत जोड़ें",
+    "add_labor": "श्रम जोड़ें",
+    "add_note": "नोट जोड़ें",
+    "add_activity": "गतिविधि जोड़ें",
+    "add_event": "घटना जोड़ें",
+    "crop_status_history": "फसल स्थिति इतिहास",
+    "no_data_available": "कोई डेटा उपलब्ध नहीं"
+  },
+  
   "weather": "मौसम",
   "local_forecast": "आपका स्थानीय पूर्वानुमान",
   "my_crops": "मेरी फसलें",

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import VerticalHeader from './VerticalHeader';
 import MobileHeader from './header/MobileHeader';
 import MobileBottomNav from './header/MobileBottomNav';
@@ -11,6 +12,7 @@ import '../styles/layout.css';
 import '../styles/animations.css';
 
 const AppLayout = ({ children, pageTitle }) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const path = location.pathname;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

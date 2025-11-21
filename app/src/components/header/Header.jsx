@@ -216,7 +216,7 @@ function Header() {
               className={`flex items-center gap-3 px-3 py-3 rounded-lg ${isActive('/calendar') ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'}`}
             >
               <FaCalendarAlt className="text-lg" />
-              <span>Calendar</span>
+              <span>{t('navigation.calendar')}</span>
             </Link>
           </li>
           <li>

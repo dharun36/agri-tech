@@ -489,6 +489,15 @@ const MarketPrices = () => {
                       </div>
                     )}
 
+                    {/* Show note if available (e.g., "No current data - showing previous data") */}
+                    {item.note && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-md p-2 mb-2">
+                        <div className="flex items-center gap-2 text-blue-700 text-xs">
+                          <span>ℹ️ {item.note}</span>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-green-600 text-lg">

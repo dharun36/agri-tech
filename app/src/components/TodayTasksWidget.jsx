@@ -51,7 +51,7 @@ const TASK_CATEGORIES = {
 };
 
 const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['translation', 'tasks']);
   const [todayTasks, setTodayTasks] = useState([]);
   const [completedTasks, setCompletedTasks] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -98,6 +98,12 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
           console.log(`📋 Retrieved ${data.tasks.length} daily tasks`, data);
           let tasks = data.tasks || [];
 
+          // Extract crop names BEFORE translation (they should always remain in English)
+          tasks = tasks.map(t => ({
+            ...t,
+            cropName: t.crop?.name || t.cropName || ''
+          }));
+
           // Translation functionality disabled
           // Only translate when user's language is not English
           const lng = localStorage.getItem('i18nextLng') || 'en';
@@ -105,6 +111,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
             try {
               tasks = await translateTasksBatch(tasks, lng, 'en');
             } catch (e) {
+              console.error('Translation error:', e);
               // fail silently, keep English
             }
           }
@@ -345,8 +352,8 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
               <FaLeaf className="text-green-600 text-sm sm:text-lg" />
             </div>
             <div>
-              <h3 className="text-lg sm:text-xl font-bold text-gray-800">Today's Tasks</h3>
-              <p className="text-green-600 text-xs sm:text-sm">Daily activities</p>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800">{t('tasks:today_tasks')}</h3>
+              <p className="text-green-600 text-xs sm:text-sm">{t('tasks:daily_activities')}</p>
             </div>
           </div>
 
@@ -363,8 +370,8 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
             <div className="flex items-center justify-center w-16 h-16 rounded-full text-green-600 mx-auto mb-4">
               <MdCheckCircle className="text-2xl" />
             </div>
-            <h4 className="text-lg font-bold text-gray-800 mb-2">All Tasks Complete!</h4>
-            <p className="text-gray-600">Your farm is up to date</p>
+            <h4 className="text-lg font-bold text-gray-800 mb-2">{t('tasks:all_tasks_complete')}</h4>
+            <p className="text-gray-600">{t('tasks:farm_up_to_date')}</p>
           </div>
         ) : (
           <div className="space-y-1 sm:space-y-2">
@@ -383,7 +390,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                       <div className="flex items-center justify-between pb-2">
                         <div className="text-xs sm:text-sm bg-green-50 text-green-700 px-2 py-1 rounded-md font-medium">
                           <FaSeedling className="inline mr-1 text-xs" />
-                          {task.crop?.name || task.cropName || 'Unknown Crop'}
+                          {task.cropName || t('tasks:no_crop')}
                         </div>
                       </div>
 
@@ -425,7 +432,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                             ) : (
                               <FaCheck className="w-3 h-3 sm:w-4 sm:h-4" />
                             )}
-                            <span className="font-medium">Done</span>
+                            <span className="font-medium">{t('tasks:done')}</span>
                           </button>
 
                           {/* Skip button */}
@@ -436,7 +443,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                             title="Skip Task"
                           >
                             <FaTimes className="w-3 h-3 sm:w-4 sm:h-4" />
-                            <span className="font-medium">Skip</span>
+                            <span className="font-medium">{t('tasks:skip')}</span>
                           </button>
                         </div>
                       </div>
@@ -506,7 +513,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">
-                {completionModal.type === 'complete' ? '✅ Complete Task' : '⏭️ Skip Task'}
+                {completionModal.type === 'complete' ? `✅ ${t('tasks:complete_task_title')}` : `⏭️ ${t('tasks:skip_task_title')}`}
               </h3>
 
               <div className="mb-4">
@@ -520,7 +527,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
 
               <div className="mb-6">
                 <label htmlFor="task-notes" className="block text-sm font-medium text-gray-700 mb-2">
-                  {completionModal.type === 'complete' ? 'Notes (optional)' : 'Reason for skipping (optional)'}
+                  {completionModal.type === 'complete' ? t('tasks:notes_optional') : t('tasks:reason_for_skipping')}
                 </label>
                 <textarea
                   id="task-notes"
@@ -544,7 +551,7 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                   }}
                   className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t('tasks:cancel')}
                 </button>
                 <button
                   onClick={async () => {
@@ -568,8 +575,8 @@ const TodayTasksWidget = ({ crops = [], onTaskComplete, refreshKey, onTaskClick 
                     <FaCheck className="w-4 h-4" />
                   ) : (
                     <FaTimes className="w-4 h-4" />
-                  )}
-                  {completionModal.type === 'complete' ? 'Complete Task' : 'Skip Task'}
+                  )}                  
+                  {completionModal.type === 'complete' ? t('tasks:complete_task_title') : t('tasks:skip_task_title')}
                 </button>
               </div>
             </div>
