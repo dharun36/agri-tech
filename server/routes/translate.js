@@ -14,18 +14,18 @@ router.use(auth);
 router.post('/task', async (req, res) => {
   try {
     const { task, sourceLocale = 'en', targetLocale } = req.body;
-    
+
     if (!task) {
       return res.status(400).json({ error: 'Task object is required' });
     }
-    
+
     if (!targetLocale) {
       return res.status(400).json({ error: 'Target locale is required' });
     }
-    
+
     const translated = translateTask(task, targetLocale);
-    
-    res.json({ 
+
+    res.json({
       translated,
       sourceLocale,
       targetLocale,
@@ -44,18 +44,18 @@ router.post('/task', async (req, res) => {
 router.post('/tasks', async (req, res) => {
   try {
     const { tasks, sourceLocale = 'en', targetLocale } = req.body;
-    
+
     if (!Array.isArray(tasks)) {
       return res.status(400).json({ error: 'Tasks array is required' });
     }
-    
+
     if (!targetLocale) {
       return res.status(400).json({ error: 'Target locale is required' });
     }
-    
+
     const translated = translateTasks(tasks, targetLocale);
-    
-    res.json({ 
+
+    res.json({
       translated,
       sourceLocale,
       targetLocale,

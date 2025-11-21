@@ -534,7 +534,7 @@ const Calendar = ({ initialDate = new Date(), fetchUrl = '/api/tasks' }) => {
       hi: ['रवि', 'सोम', 'मंगल', 'बुध', 'गुरु', 'शुक्र', 'शनि']
     };
     const days = dayNames[t('current_language')] || dayNames.en;
-    
+
     return (
       <div className="grid grid-cols-7 text-xs font-semibold text-gray-600">
         {days.map((d, i) => (

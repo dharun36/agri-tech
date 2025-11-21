@@ -25,10 +25,10 @@ function scanFile(filePath) {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
     const fileName = path.basename(filePath);
-    
+
     // Check if file has useTranslation import
     const hasI18n = content.includes('useTranslation');
-    
+
     // Find hardcoded strings
     const hardcodedStrings = [];
     hardcodedPatterns.forEach(pattern => {
@@ -37,7 +37,7 @@ function scanFile(filePath) {
         hardcodedStrings.push(...matches);
       }
     });
-    
+
     return {
       fileName,
       hasI18n,
@@ -52,17 +52,17 @@ function scanComponents() {
   try {
     const files = fs.readdirSync(componentsDir)
       .filter(file => file.endsWith('.jsx') && !excludeFiles.includes(file));
-    
+
     console.log('🔍 Scanning components for i18n support...\n');
-    
+
     files.forEach(file => {
       const filePath = path.join(componentsDir, file);
       const result = scanFile(filePath);
-      
+
       if (result) {
         const status = result.hasI18n ? '✅' : '❌';
         console.log(`${status} ${result.fileName}`);
-        
+
         if (!result.hasI18n && result.hardcodedStrings.length > 0) {
           console.log('   Hardcoded strings found:');
           result.hardcodedStrings.forEach(str => {

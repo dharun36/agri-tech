@@ -7,7 +7,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
  */
 export async function translateTaskContent(task, targetLocale, sourceLocale = 'en') {
   if (!task || targetLocale === 'en') return task;
-  
+
   try {
     const response = await fetch(`${API_BASE}/api/translate/task`, {
       method: 'POST',
@@ -21,7 +21,7 @@ export async function translateTaskContent(task, targetLocale, sourceLocale = 'e
         targetLocale
       })
     });
-    
+
     if (response.ok) {
       const data = await response.json();
       return data.translated || task;
@@ -29,7 +29,7 @@ export async function translateTaskContent(task, targetLocale, sourceLocale = 'e
   } catch (error) {
     console.error('Translation error:', error);
   }
-  
+
   // Fallback: return original task
   return task;
 }
@@ -41,7 +41,7 @@ export async function translateTasksBatch(tasks, targetLocale, sourceLocale = 'e
   if (!Array.isArray(tasks) || tasks.length === 0 || targetLocale === 'en') {
     return tasks;
   }
-  
+
   try {
     const response = await fetch(`${API_BASE}/api/translate/tasks`, {
       method: 'POST',
@@ -55,7 +55,7 @@ export async function translateTasksBatch(tasks, targetLocale, sourceLocale = 'e
         targetLocale
       })
     });
-    
+
     if (response.ok) {
       const data = await response.json();
       return data.translated || tasks;
@@ -63,7 +63,7 @@ export async function translateTasksBatch(tasks, targetLocale, sourceLocale = 'e
   } catch (error) {
     console.error('Batch translation error:', error);
   }
-  
+
   // Fallback: return original tasks
   return tasks;
 }

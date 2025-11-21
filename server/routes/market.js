@@ -46,27 +46,87 @@ const getPriceTrend = async (commodity, currentPrice, district) => {
 };
 
 // Helper function to get most recent price from database
+// Priority: 1) Selected district, 2) Nearby districts, 3) Any Tamil Nadu district
+// NOTE: This function ONLY searches within Tamil Nadu state
 const getRecentPriceFromDB = async (commodity, district) => {
   try {
-    let filter = { 
-      crop_name: commodity.toLowerCase(),
-      price: { $gt: 0 } // Only get valid prices
+    const cropName = commodity.toLowerCase();
+
+    // Define nearby districts for common Tamil Nadu districts
+    const nearbyDistricts = {
+      'Karur': ['Karur', 'Erode', 'Salem', 'Namakkal', 'Trichy', 'Tiruchirappalli'],
+      'Erode': ['Erode', 'Karur', 'Salem', 'Coimbatore', 'Namakkal'],
+      'Salem': ['Salem', 'Erode', 'Karur', 'Namakkal', 'Dharmapuri'],
+      'Coimbatore': ['Coimbatore', 'Erode', 'Tiruppur', 'Dindigul'],
+      'Trichy': ['Trichy', 'Tiruchirappalli', 'Karur', 'Thanjavur', 'Ariyalur'],
+      'Tiruchirappalli': ['Tiruchirappalli', 'Trichy', 'Karur', 'Thanjavur', 'Ariyalur'],
+      'Chennai': ['Chennai', 'Kanchipuram', 'Tiruvallur', 'Chengalpattu'],
+      'Madurai': ['Madurai', 'Dindigul', 'Theni', 'Sivaganga'],
+      'Thanjavur': ['Thanjavur', 'Trichy', 'Tiruchirappalli', 'Ariyalur', 'Mayiladuthurai'],
+      'Tirunelveli': ['Tirunelveli', 'Tenkasi', 'Thoothukudi', 'Kanyakumari'],
+      'Vellore': ['Vellore', 'Tirupathur', 'Ranipet', 'Krishnagiri']
     };
-    
+
+    let recentPrice = null;
+
+    // Step 1: Try exact district match if specified (within Tamil Nadu only)
     if (district && district !== 'All') {
-      filter.city = new RegExp(district, 'i');
+      const filter = {
+        crop_name: cropName,
+        city: new RegExp(district, 'i'),
+        state: 'Tamil Nadu',  // Only Tamil Nadu
+        price: { $gt: 0 }
+      };
+      console.log(`🔍 Searching DB for ${commodity} in ${district}, Tamil Nadu`);
+      recentPrice = await CropPrice.findOne(filter).sort({ date: -1 }).limit(1);
+
+      if (recentPrice) {
+        console.log(`✅ Found cached price for ${commodity} in ${district}: ₹${recentPrice.price / 100} (${recentPrice.date.toLocaleDateString()})`);
+        return recentPrice;
+      }
     }
 
-    console.log(`🔍 Searching DB for ${commodity} in ${district || 'any location'}`);
+    // Step 2: Try nearby districts if district is specified and has nearby areas (Tamil Nadu only)
+    if (district && district !== 'All' && nearbyDistricts[district]) {
+      console.log(`⚠️ No data for ${commodity} in ${district}, searching nearby Tamil Nadu areas...`);
 
-    const recentPrice = await CropPrice.findOne(filter)
-      .sort({ date: -1 })
-      .limit(1);
+      for (const nearbyDistrict of nearbyDistricts[district]) {
+        if (nearbyDistrict === district) continue; // Already checked
 
-    if (recentPrice) {
-      console.log(`✅ Found cached price for ${commodity}: ₹${recentPrice.price / 100} from ${recentPrice.date.toLocaleDateString()}`);
-    } else {
-      console.log(`❌ No cached price found for ${commodity}`);
+        const filter = {
+          crop_name: cropName,
+          city: new RegExp(nearbyDistrict, 'i'),
+          state: 'Tamil Nadu',  // Only Tamil Nadu
+          price: { $gt: 0 }
+        };
+
+        recentPrice = await CropPrice.findOne(filter).sort({ date: -1 }).limit(1);
+
+        if (recentPrice) {
+          console.log(`✅ Found cached price for ${commodity} in nearby ${recentPrice.city}: ₹${recentPrice.price / 100} (${recentPrice.date.toLocaleDateString()})`);
+          return recentPrice;
+        }
+      }
+    }
+
+    // Step 3: Fall back to any district in Tamil Nadu
+    if (!recentPrice) {
+      console.log(`⚠️ No data in specified/nearby areas, searching all Tamil Nadu districts...`);
+      const filter = {
+        crop_name: cropName,
+        state: 'Tamil Nadu',  // Only Tamil Nadu
+        price: { $gt: 0 }
+      };
+      recentPrice = await CropPrice.findOne(filter).sort({ date: -1 }).limit(1);
+
+      if (recentPrice) {
+        console.log(`✅ Found cached price for ${commodity} in ${recentPrice.city}, Tamil Nadu: ₹${recentPrice.price / 100} (${recentPrice.date.toLocaleDateString()})`);
+        return recentPrice;
+      }
+    }
+
+    if (!recentPrice) {
+      console.log(`❌ No cached price found for ${commodity} in Tamil Nadu`);
     }
 
     return recentPrice;
@@ -86,40 +146,61 @@ const savePriceToDatabase = async (priceData) => {
     const priceValue = parseFloat(raw.modal_price || 0);
     if (priceValue === 0) return;
 
-    // Create date for today
+    // Create date for today (normalize to start of day for comparison)
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
-    // Check if price already exists for today
-    const existingPrice = await CropPrice.findOne({
-      crop_name: commodity.toLowerCase(),
-      city: raw.district || 'unknown',
-      date: {
-        $gte: startOfDay,
-        $lte: endOfDay
+    // Normalize city name - extract base city name without market details
+    let city = raw.district || raw.market || 'unknown';
+    // Remove market name in parentheses (e.g., "Erode(Uzhavar Sandhai)" -> "Erode")
+    city = city.replace(/\s*\([^)]*\)\s*/g, '').trim();
+
+    const cropName = commodity.toLowerCase();
+    const market = raw.market || 'unknown';
+    const state = raw.state || 'unknown';
+
+    // Use upsert to handle duplicates gracefully
+    try {
+      const result = await CropPrice.findOneAndUpdate(
+        {
+          crop_name: cropName,
+          city: city,
+          date: {
+            $gte: startOfDay,
+            $lt: new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000)
+          }
+        },
+        {
+          $set: {
+            price: priceValue,
+            market: market,
+            state: state,
+            date: startOfDay
+          },
+          $setOnInsert: {
+            crop_name: cropName,
+            city: city,
+            created_at: new Date()
+          }
+        },
+        {
+          upsert: true,
+          new: true,
+          runValidators: true
+        }
+      );
+
+      if (result) {
+        console.log(`✅ Saved/Updated price: ${commodity} - ₹${priceValue / 100} in ${city}`);
       }
-    });
-
-    if (existingPrice) {
-      console.log(`Price already exists for ${commodity} in ${raw.district || 'unknown'}`);
-      return;
+    } catch (saveError) {
+      // If still duplicate, silently ignore
+      if (saveError.code !== 11000) {
+        console.error(`Error saving price for ${commodity}:`, saveError.message);
+      }
     }
-
-    // Save new price data
-    const cropPrice = new CropPrice({
-      crop_name: commodity.toLowerCase(),
-      city: raw.district || raw.market || 'unknown',
-      state: raw.state || 'unknown',
-      price: priceValue,
-      market: raw.market || 'unknown',
-      date: new Date()
-    });
-
-    await cropPrice.save();
-    console.log(`✅ Saved price: ${commodity} - ₹${priceValue} in ${raw.district || 'unknown'}`);
   } catch (error) {
-    console.error(`Error saving price for ${priceData.commodity}:`, error.message);
+    console.error(`Error processing price for ${priceData.commodity}:`, error.message);
   }
 };
 
