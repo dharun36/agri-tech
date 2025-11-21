@@ -146,40 +146,61 @@ const savePriceToDatabase = async (priceData) => {
     const priceValue = parseFloat(raw.modal_price || 0);
     if (priceValue === 0) return;
 
-    // Create date for today
+    // Create date for today (normalize to start of day for comparison)
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
-    // Check if price already exists for today
-    const existingPrice = await CropPrice.findOne({
-      crop_name: commodity.toLowerCase(),
-      city: raw.district || 'unknown',
-      date: {
-        $gte: startOfDay,
-        $lte: endOfDay
+    // Normalize city name - extract base city name without market details
+    let city = raw.district || raw.market || 'unknown';
+    // Remove market name in parentheses (e.g., "Erode(Uzhavar Sandhai)" -> "Erode")
+    city = city.replace(/\s*\([^)]*\)\s*/g, '').trim();
+
+    const cropName = commodity.toLowerCase();
+    const market = raw.market || 'unknown';
+    const state = raw.state || 'unknown';
+
+    // Use upsert to handle duplicates gracefully
+    try {
+      const result = await CropPrice.findOneAndUpdate(
+        {
+          crop_name: cropName,
+          city: city,
+          date: {
+            $gte: startOfDay,
+            $lt: new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000)
+          }
+        },
+        {
+          $set: {
+            price: priceValue,
+            market: market,
+            state: state,
+            date: startOfDay
+          },
+          $setOnInsert: {
+            crop_name: cropName,
+            city: city,
+            created_at: new Date()
+          }
+        },
+        {
+          upsert: true,
+          new: true,
+          runValidators: true
+        }
+      );
+
+      if (result) {
+        console.log(`✅ Saved/Updated price: ${commodity} - ₹${priceValue / 100} in ${city}`);
       }
-    });
-
-    if (existingPrice) {
-      console.log(`Price already exists for ${commodity} in ${raw.district || 'unknown'}`);
-      return;
+    } catch (saveError) {
+      // If still duplicate, silently ignore
+      if (saveError.code !== 11000) {
+        console.error(`Error saving price for ${commodity}:`, saveError.message);
+      }
     }
-
-    // Save new price data
-    const cropPrice = new CropPrice({
-      crop_name: commodity.toLowerCase(),
-      city: raw.district || raw.market || 'unknown',
-      state: raw.state || 'unknown',
-      price: priceValue,
-      market: raw.market || 'unknown',
-      date: new Date()
-    });
-
-    await cropPrice.save();
-    console.log(`✅ Saved price: ${commodity} - ₹${priceValue} in ${raw.district || 'unknown'}`);
   } catch (error) {
-    console.error(`Error saving price for ${priceData.commodity}:`, error.message);
+    console.error(`Error processing price for ${priceData.commodity}:`, error.message);
   }
 };
 
