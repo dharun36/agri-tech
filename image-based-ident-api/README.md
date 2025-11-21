@@ -17,6 +17,9 @@ pip install -r requirements.txt
 ## Usage
 
 1) To start the server with the uvicorn command, run the following command in your terminal:
+
+.\venv\Scripts\activate
+
 ```python
 uvicorn main:app --host=0.0.0.0 --port=8000
 ```

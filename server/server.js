@@ -15,7 +15,7 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"], // Multiple frontend URLs
+    origin: ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174","https://ai-farming-assistant.vercel.app/","agri-tech-app-hv70.onrender.com"], // Multiple frontend URLs
     methods: ["GET", "POST"]
   }
 });
@@ -24,8 +24,13 @@ app.use(cors());
 
 // Configure headers for OAuth compatibility
 app.use((req, res, next) => {
-  // Set OAuth-compatible Cross-Origin-Opener-Policy
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  // In development, relax COOP to avoid blocking window.postMessage (dev tools, HMR, etc.)
+  if (process.env.NODE_ENV === 'development') {
+    res.setHeader('Cross-Origin-Opener-Policy', 'unsafe-none');
+  } else {
+    // Production: keep OAuth-compatible isolation while allowing popups
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  }
 
   // Remove problematic headers that interfere with OAuth flows
   res.removeHeader('Cross-Origin-Embedder-Policy');
