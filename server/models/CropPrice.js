@@ -4,7 +4,8 @@ const cropPriceSchema = new mongoose.Schema({
   crop_name: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    lowercase: true
   },
   city: {
     type: String,
@@ -37,8 +38,9 @@ const cropPriceSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Create compound index to prevent duplicates based on crop, city, and date
-cropPriceSchema.index({ crop_name: 1, city: 1, date: 1 }, { unique: true });
+// IMPORTANT: Non-unique index - ALLOWS DUPLICATES
+// Remove this line entirely to prevent Mongoose from auto-creating indexes
+// cropPriceSchema.index({ crop_name: 1, city: 1, date: 1 });
 
 const CropPrice = mongoose.model('CropPrice', cropPriceSchema);
 
