@@ -42,15 +42,25 @@ const TabButton = React.memo(({ active, onClick, icon, label }) => (
 
 TabButton.displayName = 'TabButton';
 
-const CropStatusHistory = React.memo(({ crop, onAddEvent }) => {
+const CropStatusHistory = React.memo(({ crop, onAddEvent, onRefreshActivities }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('irrigation');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Memoize tab change handler
   const handleTabChange = useCallback((tabName) => {
     setActiveTab(tabName);
   }, []);
+
+  // Manual refresh handler
+  const handleRefresh = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+    console.log('Manual refresh triggered');
+    if (onRefreshActivities) {
+      onRefreshActivities();
+    }
+  }, [onRefreshActivities]);
 
   // Helper function to get the appropriate data array based on the active tab
   const getActiveData = useCallback(() => {
@@ -76,6 +86,9 @@ const CropStatusHistory = React.memo(({ crop, onAddEvent }) => {
         return [crop.notes]; // Wrap in array if it's a single object or string
       case 'activity':
         // Handle both cases: if activities is an array, return it; if it's an object, wrap it in an array
+        console.log('Activity tab - crop.activities:', crop.activities);
+        console.log('Is array?', Array.isArray(crop.activities));
+        console.log('Length:', crop.activities?.length);
         if (!crop.activities) return [];
         if (Array.isArray(crop.activities)) return crop.activities;
         return [crop.activities]; // Wrap in array if it's a single object
@@ -313,7 +326,7 @@ const CropStatusHistory = React.memo(({ crop, onAddEvent }) => {
       </div>
 
       {/* Add event button */}
-      <div className="flex justify-center">
+      <div className="flex justify-center gap-3">
         <Button
           onClick={() => onAddEvent(activeTab)}
           variant="primary"
@@ -321,6 +334,15 @@ const CropStatusHistory = React.memo(({ crop, onAddEvent }) => {
           <FontAwesomeIcon icon={EventTypeIcons[activeTab]} className="mr-2" />
           {getAddButtonLabel()}
         </Button>
+        
+        {activeTab === 'activity' && (
+          <Button
+            onClick={handleRefresh}
+            variant="secondary"
+          >
+            Refresh
+          </Button>
+        )}
       </div>
     </Card>
   );
