@@ -182,29 +182,43 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
 
   // Fetch activities separately to avoid race conditions
   const fetchActivities = useCallback(async () => {
-    if (!crop || !id) return;
+    if (!id) return;
 
     try {
       const token = localStorage.getItem('token');
+      console.log(`Fetching activities for crop: ${id}`);
+      
       const activitiesResponse = await axios.get(`${API_BASE_URL}/api/activities/crop/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+
+      console.log('Activities fetched:', activitiesResponse.data);
+      console.log('Number of activities:', activitiesResponse.data.activities?.length || 0);
 
       setCrop(prevCrop => ({
         ...prevCrop,
         activities: activitiesResponse.data.activities || []
       }));
     } catch (activitiesError) {
-      console.warn('Error fetching activities:', activitiesError);
+      console.error('Error fetching activities:', activitiesError);
+      console.error('Error response:', activitiesError.response?.data);
+      // Set empty array if there's an error to prevent showing stale data
+      setCrop(prevCrop => ({
+        ...prevCrop,
+        activities: []
+      }));
     }
-  }, [crop?.id, id]);
+  }, [id]);
 
   // Fetch activities after crop data is loaded
   useEffect(() => {
-    if (crop && !crop.activities) {
+    if (crop && id) {
+      console.log('useEffect triggered - fetching activities');
       fetchActivities();
+    } else {
+      console.log('useEffect skipped - crop:', !!crop, 'id:', id);
     }
-  }, [crop, fetchActivities]);
+  }, [id, fetchActivities]);
 
   const handleAddEvent = useCallback((eventType) => {
     setActiveEventForm(eventType);
@@ -275,8 +289,17 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
 
         const response = await axios.post(fullEndpoint, updatedFormData, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }); // Update local state
-        setCrop(response.data);
+        }); 
+        
+        // Update local state
+        if (eventType === 'activity') {
+          // For activities, refresh the activities list
+          await fetchActivities();
+        } else {
+          // For other events, update the crop data
+          setCrop(response.data);
+        }
+        
         setActiveEventForm(null);
 
         // Show success message
@@ -338,7 +361,7 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, fetchActivities]);
 
   // All activities are now handled through the standard event system
   // No separate activity handling functions needed
@@ -723,7 +746,7 @@ const CropDetails = ({ initialCropData: propInitialCropData, cropId: propCropId 
       </Card>
 
       {/* Crop Status History component */}
-      <CropStatusHistory crop={crop} onAddEvent={handleAddEvent} />
+      <CropStatusHistory crop={crop} onAddEvent={handleAddEvent} onRefreshActivities={fetchActivities} />
 
       {/* Floating Edit Button for Mobile */}
       <div className="fixed bottom-6 right-6 sm:hidden z-50">

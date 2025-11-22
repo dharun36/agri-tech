@@ -33,28 +33,63 @@ router.use(auth);
  */
 const SYSTEM_PROMPT = `You are a helpful farming assistant that supports multiple languages including Tamil (தமிழ்) and English. Provide practical agricultural advice and help farmers manage their crops. Be friendly, knowledgeable, and give actionable suggestions.
 
+IMPORTANT: Keep ALL responses SHORT, SIMPLE, and CLEAR. Farmers need quick, easy-to-understand answers, not long explanations. Use simple words and short sentences. Maximum 2-3 sentences per response unless specifically asked for more details.
+
 Translation Process:
 - Tamil input is automatically translated to English for backend consistency
 - All API calls and database operations use English terms
 - Responses can be in Tamil or English based on user preference
 - Mixed language conversations are supported
 
-When users ask to perform actions and you have all required information, respond in this format:
+When users ask to perform actions, BE SMART and INFER missing details. If a user says "add watering event to wheat", you should extract:
+- Crop name: wheat
+- Activity type: watering
+- Activity title: Watering event (auto-generated)
+- Description: can be empty or auto-generated
+
+Respond in this format when you have enough info:
 ACTION: action_name(parameter1, parameter2)
-Then provide your response in the user's preferred language.
+Then provide your response in the user's preferred language. Keep the response BRIEF and SIMPLE.
 
 Available actions (always use English parameters):
-- ADD_CROP(actual_crop_name, actual_variety) - Add a new crop (example: ADD_CROP(tomato, cherry))
-- REMOVE_CROP(actual_crop_name) - Remove an existing crop (example: REMOVE_CROP(tomato))
+- ADD_CROP(crop_name, variety) - Add a new crop. Variety is OPTIONAL (example: ADD_CROP(tomato, cherry) or ADD_CROP(wheat))
+- REMOVE_CROP(crop_name) - Remove an existing crop (example: REMOVE_CROP(tomato))
 - LIST_CROPS() - Show all crops
-- GET_WEATHER(actual_location) - Get weather for specific location (example: GET_WEATHER(Mumbai))
-- CREATE_TASK(task_title, task_description, crop_name) - Create a farming task (example: CREATE_TASK(Water plants, Check soil moisture, tomato))
+- GET_WEATHER(location) - Get weather for specific location (example: GET_WEATHER(Mumbai))
+- CREATE_TASK(task_title, description, crop_name) - Create a farming task. Description and crop_name are OPTIONAL (example: CREATE_TASK(Water plants, Check soil moisture, tomato) or CREATE_TASK(Water plants))
 - LIST_TASKS(status) - Show tasks (status: today, upcoming, all) (example: LIST_TASKS(today))
 - COMPLETE_TASK(task_id) - Mark a task as complete (example: COMPLETE_TASK(12345))
 - LIST_ACTIVITIES(crop_name) - Show activities for a crop (example: LIST_ACTIVITIES(tomato))
-- ADD_ACTIVITY(crop_name, activity_title, activity_description, activity_type) - Record farming activity (example: ADD_ACTIVITY(tomato, Applied fertilizer, Used NPK 10-10-10, maintenance))
+- ADD_ACTIVITY(crop_name, activity_type) - Record farming activity. Activity type can be: watering, fertilizing, harvesting, planting, weeding, spraying, pruning, general. Title and description are AUTO-GENERATED from activity type. (example: ADD_ACTIVITY(wheat, watering) or ADD_ACTIVITY(tomato, fertilizing))
 - GET_MARKET_PRICES(crop_name) - Check market prices for crops (example: GET_MARKET_PRICES(tomato))
 
+IMPORTANT RULES:
+1. KEEP RESPONSES SHORT AND SIMPLE - Farmers need quick, clear answers
+2. Use simple language, avoid technical jargon
+3. Maximum 2-3 short sentences unless asked for details
+4. BE SMART - Extract crop names and activity types from natural language
+5. Natural language examples for ADD_ACTIVITY:
+   - "add watering to wheat" → ADD_ACTIVITY(wheat, watering)
+   - "water my rice" → ADD_ACTIVITY(rice, watering)
+   - "fertilize tomatoes" → ADD_ACTIVITY(tomato, fertilizing)
+   - "add watering event to the wheat crop" → ADD_ACTIVITY(wheat, watering)
+   - "record watering for paddy" → ADD_ACTIVITY(paddy, watering)
+   - "I watered the corn" → ADD_ACTIVITY(corn, watering)
+   - "harvested my wheat today" → ADD_ACTIVITY(wheat, harvesting)
+   - "applied fertilizer to rice" → ADD_ACTIVITY(rice, fertilizing)
+6. Activity type keywords to recognize:
+   - water/watering/irrigate/irrigation → watering
+   - fertilize/fertilizer/fertilizing/manure → fertilizing
+   - harvest/harvesting/reap/collect → harvesting
+   - plant/planting/sow/sowing → planting
+   - weed/weeding/remove weeds → weeding
+   - spray/spraying/pesticide/fungicide → spraying
+   - prune/pruning/trim → pruning
+7. ONLY ask for clarification if you truly cannot determine the crop name
+8. Default missing activity type to 'general' if unclear
+9. Be conversational and helpful, not robotic
+10. ALWAYS be brief - farmers are busy people!
+ 
 Tamil Translations for Common Farming Terms (for reference only, use English in ACTIONs):
 - Crop = பயிர் (payir)
 - Farm = பண்ணை (pannai) 
@@ -336,10 +371,13 @@ async function executeAction(action, userId, authToken, userLocation = null) {
       case 'LIST_ACTIVITIES':
         return await listActivitiesAPI(params[0], userId, authToken, baseURL);
       case 'ADD_ACTIVITY':
-        if (!params[0] || !params[1]) {
-          return { success: false, message: '📊 Please specify crop name and activity details. For example: "Record fertilizer activity for tomatoes"', requiresInput: true };
+        if (!params[0]) {
+          return { success: false, message: '📊 Please specify which crop. For example: "Add watering to wheat" or "Record fertilizing for tomatoes"', requiresInput: true };
         }
-        return await addActivityAPI(params[0], params[1], params[2], params[3], userId, authToken, baseURL);
+        // params[0] = crop_name, params[1] = activity_type (auto-detect from natural language)
+        // If only crop is provided, default to 'general' activity
+        const activityTypeParam = params[1] || 'general';
+        return await addActivityAPI(params[0], activityTypeParam, params[2], params[3], userId, authToken, baseURL);
       case 'GET_MARKET_PRICES':
         if (!params[0]) {
           return { success: false, message: '💰 Please specify which crop prices you want to check. For example: "Check tomato prices"', requiresInput: true };
@@ -786,7 +824,7 @@ async function listActivitiesAPI(cropName, userId, authToken, baseURL) {
 /**
  * Add a new farming activity
  */
-async function addActivityAPI(cropName, title, description, activityType, userId, authToken, baseURL) {
+async function addActivityAPI(cropName, activityType, title, description, userId, authToken, baseURL) {
   try {
     // Find the crop
     const cropsResponse = await fetch(`${baseURL}/api/crops`, {
@@ -805,15 +843,55 @@ async function addActivityAPI(cropName, title, description, activityType, userId
     if (!targetCrop) {
       return {
         success: false,
-        message: `❌ Could not find crop "${cropName}".\nAvailable crops: ${crops.map(c => c.name).join(', ') || 'None'}`
+        message: `❌ Could not find crop "${cropName}".\nAvailable crops: ${crops.map(c => c.name).join(', ') || 'None'}\n\n💡 Add a crop first by saying "Add ${cropName} crop"`
       };
     }
 
+    // Auto-generate title and description based on activity type if not provided
+    const normalizedActivityType = (activityType || 'general').toLowerCase().trim();
+    
+    const activityTemplates = {
+      watering: {
+        title: `Watering ${targetCrop.name}`,
+        description: `Watered ${targetCrop.name} crop on ${new Date().toLocaleDateString()}`
+      },
+      fertilizing: {
+        title: `Fertilizing ${targetCrop.name}`,
+        description: `Applied fertilizer to ${targetCrop.name} crop`
+      },
+      harvesting: {
+        title: `Harvesting ${targetCrop.name}`,
+        description: `Harvested ${targetCrop.name} crop`
+      },
+      planting: {
+        title: `Planting ${targetCrop.name}`,
+        description: `Planted ${targetCrop.name} seeds/seedlings`
+      },
+      weeding: {
+        title: `Weeding ${targetCrop.name}`,
+        description: `Removed weeds from ${targetCrop.name} field`
+      },
+      spraying: {
+        title: `Spraying ${targetCrop.name}`,
+        description: `Applied pesticide/fungicide spray to ${targetCrop.name}`
+      },
+      pruning: {
+        title: `Pruning ${targetCrop.name}`,
+        description: `Pruned ${targetCrop.name} plants`
+      },
+      general: {
+        title: `${targetCrop.name} Activity`,
+        description: `General farming activity for ${targetCrop.name}`
+      }
+    };
+
+    const template = activityTemplates[normalizedActivityType] || activityTemplates.general;
+    
     const activityData = {
       cropId: targetCrop._id,
-      title: title.trim(),
-      description: description?.trim() || title.trim(),
-      activityType: activityType?.trim() || 'general',
+      title: title?.trim() || template.title,
+      description: description?.trim() || template.description,
+      activityType: normalizedActivityType,
       date: new Date().toISOString()
     };
 
@@ -831,9 +909,24 @@ async function addActivityAPI(cropName, title, description, activityType, userId
     }
 
     const result = await response.json();
+    
+    // Activity type specific messages
+    const activityMessages = {
+      watering: '💧 Great! Regular watering is essential for healthy crops.',
+      fertilizing: '🌱 Excellent! Proper fertilization will boost your yield.',
+      harvesting: '🎉 Congratulations on your harvest!',
+      planting: '🌾 Good luck with your new planting!',
+      weeding: '🔪 Clean fields mean healthier crops!',
+      spraying: '🛡️ Protecting your crops from pests is crucial.',
+      pruning: '✂️ Proper pruning promotes better growth!',
+      general: '✅ Activity recorded successfully!'
+    };
+    
+    const successMessage = activityMessages[normalizedActivityType] || activityMessages.general;
+    
     return {
       success: true,
-      message: `📊 Successfully recorded activity: "${title}" for ${targetCrop.name}!\n\n📅 Date: ${new Date().toLocaleDateString()}\n💡 You can view all activities by saying "show activities for ${targetCrop.name}"`,
+      message: `📊 Successfully recorded ${normalizedActivityType} activity for ${targetCrop.name}!\n\n${successMessage}\n📅 Date: ${new Date().toLocaleDateString()}\n💡 View all activities by saying "show activities for ${targetCrop.name}"`,
       data: result
     };
   } catch (error) {

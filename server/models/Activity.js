@@ -9,7 +9,27 @@ const activitySchema = new mongoose.Schema({
   activityType: {
     type: String,
     required: true,
-    enum: ['general', 'inspection', 'maintenance', 'training', 'pruning', 'thinning', 'mulching', 'other']
+    enum: [
+      'general', 
+      'watering', 
+      'irrigation',
+      'fertilizing', 
+      'harvesting', 
+      'planting', 
+      'weeding', 
+      'spraying', 
+      'pruning', 
+      'inspection', 
+      'maintenance', 
+      'training', 
+      'thinning', 
+      'mulching', 
+      'pest-control',
+      'disease-treatment',
+      'soil-testing',
+      'transplanting',
+      'other'
+    ]
   },
   date: { type: Date, required: true, default: Date.now },
   duration: { type: Number, comment: "Duration in minutes" },
